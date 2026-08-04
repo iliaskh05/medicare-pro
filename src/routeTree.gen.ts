@@ -10,33 +10,73 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuditRouteImport } from './routes/audit'
+import { Route as FacturationRouteImport } from './routes/facturation'
+import { Route as MedecinsRouteImport } from './routes/medecins'
+import { Route as PatientsRouteImport } from './routes/patients'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuditRoute = AuditRouteImport.update({
+  id: '/audit',
+  path: '/audit',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FacturationRoute = FacturationRouteImport.update({
+  id: '/facturation',
+  path: '/facturation',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MedecinsRoute = MedecinsRouteImport.update({
+  id: '/medecins',
+  path: '/medecins',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PatientsRoute = PatientsRouteImport.update({
+  id: '/patients',
+  path: '/patients',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/audit': typeof AuditRoute
+  '/facturation': typeof FacturationRoute
+  '/medecins': typeof MedecinsRoute
+  '/patients': typeof PatientsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/audit': typeof AuditRoute
+  '/facturation': typeof FacturationRoute
+  '/medecins': typeof MedecinsRoute
+  '/patients': typeof PatientsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/audit': typeof AuditRoute
+  '/facturation': typeof FacturationRoute
+  '/medecins': typeof MedecinsRoute
+  '/patients': typeof PatientsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/audit' | '/facturation' | '/medecins' | '/patients'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/audit' | '/facturation' | '/medecins' | '/patients'
+  id: '__root__' | '/' | '/audit' | '/facturation' | '/medecins' | '/patients'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuditRoute: typeof AuditRoute
+  FacturationRoute: typeof FacturationRoute
+  MedecinsRoute: typeof MedecinsRoute
+  PatientsRoute: typeof PatientsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,22 +88,44 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/audit': {
+      id: '/audit'
+      path: '/audit'
+      fullPath: '/audit'
+      preLoaderRoute: typeof AuditRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/facturation': {
+      id: '/facturation'
+      path: '/facturation'
+      fullPath: '/facturation'
+      preLoaderRoute: typeof FacturationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/medecins': {
+      id: '/medecins'
+      path: '/medecins'
+      fullPath: '/medecins'
+      preLoaderRoute: typeof MedecinsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/patients': {
+      id: '/patients'
+      path: '/patients'
+      fullPath: '/patients'
+      preLoaderRoute: typeof PatientsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuditRoute: AuditRoute,
+  FacturationRoute: FacturationRoute,
+  MedecinsRoute: MedecinsRoute,
+  PatientsRoute: PatientsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
