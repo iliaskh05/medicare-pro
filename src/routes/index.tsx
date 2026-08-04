@@ -124,7 +124,7 @@ function Dashboard() {
                 <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   {kpi.label}
                 </p>
-                <p className="mt-1 truncate text-2xl font-bold tracking-tight">{kpi.value}</p>
+                <p className="mt-1 text-xl font-bold tracking-tight sm:text-2xl">{kpi.value}</p>
                 <p
                   className={`mt-1 flex items-center gap-1 text-xs font-medium ${
                     kpi.positive ? "text-success" : "text-warning-foreground"
