@@ -15,6 +15,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppHeader } from "@/components/app-header";
 import { Toaster } from "@/components/ui/sonner";
+import { MessagerieDock } from "@/components/messagerie-dock";
 
 function NotFoundComponent() {
   return (
@@ -138,6 +139,7 @@ function RootComponent() {
           </div>
         </div>
       </SidebarProvider>
+      <MessagerieDock />
       <Toaster />
     </QueryClientProvider>
   );

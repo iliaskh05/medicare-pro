@@ -12,8 +12,10 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuditRouteImport } from './routes/audit'
 import { Route as FacturationRouteImport } from './routes/facturation'
+import { Route as ImagerieRouteImport } from './routes/imagerie'
 import { Route as MedecinsRouteImport } from './routes/medecins'
 import { Route as PatientsRouteImport } from './routes/patients'
+import { Route as WhatsappRouteImport } from './routes/whatsapp'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -30,6 +32,11 @@ const FacturationRoute = FacturationRouteImport.update({
   path: '/facturation',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ImagerieRoute = ImagerieRouteImport.update({
+  id: '/imagerie',
+  path: '/imagerie',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MedecinsRoute = MedecinsRouteImport.update({
   id: '/medecins',
   path: '/medecins',
@@ -40,43 +47,78 @@ const PatientsRoute = PatientsRouteImport.update({
   path: '/patients',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WhatsappRoute = WhatsappRouteImport.update({
+  id: '/whatsapp',
+  path: '/whatsapp',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/audit': typeof AuditRoute
   '/facturation': typeof FacturationRoute
+  '/imagerie': typeof ImagerieRoute
   '/medecins': typeof MedecinsRoute
   '/patients': typeof PatientsRoute
+  '/whatsapp': typeof WhatsappRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/audit': typeof AuditRoute
   '/facturation': typeof FacturationRoute
+  '/imagerie': typeof ImagerieRoute
   '/medecins': typeof MedecinsRoute
   '/patients': typeof PatientsRoute
+  '/whatsapp': typeof WhatsappRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/audit': typeof AuditRoute
   '/facturation': typeof FacturationRoute
+  '/imagerie': typeof ImagerieRoute
   '/medecins': typeof MedecinsRoute
   '/patients': typeof PatientsRoute
+  '/whatsapp': typeof WhatsappRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/audit' | '/facturation' | '/medecins' | '/patients'
+  fullPaths:
+    | '/'
+    | '/audit'
+    | '/facturation'
+    | '/imagerie'
+    | '/medecins'
+    | '/patients'
+    | '/whatsapp'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/audit' | '/facturation' | '/medecins' | '/patients'
-  id: '__root__' | '/' | '/audit' | '/facturation' | '/medecins' | '/patients'
+  to:
+    | '/'
+    | '/audit'
+    | '/facturation'
+    | '/imagerie'
+    | '/medecins'
+    | '/patients'
+    | '/whatsapp'
+  id:
+    | '__root__'
+    | '/'
+    | '/audit'
+    | '/facturation'
+    | '/imagerie'
+    | '/medecins'
+    | '/patients'
+    | '/whatsapp'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuditRoute: typeof AuditRoute
   FacturationRoute: typeof FacturationRoute
+  ImagerieRoute: typeof ImagerieRoute
   MedecinsRoute: typeof MedecinsRoute
   PatientsRoute: typeof PatientsRoute
+  WhatsappRoute: typeof WhatsappRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -102,6 +144,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FacturationRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/imagerie': {
+      id: '/imagerie'
+      path: '/imagerie'
+      fullPath: '/imagerie'
+      preLoaderRoute: typeof ImagerieRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/medecins': {
       id: '/medecins'
       path: '/medecins'
@@ -116,6 +165,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PatientsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/whatsapp': {
+      id: '/whatsapp'
+      path: '/whatsapp'
+      fullPath: '/whatsapp'
+      preLoaderRoute: typeof WhatsappRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -123,8 +179,10 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuditRoute: AuditRoute,
   FacturationRoute: FacturationRoute,
+  ImagerieRoute: ImagerieRoute,
   MedecinsRoute: MedecinsRoute,
   PatientsRoute: PatientsRoute,
+  WhatsappRoute: WhatsappRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
