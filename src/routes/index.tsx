@@ -96,6 +96,49 @@ const statutTone = {
 const niveauTone = { critique: "destructive", eleve: "warning", moyen: "neutral" } as const;
 const niveauLabel = { critique: "Critique", eleve: "Élevé", moyen: "Moyen" } as const;
 
+const slotOrder: ("Matin" | "Midi" | "Après-midi")[] = ["Matin", "Midi", "Après-midi"];
+const levelClass: Record<PlanningSlot["level"], string> = {
+  libre: "bg-success/40 hover:bg-success/60",
+  occupé: "bg-primary/50 hover:bg-primary/70",
+  saturé: "bg-warning hover:bg-warning/90",
+  critique: "bg-destructive hover:bg-destructive/90",
+};
+
+function PlanningHeatmap({ data }: { data: PlanningSlot[] }) {
+  const days = Array.from(new Map(data.map((d) => [d.dayLabel, d])).values());
+  return (
+    <div className="space-y-2">
+      <div className="grid" style={{ gridTemplateColumns: `3.5rem repeat(${days.length}, minmax(0, 1fr))` }}>
+        <div />
+        {days.map((d) => (
+          <div key={d.dayLabel} className="text-center text-[11px] font-medium text-muted-foreground">
+            {d.dayLabel}
+          </div>
+        ))}
+      </div>
+      {slotOrder.map((slot) => (
+        <div
+          key={slot}
+          className="grid items-center gap-2"
+          style={{ gridTemplateColumns: `3.5rem repeat(${days.length}, minmax(0, 1fr))` }}
+        >
+          <span className="text-[11px] font-medium text-muted-foreground">{slot}</span>
+          {days.map((d) => {
+            const cell = data.find((item) => item.dayLabel === d.dayLabel && item.slot === slot)!;
+            return (
+              <div
+                key={`${d.dayLabel}-${slot}`}
+                title={`${d.dayLabel} · ${slot} · ${cell.level}`}
+                className={`aspect-square rounded-md transition-colors ${levelClass[cell.level]}`}
+              />
+            );
+          })}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function Dashboard() {
   return (
     <div className="space-y-6">
