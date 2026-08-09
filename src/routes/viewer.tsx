@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Activity,
   FileText,
@@ -18,11 +18,28 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { apiFetch, getApiKey } from "@/lib/api-client";
-import type {
-  ImageAnalysisResult,
-  ImagingStudy,
-  StructuredReport,
-} from "@/server/store/types";
+import { generateStructuredReport } from "@/services/reportService";
+import type { ImageAnalysisResult, ImagingStudy } from "@/server/store/types";
+
+export type SelectedStudy = {
+  id: string;
+  patientName: string;
+  studyType: string;
+  modality: ImagingStudy["modality"];
+  bodyPart: string;
+  status: ImagingStudy["status"];
+};
+
+function toSelectedStudy(study: ImagingStudy): SelectedStudy {
+  return {
+    id: study.id,
+    patientName: study.patientName,
+    studyType: study.examLabel,
+    modality: study.modality,
+    bodyPart: study.bodyPart,
+    status: study.status,
+  };
+}
 
 export const Route = createFileRoute("/viewer")({
   head: () => ({
@@ -30,7 +47,8 @@ export const Route = createFileRoute("/viewer")({
       { title: "Visionneuse & analyse IA — RadioCRM" },
       {
         name: "description",
-        content: "Visionneuse d'examens radiologiques connectée au pipeline d'analyse d'images et au LLM de compte rendu.",
+        content:
+          "Visionneuse d'examens radiologiques connectée au pipeline d'analyse d'images et au LLM de compte rendu.",
       },
     ],
   }),
@@ -39,9 +57,13 @@ export const Route = createFileRoute("/viewer")({
 
 function ViewerPage() {
   const qc = useQueryClient();
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [notes, setNotes] = useState("");
-  const [context, setContext] = useState("Douleurs / bilan demandé par le médecin traitant.");
+  const [selectedStudy, setSelectedStudy] = useState<SelectedStudy | null>(null);
+  const [clinicalContext, setClinicalContext] = useState(
+    "Douleurs / bilan demandé par le médecin traitant.",
+  );
+  const [dictationNotes, setDictationNotes] = useState("");
+  const [structuredReport, setStructuredReport] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
 
@@ -51,26 +73,28 @@ function ViewerPage() {
   });
 
   const studies = studiesQuery.data?.studies ?? [];
-  const study = useMemo(
-    () => studies.find((s) => s.id === (selectedId ?? studies[0]?.id)) ?? null,
-    [studies, selectedId],
-  );
+
+  useEffect(() => {
+    if (!selectedStudy && studies.length > 0) {
+      setSelectedStudy(toSelectedStudy(studies[0]!));
+    }
+  }, [studies, selectedStudy]);
 
   const detailQuery = useQuery({
-    queryKey: ["imaging-study", study?.id],
-    enabled: !!study?.id,
+    queryKey: ["imaging-study", selectedStudy?.id],
+    enabled: !!selectedStudy?.id,
     queryFn: () =>
       apiFetch<{ study: ImagingStudy; analysis: ImageAnalysisResult | null }>(
-        `/api/imaging/studies/${study!.id}`,
+        `/api/imaging/studies/${selectedStudy!.id}`,
       ),
   });
 
   const analyzeMut = useMutation({
     mutationFn: async () => {
-      if (!study) throw new Error("Aucune étude");
+      if (!selectedStudy) throw new Error("Aucune étude");
       if (file) {
         const form = new FormData();
-        form.append("studyId", study.id);
+        form.append("studyId", selectedStudy.id);
         form.append("file", file);
         const res = await fetch("/api/imaging/analyze", {
           method: "POST",
@@ -83,33 +107,48 @@ function ViewerPage() {
       }
       return apiFetch<ImageAnalysisResult>("/api/imaging/analyze", {
         method: "POST",
-        body: JSON.stringify({ studyId: study.id }),
+        body: JSON.stringify({ studyId: selectedStudy.id }),
       });
     },
     onSuccess: () => {
       toast.success("Analyse d'image terminée");
-      qc.invalidateQueries({ queryKey: ["imaging-study", study?.id] });
+      qc.invalidateQueries({ queryKey: ["imaging-study", selectedStudy?.id] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const reportMut = useMutation({
-    mutationFn: () =>
-      apiFetch<StructuredReport>("/api/reports/structure", {
-        method: "POST",
-        body: JSON.stringify({
-          studyId: study!.id,
-          clinicalContext: context,
-          rawNotes: notes,
-          draft: true,
-        }),
-      }),
-    onSuccess: () => toast.success("Compte rendu structuré généré"),
-    onError: (e: Error) => toast.error(e.message),
-  });
+  const handleGenerateCR = async () => {
+    if (!selectedStudy) {
+      toast.error("Sélectionnez une étude avant de générer le compte rendu.");
+      return;
+    }
+    if (!clinicalContext.trim() && !dictationNotes.trim()) {
+      toast.error("Renseignez le contexte clinique ou les notes de dictée.");
+      return;
+    }
+
+    setIsGenerating(true);
+    try {
+      const report = await generateStructuredReport({
+        patientName: selectedStudy.patientName,
+        studyType: selectedStudy.studyType,
+        clinicalContext,
+        dictationNotes,
+      });
+      setStructuredReport(report);
+      toast.success("Compte rendu structuré généré");
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Le service de génération de compte rendu est temporairement indisponible.";
+      toast.error(message);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const analysis = detailQuery.data?.analysis ?? analyzeMut.data ?? null;
-  const report = reportMut.data ?? null;
 
   return (
     <div className="space-y-6">
@@ -120,7 +159,7 @@ function ViewerPage() {
           <div className="flex flex-wrap gap-2">
             <Button
               variant="outline"
-              disabled={!study || analyzeMut.isPending}
+              disabled={!selectedStudy || analyzeMut.isPending}
               onClick={() => analyzeMut.mutate()}
             >
               {analyzeMut.isPending ? (
@@ -131,10 +170,10 @@ function ViewerPage() {
               Lancer l'analyse IA
             </Button>
             <Button
-              disabled={!study || !analysis || reportMut.isPending}
-              onClick={() => reportMut.mutate()}
+              disabled={!selectedStudy || isGenerating}
+              onClick={() => void handleGenerateCR()}
             >
-              {reportMut.isPending ? (
+              {isGenerating ? (
                 <Loader2 className="mr-2 size-4 animate-spin" />
               ) : (
                 <Sparkles className="mr-2 size-4" />
@@ -159,13 +198,13 @@ function ViewerPage() {
                 key={s.id}
                 type="button"
                 onClick={() => {
-                  setSelectedId(s.id);
+                  setSelectedStudy(toSelectedStudy(s));
                   setPreviewUrl(null);
                   setFile(null);
-                  reportMut.reset();
+                  setStructuredReport(null);
                 }}
                 className={`w-full rounded-lg border px-3 py-2 text-left transition-colors ${
-                  study?.id === s.id
+                  selectedStudy?.id === s.id
                     ? "border-primary bg-primary/5"
                     : "border-border hover:bg-muted/50"
                 }`}
@@ -184,7 +223,9 @@ function ViewerPage() {
         <Card className="shadow-none overflow-hidden">
           <CardHeader className="flex-row items-center justify-between space-y-0">
             <CardTitle className="text-base">
-              {study ? `${study.examLabel} · ${study.patientName}` : "Sélectionnez une étude"}
+              {selectedStudy
+                ? `${selectedStudy.studyType} · ${selectedStudy.patientName}`
+                : "Sélectionnez une étude"}
             </CardTitle>
             <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-primary">
               <Upload className="size-4" />
@@ -205,14 +246,18 @@ function ViewerPage() {
           <CardContent>
             <div className="relative flex aspect-[4/3] items-center justify-center overflow-hidden rounded-lg bg-[radial-gradient(circle_at_30%_20%,#1e293b,#020617)]">
               {previewUrl ? (
-                <img src={previewUrl} alt="Aperçu radio" className="max-h-full max-w-full object-contain" />
+                <img
+                  src={previewUrl}
+                  alt="Aperçu radio"
+                  className="max-h-full max-w-full object-contain"
+                />
               ) : (
                 <div className="px-6 text-center text-slate-300">
                   <IconTile tone="primary">
                     <Activity className="size-5" />
                   </IconTile>
                   <p className="mt-3 text-sm font-medium">
-                    {study?.modality ?? "—"} · {study?.bodyPart ?? "—"}
+                    {selectedStudy?.modality ?? "—"} · {selectedStudy?.bodyPart ?? "—"}
                   </p>
                   <p className="mt-1 text-xs text-slate-400">
                     Importez une image ou lancez l'analyse sur les métadonnées de l'étude
@@ -224,20 +269,20 @@ function ViewerPage() {
 
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <div>
-                <Label htmlFor="ctx">Contexte clinique</Label>
+                <Label htmlFor="clinical-context">Contexte clinique</Label>
                 <Textarea
-                  id="ctx"
-                  value={context}
-                  onChange={(e) => setContext(e.target.value)}
+                  id="clinical-context"
+                  value={clinicalContext}
+                  onChange={(e) => setClinicalContext(e.target.value)}
                   className="mt-1.5 min-h-20"
                 />
               </div>
               <div>
-                <Label htmlFor="notes">Notes / dictée</Label>
+                <Label htmlFor="dictation-notes">Notes / dictée</Label>
                 <Textarea
-                  id="notes"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
+                  id="dictation-notes"
+                  value={dictationNotes}
+                  onChange={(e) => setDictationNotes(e.target.value)}
                   placeholder="Saisie libre avant structuration LLM…"
                   className="mt-1.5 min-h-20"
                 />
@@ -286,7 +331,15 @@ function ViewerPage() {
                       <li key={f.code} className="rounded-md border border-border px-3 py-2 text-sm">
                         <div className="flex items-start justify-between gap-2">
                           <span className="font-medium">{f.label}</span>
-                          <Pill tone={f.severity === "severe" ? "destructive" : f.severity === "moderate" ? "warning" : "neutral"}>
+                          <Pill
+                            tone={
+                              f.severity === "severe"
+                                ? "destructive"
+                                : f.severity === "moderate"
+                                  ? "warning"
+                                  : "neutral"
+                            }
+                          >
                             {(f.confidence * 100).toFixed(0)}%
                           </Pill>
                         </div>
@@ -312,33 +365,18 @@ function ViewerPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
-              {report ? (
-                <>
-                  <section>
-                    <h4 className="font-semibold">Indication</h4>
-                    <p className="text-muted-foreground">{report.sections.indication}</p>
-                  </section>
-                  <section>
-                    <h4 className="font-semibold">Technique</h4>
-                    <p className="text-muted-foreground">{report.sections.technique}</p>
-                  </section>
-                  <section>
-                    <h4 className="font-semibold">Résultats</h4>
-                    <p className="whitespace-pre-wrap text-muted-foreground">
-                      {report.sections.resultats}
-                    </p>
-                  </section>
-                  <section>
-                    <h4 className="font-semibold">Conclusion</h4>
-                    <p className="text-muted-foreground">{report.sections.conclusion}</p>
-                  </section>
-                  <p className="text-[11px] text-muted-foreground">
-                    {report.model} · {report.draft ? "brouillon" : "final"} · {report.id}
-                  </p>
-                </>
+              {isGenerating ? (
+                <div className="flex flex-col items-center justify-center gap-3 py-8 text-muted-foreground">
+                  <Loader2 className="size-6 animate-spin text-primary" />
+                  <p>Génération du compte rendu par le LLM…</p>
+                </div>
+              ) : structuredReport ? (
+                <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-muted-foreground">
+                  {structuredReport}
+                </pre>
               ) : (
                 <p className="text-muted-foreground">
-                  Générez un CR après analyse — LLM si clé configurée, sinon heuristique clinique.
+                  Saisissez le contexte et la dictée, puis cliquez sur « Générer le CR ».
                 </p>
               )}
             </CardContent>
