@@ -139,6 +139,7 @@ function RootComponent() {
           </div>
         </div>
       </SidebarProvider>
+      <MessagerieDock />
       <Toaster />
     </QueryClientProvider>
   );
