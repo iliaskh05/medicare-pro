@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import {
   Activity,
+  AlertCircle,
   FileText,
   Loader2,
   ScanLine,
@@ -12,6 +13,7 @@ import {
 import { toast } from "sonner";
 
 import { PageHeader, Pill, IconTile } from "@/components/ui-kit";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -64,6 +66,7 @@ function ViewerPage() {
   const [dictationNotes, setDictationNotes] = useState("");
   const [structuredReport, setStructuredReport] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
 
@@ -118,32 +121,58 @@ function ViewerPage() {
   });
 
   const handleGenerateCR = async () => {
+    console.log("[viewer] Clic « Générer le CR »", {
+      selectedStudy,
+      clinicalContext,
+      dictationNotes,
+      isGenerating,
+    });
+
+    setErrorMessage(null);
+
     if (!selectedStudy) {
-      toast.error("Sélectionnez une étude avant de générer le compte rendu.");
-      return;
-    }
-    if (!clinicalContext.trim() && !dictationNotes.trim()) {
-      toast.error("Renseignez le contexte clinique ou les notes de dictée.");
+      const msg = "Sélectionnez une étude avant de générer le compte rendu.";
+      console.warn("[viewer] Validation échouée:", msg);
+      setErrorMessage(msg);
+      toast.error(msg);
       return;
     }
 
+    if (!dictationNotes.trim()) {
+      const msg = "Les notes de dictée sont vides. Saisissez une dictée avant de générer le CR.";
+      console.warn("[viewer] Validation échouée:", msg);
+      setErrorMessage(msg);
+      toast.error(msg);
+      return;
+    }
+
+    const payload = {
+      patientName: selectedStudy.patientName,
+      studyType: selectedStudy.studyType,
+      clinicalContext,
+      dictationNotes,
+    };
+
+    console.log("[viewer] Données envoyées à generateStructuredReport:", payload);
     setIsGenerating(true);
+    setStructuredReport(null);
+
     try {
-      const report = await generateStructuredReport({
-        patientName: selectedStudy.patientName,
-        studyType: selectedStudy.studyType,
-        clinicalContext,
-        dictationNotes,
-      });
+      const report = await generateStructuredReport(payload);
+      console.log("[viewer] Retour API OK — longueur CR:", report.length, "| aperçu:", report.slice(0, 200));
       setStructuredReport(report);
+      setErrorMessage(null);
       toast.success("Compte rendu structuré généré");
     } catch (error) {
+      console.error("[viewer] Erreur dans handleGenerateCR (catch):", error);
       const message =
         error instanceof Error
           ? error.message
           : "Le service de génération de compte rendu est temporairement indisponible.";
+      setErrorMessage(message);
       toast.error(message);
     } finally {
+      console.log("[viewer] Fin handleGenerateCR — isGenerating → false");
       setIsGenerating(false);
     }
   };
@@ -170,15 +199,19 @@ function ViewerPage() {
               Lancer l'analyse IA
             </Button>
             <Button
+              type="button"
               disabled={!selectedStudy || isGenerating}
-              onClick={() => void handleGenerateCR()}
+              onClick={() => {
+                console.log("[viewer] onClick bouton Générer le CR déclenché");
+                void handleGenerateCR();
+              }}
             >
               {isGenerating ? (
                 <Loader2 className="mr-2 size-4 animate-spin" />
               ) : (
                 <Sparkles className="mr-2 size-4" />
               )}
-              Générer le CR
+              {isGenerating ? "Génération…" : "Générer le CR"}
             </Button>
           </div>
         }
@@ -202,6 +235,7 @@ function ViewerPage() {
                   setPreviewUrl(null);
                   setFile(null);
                   setStructuredReport(null);
+                  setErrorMessage(null);
                 }}
                 className={`w-full rounded-lg border px-3 py-2 text-left transition-colors ${
                   selectedStudy?.id === s.id
@@ -282,9 +316,13 @@ function ViewerPage() {
                 <Textarea
                   id="dictation-notes"
                   value={dictationNotes}
-                  onChange={(e) => setDictationNotes(e.target.value)}
-                  placeholder="Saisie libre avant structuration LLM…"
+                  onChange={(e) => {
+                    setDictationNotes(e.target.value);
+                    if (errorMessage) setErrorMessage(null);
+                  }}
+                  placeholder="Obligatoire — ex: Ventricules normaux, FLAIR sans anomalie…"
                   className="mt-1.5 min-h-20"
+                  aria-invalid={Boolean(errorMessage && !dictationNotes.trim())}
                 />
               </div>
             </div>
@@ -365,20 +403,29 @@ function ViewerPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
+              {errorMessage ? (
+                <Alert variant="destructive">
+                  <AlertCircle className="size-4" />
+                  <AlertTitle>Échec de la génération</AlertTitle>
+                  <AlertDescription className="whitespace-pre-wrap">{errorMessage}</AlertDescription>
+                </Alert>
+              ) : null}
+
               {isGenerating ? (
                 <div className="flex flex-col items-center justify-center gap-3 py-8 text-muted-foreground">
                   <Loader2 className="size-6 animate-spin text-primary" />
                   <p>Génération du compte rendu par le LLM…</p>
+                  <p className="text-xs">Ouvrez la console (F12) pour suivre les logs `[viewer]` / `[reportService]`.</p>
                 </div>
               ) : structuredReport ? (
                 <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-muted-foreground">
                   {structuredReport}
                 </pre>
-              ) : (
+              ) : !errorMessage ? (
                 <p className="text-muted-foreground">
-                  Saisissez le contexte et la dictée, puis cliquez sur « Générer le CR ».
+                  Saisissez une dictée (obligatoire), puis cliquez sur « Générer le CR ».
                 </p>
-              )}
+              ) : null}
             </CardContent>
           </Card>
         </div>
