@@ -31,6 +31,7 @@ import {
   planningTension,
   salleAttente,
   urgencesFraude,
+  type PlanningSlot,
 } from "@/data/mock";
 
 export const Route = createFileRoute("/")({
