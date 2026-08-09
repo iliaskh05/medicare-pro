@@ -9,7 +9,10 @@
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "dev:ws": "node services/ws/server.mjs",
+    "dev:ml": "py -m uvicorn app.main:app --app-dir services/ml --host 127.0.0.1 --port 8090 --reload",
+    "ml:install": "py -m pip install -r services/ml/requirements.txt"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -63,6 +66,7 @@
     "tw-animate-css": "^1.3.4",
     "vaul": "^1.1.2",
     "vite-tsconfig-paths": "^6.0.2",
+    "ws": "^8.21.3",
     "zod": "^3.24.2"
   },
   "devDependencies": {

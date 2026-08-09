@@ -15,10 +15,19 @@ dist-ssr
 .tanstack/**
 .nitro
 *.local
+.env
+.env.*
+!.env.example
 
 # Wrangler / Cloudflare
 .wrangler/
 .dev.vars
+
+# Python ML
+services/ml/.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
 
 # Editor directories and files
 .vscode/*
