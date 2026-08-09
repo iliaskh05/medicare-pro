@@ -48,7 +48,7 @@ export function AppSidebar() {
           </div>
           <div className="min-w-0 group-data-[collapsible=icon]:hidden">
             <p className="truncate text-sm font-bold tracking-tight">Centre Radiologie</p>
-            <p className="truncate text-xs text-muted-foreground">Al Amal · Casablanca</p>
+            <p className="truncate text-xs text-muted-foreground">{"\n"}</p>
           </div>
         </div>
       </SidebarHeader>
