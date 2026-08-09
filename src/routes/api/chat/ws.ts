@@ -40,7 +40,7 @@ export const Route = createFileRoute("/api/chat/ws")({
           return jsonOk({
             transport: "websocket",
             path: serverConfig.wsPath,
-            dedicatedUrl: process.env.WS_PUBLIC_URL ?? "ws://127.0.0.1:8788/chat",
+            dedicatedUrl: process.env['WS_PUBLIC_URL'] ?? "ws://127.0.0.1:8788/chat",
             sseFallback: "/api/chat/stream",
             protocol: {
               join: { type: "join", roomId: "room-staff" },
@@ -78,7 +78,7 @@ export const Route = createFileRoute("/api/chat/ws")({
               roomId: body.roomId,
               senderId: body.senderId,
               body: body.text,
-              studyId: body.studyId,
+              ...(body.studyId ? { studyId: body.studyId } : {}),
             });
             return jsonOk(message);
           }
