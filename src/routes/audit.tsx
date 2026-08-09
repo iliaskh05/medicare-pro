@@ -429,6 +429,7 @@ function AuditPage() {
                   setQuery(e.target.value);
                   setPage(1);
                 }}
+                aria-label="Rechercher un dossier, un patient ou un acte"
                 placeholder="Dossier, patient ou acte…"
                 className="pl-9 lg:w-52"
               />

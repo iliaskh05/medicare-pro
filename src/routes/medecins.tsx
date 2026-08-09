@@ -71,6 +71,7 @@ function MedecinsPage() {
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
+              aria-label="Rechercher un médecin ou une spécialité"
               placeholder="Rechercher un médecin ou une spécialité…"
               className="pl-9"
             />

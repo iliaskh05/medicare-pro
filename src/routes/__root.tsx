@@ -88,6 +88,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         content:
           "CRM médical pour centre de radiologie au Maroc : patients, facturation MAD, prescripteurs et audit IA.",
       },
+      { property: "og:title", content: "RadioCRM — CRM du centre de radiologie" },
+      {
+        property: "og:description",
+        content:
+          "CRM médical pour centre de radiologie au Maroc : patients, facturation MAD, prescripteurs et audit IA.",
+      },
+      { property: "og:site_name", content: "RadioCRM" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
