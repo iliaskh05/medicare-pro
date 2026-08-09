@@ -8,6 +8,7 @@ import {
   Scan,
   ScanLine,
   MessagesSquare,
+  MessageCircle,
 } from "lucide-react";
 
 import {
@@ -28,7 +29,9 @@ const items = [
   { title: "Patients", url: "/patients", icon: Users },
   { title: "Actes & Facturation", url: "/facturation", icon: ReceiptText },
   { title: "Visionneuse IA", url: "/viewer", icon: ScanLine },
+  { title: "Visionneuse de scans", url: "/imagerie", icon: ScanLine },
   { title: "Chat médecins", url: "/chat", icon: MessagesSquare },
+  { title: "Chatbot WhatsApp", url: "/whatsapp", icon: MessageCircle },
   { title: "Médecins prescripteurs", url: "/medecins", icon: Stethoscope },
   { title: "Audit & Conformité", url: "/audit", icon: ShieldAlert },
 ] as const;

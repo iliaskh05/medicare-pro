@@ -13,9 +13,11 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuditRouteImport } from './routes/audit'
 import { Route as ChatRouteImport } from './routes/chat'
 import { Route as FacturationRouteImport } from './routes/facturation'
+import { Route as ImagerieRouteImport } from './routes/imagerie'
 import { Route as MedecinsRouteImport } from './routes/medecins'
 import { Route as PatientsRouteImport } from './routes/patients'
 import { Route as ViewerRouteImport } from './routes/viewer'
+import { Route as WhatsappRouteImport } from './routes/whatsapp'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiChatMessagesRouteImport } from './routes/api/chat/messages'
 import { Route as ApiChatRoomsRouteImport } from './routes/api/chat/rooms'
@@ -51,6 +53,11 @@ const FacturationRoute = FacturationRouteImport.update({
   path: '/facturation',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ImagerieRoute = ImagerieRouteImport.update({
+  id: '/imagerie',
+  path: '/imagerie',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MedecinsRoute = MedecinsRouteImport.update({
   id: '/medecins',
   path: '/medecins',
@@ -64,6 +71,11 @@ const PatientsRoute = PatientsRouteImport.update({
 const ViewerRoute = ViewerRouteImport.update({
   id: '/viewer',
   path: '/viewer',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WhatsappRoute = WhatsappRouteImport.update({
+  id: '/whatsapp',
+  path: '/whatsapp',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiHealthRoute = ApiHealthRouteImport.update({
@@ -143,9 +155,11 @@ export interface FileRoutesByFullPath {
   '/audit': typeof AuditRoute
   '/chat': typeof ChatRoute
   '/facturation': typeof FacturationRoute
+  '/imagerie': typeof ImagerieRoute
   '/medecins': typeof MedecinsRoute
   '/patients': typeof PatientsRoute
   '/viewer': typeof ViewerRoute
+  '/whatsapp': typeof WhatsappRoute
   '/api/health': typeof ApiHealthRoute
   '/api/chat/messages': typeof ApiChatMessagesRoute
   '/api/chat/rooms': typeof ApiChatRoomsRoute
@@ -166,9 +180,11 @@ export interface FileRoutesByTo {
   '/audit': typeof AuditRoute
   '/chat': typeof ChatRoute
   '/facturation': typeof FacturationRoute
+  '/imagerie': typeof ImagerieRoute
   '/medecins': typeof MedecinsRoute
   '/patients': typeof PatientsRoute
   '/viewer': typeof ViewerRoute
+  '/whatsapp': typeof WhatsappRoute
   '/api/health': typeof ApiHealthRoute
   '/api/chat/messages': typeof ApiChatMessagesRoute
   '/api/chat/rooms': typeof ApiChatRoomsRoute
@@ -190,9 +206,11 @@ export interface FileRoutesById {
   '/audit': typeof AuditRoute
   '/chat': typeof ChatRoute
   '/facturation': typeof FacturationRoute
+  '/imagerie': typeof ImagerieRoute
   '/medecins': typeof MedecinsRoute
   '/patients': typeof PatientsRoute
   '/viewer': typeof ViewerRoute
+  '/whatsapp': typeof WhatsappRoute
   '/api/health': typeof ApiHealthRoute
   '/api/chat/messages': typeof ApiChatMessagesRoute
   '/api/chat/rooms': typeof ApiChatRoomsRoute
@@ -215,9 +233,11 @@ export interface FileRouteTypes {
     | '/audit'
     | '/chat'
     | '/facturation'
+    | '/imagerie'
     | '/medecins'
     | '/patients'
     | '/viewer'
+    | '/whatsapp'
     | '/api/health'
     | '/api/chat/messages'
     | '/api/chat/rooms'
@@ -238,9 +258,11 @@ export interface FileRouteTypes {
     | '/audit'
     | '/chat'
     | '/facturation'
+    | '/imagerie'
     | '/medecins'
     | '/patients'
     | '/viewer'
+    | '/whatsapp'
     | '/api/health'
     | '/api/chat/messages'
     | '/api/chat/rooms'
@@ -261,9 +283,11 @@ export interface FileRouteTypes {
     | '/audit'
     | '/chat'
     | '/facturation'
+    | '/imagerie'
     | '/medecins'
     | '/patients'
     | '/viewer'
+    | '/whatsapp'
     | '/api/health'
     | '/api/chat/messages'
     | '/api/chat/rooms'
@@ -285,9 +309,11 @@ export interface RootRouteChildren {
   AuditRoute: typeof AuditRoute
   ChatRoute: typeof ChatRoute
   FacturationRoute: typeof FacturationRoute
+  ImagerieRoute: typeof ImagerieRoute
   MedecinsRoute: typeof MedecinsRoute
   PatientsRoute: typeof PatientsRoute
   ViewerRoute: typeof ViewerRoute
+  WhatsappRoute: typeof WhatsappRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiChatMessagesRoute: typeof ApiChatMessagesRoute
   ApiChatRoomsRoute: typeof ApiChatRoomsRoute
@@ -333,6 +359,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FacturationRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/imagerie': {
+      id: '/imagerie'
+      path: '/imagerie'
+      fullPath: '/imagerie'
+      preLoaderRoute: typeof ImagerieRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/medecins': {
       id: '/medecins'
       path: '/medecins'
@@ -352,6 +385,13 @@ declare module '@tanstack/react-router' {
       path: '/viewer'
       fullPath: '/viewer'
       preLoaderRoute: typeof ViewerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/whatsapp': {
+      id: '/whatsapp'
+      path: '/whatsapp'
+      fullPath: '/whatsapp'
+      preLoaderRoute: typeof WhatsappRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/health': {
@@ -471,9 +511,11 @@ const rootRouteChildren: RootRouteChildren = {
   AuditRoute: AuditRoute,
   ChatRoute: ChatRoute,
   FacturationRoute: FacturationRoute,
+  ImagerieRoute: ImagerieRoute,
   MedecinsRoute: MedecinsRoute,
   PatientsRoute: PatientsRoute,
   ViewerRoute: ViewerRoute,
+  WhatsappRoute: WhatsappRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiChatMessagesRoute: ApiChatMessagesRoute,
   ApiChatRoomsRoute: ApiChatRoomsRoute,
