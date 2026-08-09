@@ -45,7 +45,7 @@ export function sendMessage(input: SendMessageInput): ChatMessage {
     senderName: sender.name,
     body,
     createdAt: new Date().toISOString(),
-    studyId: input.studyId,
+    ...(input.studyId ? { studyId: input.studyId } : {}),
   };
 
   store.messages.push(message);

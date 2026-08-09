@@ -19,7 +19,7 @@ export function loadHistoricalLabeledInvoices(): LabeledInvoice[] {
     partMutuelle: f.partMutuelle,
     date: f.date,
     label: suspectIds.has(f.id) ? 1 : 0,
-    raison: raisonById.get(f.id),
+    ...(raisonById.get(f.id) ? { raison: raisonById.get(f.id) as string } : {}),
   }));
 
   const fromSuspects: LabeledInvoice[] = facturesSuspectes.map((f) => ({

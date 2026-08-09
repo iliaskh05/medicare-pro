@@ -83,8 +83,8 @@ export function ingestWhatsAppPayload(payload: unknown): WhatsAppInbound[] {
           from: msg.from,
           timestamp: new Date(Number(msg.timestamp) * 1000).toISOString(),
           type: msg.type,
-          text: msg.text?.body,
-          patientHint: contactName,
+          ...(msg.text?.body ? { text: msg.text.body } : {}),
+          ...(contactName ? { patientHint: contactName } : {}),
           raw: msg,
         };
         store.whatsapp.unshift(inbound);

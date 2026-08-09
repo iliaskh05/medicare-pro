@@ -128,9 +128,10 @@ export async function analyzeImageBuffer(
     let sumSq = 0;
     let edges = 0;
     for (let i = 0; i < bytes.length; i++) {
-      sum += bytes[i];
-      sumSq += bytes[i] * bytes[i];
-      if (i > 0 && Math.abs(bytes[i] - bytes[i - 1]) > 28) edges++;
+      const v = bytes[i] ?? 0;
+      sum += v;
+      sumSq += v * v;
+      if (i > 0 && Math.abs(v - (bytes[i - 1] ?? 0)) > 28) edges++;
     }
     const n = bytes.length;
     meanIntensity = sum / n / 255;
