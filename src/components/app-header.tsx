@@ -21,6 +21,7 @@ export function AppHeader() {
       <div className="relative hidden max-w-sm flex-1 md:block">
         <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
+          aria-label="Rechercher un patient ou une facture"
           placeholder="Rechercher un patient, une facture…"
           className="h-9 bg-background pl-9"
         />

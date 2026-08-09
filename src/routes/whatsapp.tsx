@@ -190,6 +190,7 @@ function WhatsAppPage() {
               <Input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
+                aria-label="Rechercher une interaction par patient, numéro ou intention"
                 placeholder="Patient, numéro, intention…"
                 className="pl-9 sm:w-60"
               />

@@ -179,6 +179,7 @@ function PatientsPage() {
                 setQuery(e.target.value);
                 setPage(1);
               }}
+              aria-label="Rechercher un patient par nom, CIN ou téléphone"
               placeholder="Rechercher par nom, CIN ou téléphone…"
               className="pl-9"
             />

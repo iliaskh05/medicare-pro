@@ -27,7 +27,14 @@ export const Route = createFileRoute("/chat")({
         name: "description",
         content: "Messagerie interne temps réel entre médecins et techniciens (WebSocket + SSE).",
       },
+      { property: "og:title", content: "Chat médecins — RadioCRM" },
+      {
+        property: "og:description",
+        content: "Messagerie interne temps réel entre médecins et techniciens du centre de radiologie.",
+      },
+      { property: "og:url", content: "https://maroc-med-hub.lovable.app/chat" },
     ],
+    links: [{ rel: "canonical", href: "https://maroc-med-hub.lovable.app/chat" }],
   }),
   component: ChatPage,
 });
@@ -218,7 +225,11 @@ function ChatPage() {
                 onChange={(e) => setBody(e.target.value)}
                 placeholder="Écrire un message clinique…"
               />
-              <Button type="submit" disabled={sendMut.isPending || !body.trim()}>
+              <Button
+                type="submit"
+                aria-label="Envoyer le message"
+                disabled={sendMut.isPending || !body.trim()}
+              >
                 {sendMut.isPending ? (
                   <Loader2 className="size-4 animate-spin" />
                 ) : (
