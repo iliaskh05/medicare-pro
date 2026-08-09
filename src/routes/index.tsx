@@ -7,17 +7,10 @@ import {
   TrendingUp,
   TrendingDown,
   ArrowRight,
+  CalendarDays,
+  FileSpreadsheet,
+  ShieldAlert,
 } from "lucide-react";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Legend,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,7 +23,15 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { PageHeader, Pill, IconTile } from "@/components/ui-kit";
-import { actesParSemaine, alertes, salleAttente, formatMAD } from "@/data/mock";
+import { ProbabilityBar } from "@/components/probability-gauge";
+import {
+  alertes,
+  comptabilite,
+  formatMAD,
+  planningTension,
+  salleAttente,
+  urgencesFraude,
+} from "@/data/mock";
 
 export const Route = createFileRoute("/")({
   head: () => ({
