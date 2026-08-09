@@ -144,54 +144,128 @@ function Dashboard() {
         ))}
       </div>
 
-      <Card className="shadow-none">
-        <CardHeader className="flex-row items-center justify-between">
-          <div>
-            <CardTitle>Répartition des actes par semaine</CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">
-              IRM, Scanner, Échographie et Radiologie standard — 6 dernières semaines
-            </p>
-          </div>
-        </CardHeader>
-        <CardContent className="h-[340px] pl-0">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={actesParSemaine} barGap={4}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
-              <XAxis
-                dataKey="semaine"
-                tickLine={false}
-                axisLine={false}
-                stroke="var(--muted-foreground)"
-                fontSize={12}
-              />
-              <YAxis
-                tickLine={false}
-                axisLine={false}
-                stroke="var(--muted-foreground)"
-                fontSize={12}
-              />
-              <Tooltip
-                contentStyle={{
-                  background: "var(--popover)",
-                  border: "1px solid var(--border)",
-                  borderRadius: "0.625rem",
-                  fontSize: 12,
-                }}
-              />
-              <Legend iconType="circle" wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
-              <Bar dataKey="IRM" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="Scanner" fill="var(--chart-2)" radius={[4, 4, 0, 0]} />
-              <Bar
-                dataKey="Echographie"
-                name="Échographie"
-                fill="var(--chart-3)"
-                radius={[4, 4, 0, 0]}
-              />
-              <Bar dataKey="Radio" name="Radio standard" fill="var(--chart-4)" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
+      <div className="grid gap-4 lg:grid-cols-3">
+        {/* Widget 1 — Tension du planning */}
+        <Card className="shadow-none lg:col-span-1">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-3">
+              <IconTile tone="primary">
+                <CalendarDays className="size-5" />
+              </IconTile>
+              <div>
+                <CardTitle className="text-base">Tension du planning</CardTitle>
+                <p className="text-xs text-muted-foreground">5 prochains jours · 3 créneaux</p>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <PlanningHeatmap data={planningTension} />
+            <div className="mt-4 flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5">
+                <span className="size-2.5 rounded-sm bg-success/80" />
+                Libre
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="size-2.5 rounded-sm bg-primary/70" />
+                Occupé
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="size-2.5 rounded-sm bg-warning" />
+                Saturé
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="size-2.5 rounded-sm bg-destructive" />
+                Critique
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Widget 2 — Urgences Fraude & Anomalies */}
+        <Card className="shadow-none lg:col-span-1">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <IconTile tone="destructive">
+                  <ShieldAlert className="size-5" />
+                </IconTile>
+                <div>
+                  <CardTitle className="text-base">Urgences Fraude</CardTitle>
+                  <p className="text-xs text-muted-foreground">3 dernières alertes critiques IA</p>
+                </div>
+              </div>
+              <Button variant="ghost" size="sm" className="h-8 text-xs" asChild>
+                <Link to="/audit">Voir tout</Link>
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {urgencesFraude.map((u) => (
+              <div
+                key={u.id}
+                className="flex items-center justify-between gap-3 rounded-xl border border-border bg-background p-3"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold">{u.patient}</p>
+                  <p className="text-xs text-muted-foreground">{u.anomalie}</p>
+                  <div className="mt-2">
+                    <ProbabilityBar value={u.score / 100} />
+                  </div>
+                </div>
+                <Button variant="outline" size="sm" className="h-8 whitespace-nowrap text-xs" asChild>
+                  <Link to="/audit">Traiter</Link>
+                </Button>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        {/* Widget 3 — Synchronisation Comptable */}
+        <Card className="shadow-none lg:col-span-1">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-3">
+              <IconTile tone="success">
+                <FileSpreadsheet className="size-5" />
+              </IconTile>
+              <div>
+                <CardTitle className="text-base">Synchronisation EFIBEC</CardTitle>
+                <p className="text-xs text-muted-foreground">Export comptable validé</p>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <div>
+              <p className="text-3xl font-bold tracking-tight">{comptabilite.validated}</p>
+              <p className="text-sm text-muted-foreground">actes validés prêts pour l'export</p>
+            </div>
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>Progression vers clôture</span>
+                <span className="font-medium text-foreground">
+                  {Math.round(
+                    (comptabilite.validated / (comptabilite.validated + comptabilite.pending)) * 100,
+                  )}
+                  %
+                </span>
+              </div>
+              <div className="h-2 overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full rounded-full bg-success transition-all duration-700"
+                  style={{
+                    width: `${(comptabilite.validated / (comptabilite.validated + comptabilite.pending)) * 100}%`,
+                  }}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {comptabilite.pending} actes en attente · Dernier export {comptabilite.lastExport}
+              </p>
+            </div>
+            <Button className="w-full" asChild>
+              <Link to="/audit">Exporter vers EFIBEC (CSV)</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
 
       <div className="grid gap-4 lg:grid-cols-5">
         <Card className="shadow-none lg:col-span-3">
