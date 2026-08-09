@@ -150,5 +150,50 @@ export const facturesSuspectes: FactureSuspecte[] = [
   { id: "FCT-8780", date: "23/07/2026", patient: "Nadia Berrada", montant: 2100, raison: "Doublon de facturation", score: 69 },
 ];
 
+export type PlanningSlot = {
+  day: string;
+  dayLabel: string;
+  slot: "Matin" | "Midi" | "Après-midi";
+  level: "libre" | "occupé" | "saturé" | "critique";
+};
+
+export const planningTension: PlanningSlot[] = [
+  { day: "2026-08-10", dayLabel: "Lun", slot: "Matin", level: "occupé" },
+  { day: "2026-08-10", dayLabel: "Lun", slot: "Midi", level: "libre" },
+  { day: "2026-08-10", dayLabel: "Lun", slot: "Après-midi", level: "saturé" },
+  { day: "2026-08-11", dayLabel: "Mar", slot: "Matin", level: "saturé" },
+  { day: "2026-08-11", dayLabel: "Mar", slot: "Midi", level: "occupé" },
+  { day: "2026-08-11", dayLabel: "Mar", slot: "Après-midi", level: "critique" },
+  { day: "2026-08-12", dayLabel: "Mer", slot: "Matin", level: "critique" },
+  { day: "2026-08-12", dayLabel: "Mer", slot: "Midi", level: "saturé" },
+  { day: "2026-08-12", dayLabel: "Mer", slot: "Après-midi", level: "occupé" },
+  { day: "2026-08-13", dayLabel: "Jeu", slot: "Matin", level: "occupé" },
+  { day: "2026-08-13", dayLabel: "Jeu", slot: "Midi", level: "libre" },
+  { day: "2026-08-13", dayLabel: "Jeu", slot: "Après-midi", level: "libre" },
+  { day: "2026-08-14", dayLabel: "Ven", slot: "Matin", level: "saturé" },
+  { day: "2026-08-14", dayLabel: "Ven", slot: "Midi", level: "occupé" },
+  { day: "2026-08-14", dayLabel: "Ven", slot: "Après-midi", level: "critique" },
+];
+
+export type UrgenceFraude = {
+  id: string;
+  patient: string;
+  anomalie: string;
+  score: number;
+  temps: string;
+};
+
+export const urgencesFraude: UrgenceFraude[] = [
+  { id: "FA-2291", patient: "Karim Bennani", anomalie: "Montant atypique", score: 92, temps: "il y a 12 min" },
+  { id: "FA-2288", patient: "Hicham Tazi", anomalie: "Sur-prescription", score: 87, temps: "il y a 48 min" },
+  { id: "FA-2284", patient: "Meryem Alaoui", anomalie: "Incohérence acte", score: 78, temps: "il y a 2 h" },
+];
+
+export const comptabilite = {
+  validated: 45,
+  pending: 12,
+  lastExport: "08/08/2026",
+};
+
 export const formatMAD = (n: number) =>
   new Intl.NumberFormat("fr-MA", { maximumFractionDigits: 0 }).format(n) + " MAD";
