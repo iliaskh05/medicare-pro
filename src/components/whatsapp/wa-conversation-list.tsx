@@ -30,7 +30,7 @@ export function WaConversationList({
   onSelect: (id: string) => void;
 }) {
   return (
-    <aside className="flex min-h-0 flex-col bg-muted/40 lg:border-r lg:border-border">
+    <aside className="flex min-h-0 min-w-0 flex-1 flex-col bg-muted/40 lg:border-r lg:border-border">
       <div className="space-y-3 border-b border-border bg-card/60 p-4">
         <div className="relative">
           <Search

@@ -66,7 +66,7 @@ export function WaChatThread({
   }, [conversation.id, conversation.messages.length, typing]);
 
   return (
-    <section className="flex min-h-0 min-w-0 flex-col">
+    <section className="flex min-h-0 min-w-0 flex-1 flex-col">
       <header className="flex items-center gap-3 border-b border-border bg-card px-3 py-3 sm:px-4">
         <Button
           variant="ghost"

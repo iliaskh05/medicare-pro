@@ -209,8 +209,8 @@ function WhatsAppPage() {
       />
 
       <Card className="overflow-hidden p-0 shadow-sm">
-        <div className="grid h-[calc(100dvh-16rem)] min-h-[560px] grid-cols-1 lg:grid-cols-[320px_1fr] xl:grid-cols-[320px_1fr_300px]">
-          <div className={vueMobile === "liste" ? "min-h-0" : "hidden min-h-0 lg:block"}>
+        <div className="grid h-[calc(100dvh-18rem)] min-h-[560px] grid-cols-1 overflow-hidden lg:grid-cols-[320px_1fr] xl:grid-cols-[320px_1fr_300px]">
+          <div className={vueMobile === "liste" ? "flex min-h-0 min-w-0 flex-col" : "hidden min-h-0 min-w-0 lg:flex lg:flex-col"}>
             <WaConversationList
               conversations={liste}
               activeId={active?.id ?? ""}
@@ -222,7 +222,7 @@ function WhatsAppPage() {
             />
           </div>
 
-          <div className={vueMobile === "conversation" ? "min-h-0" : "hidden min-h-0 lg:block"}>
+          <div className={vueMobile === "conversation" ? "flex min-h-0 min-w-0 flex-col" : "hidden min-h-0 min-w-0 lg:flex lg:flex-col"}>
             {active ? (
               <WaChatThread
                 conversation={active}
@@ -240,7 +240,7 @@ function WhatsAppPage() {
           </div>
 
           {active ? (
-            <div className="hidden min-h-0 xl:block">
+            <div className="hidden min-h-0 min-w-0 xl:flex xl:flex-col">
               <WaContextPanel
                 conversation={active}
                 onStatutChange={handleStatut}

@@ -52,7 +52,7 @@ export function WaContextPanel({
   onEnvoyerPreparation: () => void;
 }) {
   return (
-    <aside className="flex min-h-0 flex-col gap-4 overflow-y-auto border-border bg-card p-4 xl:border-l">
+    <aside className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-y-auto border-border bg-card p-4 xl:border-l">
       <div>
         <h3 className="text-sm font-semibold text-foreground">Contexte patient</h3>
         <p className="mt-0.5 text-xs text-muted-foreground">Données fictives de démonstration.</p>
