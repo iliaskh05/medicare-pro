@@ -145,7 +145,7 @@ function FacturationPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card data-tour="facturation-finance">
           <CardHeader className="flex-row items-center gap-3">
             <IconTile tone="success">
               <Wallet className="size-5" />

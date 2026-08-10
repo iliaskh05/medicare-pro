@@ -244,7 +244,7 @@ function WhatsAppPage() {
             </header>
 
             {/* Panneau de contrôle de démo */}
-            <div className="flex flex-wrap items-center gap-2 border-b bg-muted/40 px-4 py-2.5">
+            <div data-tour="whatsapp-demo" className="flex flex-wrap items-center gap-2 border-b bg-muted/40 px-4 py-2.5">
               <span className="mr-1 text-xs font-medium text-muted-foreground">Démo :</span>
               <Button size="sm" variant="outline" className="gap-1.5" onClick={() => botRepond(reponsesDemo.ia)}>
                 <Bot className="size-3.5" /> Déclencher réponse IA
