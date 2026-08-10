@@ -52,7 +52,7 @@ export function telechargerDossierPdf(dossier: DossierPdf) {
 </style></head>
 <body>
   <header>
-    <div class="brand">Centre d'Imagerie Al Amal<small>Casablanca · Maroc</small></div>
+    <div class="brand">Centre d'Imagerie Médicale<small>Casablanca · Maroc</small></div>
     <div class="ref">Édité le ${new Date().toLocaleString("fr-MA")}</div>
   </header>
   <h1>${escape(dossier.titre)}</h1>

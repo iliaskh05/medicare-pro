@@ -50,7 +50,7 @@ export const groupesTravail: ChatChannel[] = [
     subtitle: "3 membres · pilotage & conformité",
     initiales: "DR",
     nonLus: 0,
-    dernierMessage: "Export EFIBEC de la semaine transmis au cabinet.",
+    dernierMessage: "Export comptable de la semaine transmis au cabinet.",
   },
 ];
 
@@ -194,12 +194,12 @@ export const seedMessages: ChatSeedMessage[] = [
     id: "seed-dir-1",
     roomId: "room-direction",
     senderId: "admin-alaoui",
-    senderName: "Dr. Yassine Alaoui (direction)",
+    senderName: "Mr Adnane (direction)",
     body: "Rapport de conformité hebdomadaire — 3 anomalies confirmées sur 412 dossiers.",
     createdAt: today(8, 30),
     attachment: {
       kind: "file",
-      name: "Rapport_conformite_S32_EFIBEC.pdf",
+      name: "Rapport_conformite_S32_comptable.pdf",
       size: "1,1 Mo",
       pages: 6,
     },
@@ -209,7 +209,7 @@ export const seedMessages: ChatSeedMessage[] = [
     roomId: "room-direction",
     senderId: "sec-souad",
     senderName: "Souad Bahri (secrétariat)",
-    body: "Export EFIBEC de la semaine transmis au cabinet comptable.",
+    body: "Export comptable de la semaine transmis au cabinet comptable.",
     createdAt: today(8, 47),
   },
 

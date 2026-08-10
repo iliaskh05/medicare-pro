@@ -8,7 +8,7 @@ export type RoleProfile = {
   fonction: string;
   initiales: string;
   nom: string;
-  /** Accès à l'export comptable / EFIBEC */
+  /** Accès à l'export comptable */
   canExportCompta: boolean;
   /** Accès à la validation des anomalies de facturation */
   canValiderAnomalie: boolean;
@@ -19,7 +19,7 @@ export const roleProfiles: Record<AppRole, RoleProfile> = {
     id: "directeur",
     label: "Directeur (Admin)",
     fonction: "Direction du centre",
-    nom: "Dr. Yassine Alaoui",
+    nom: "Mr Adnane",
     initiales: "YA",
     canExportCompta: true,
     canValiderAnomalie: true,

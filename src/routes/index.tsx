@@ -21,20 +21,20 @@ import centreRadiologie from "@/assets/centre-radiologie.jpg";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Connexion — RadioCRM Centre d'Imagerie Al Amal" },
+      { title: "Connexion — RadioCRM Centre d'Imagerie Médicale" },
       {
         name: "description",
         content:
-          "Accédez à RadioCRM, la plateforme du Centre d'Imagerie Al Amal : patients, facturation MAD, imagerie et détection de fraude par IA.",
+          "Accédez à RadioCRM, la plateforme du Centre d'Imagerie Médicale : patients, facturation MAD, imagerie et détection de fraude par IA.",
       },
       {
         property: "og:title",
-        content: "Connexion — RadioCRM Centre d'Imagerie Al Amal",
+        content: "Connexion — RadioCRM Centre d'Imagerie Médicale",
       },
       {
         property: "og:description",
         content:
-          "Plateforme sécurisée de gestion du centre de radiologie Al Amal, Casablanca.",
+          "Plateforme sécurisée de gestion du centre d'imagerie médicale, Casablanca.",
       },
     ],
   }),
@@ -58,7 +58,7 @@ const atouts = [
     icon: Activity,
     titre: "Automatisation du parcours",
     detail:
-      "Chatbot WhatsApp, planning intelligent et export comptable EFIBEC.",
+      "Chatbot WhatsApp, planning intelligent et export comptable.",
   },
 ];
 
@@ -84,7 +84,7 @@ function LoginPage() {
           <div className="flex size-11 items-center justify-center rounded-xl bg-primary-foreground/10 ring-1 ring-inset ring-primary-foreground/20 backdrop-blur">
             <img
               src={logoRadioCrm}
-              alt="Logo RadioCRM — Centre d'Imagerie Al Amal"
+              alt="Logo RadioCRM — Centre d'Imagerie Médicale"
               width={512}
               height={512}
               className="size-7"
@@ -104,14 +104,14 @@ function LoginPage() {
             RadioCRM
           </h1>
           <p className="mt-3 text-lg font-semibold text-primary-foreground/85">
-            Centre d'Imagerie Al Amal
+            Centre d'Imagerie Médicale
           </p>
 
           {/* Photo du centre + slogan */}
           <figure className="relative mt-6 overflow-hidden rounded-2xl ring-1 ring-inset ring-primary-foreground/15">
             <img
               src={centreRadiologie}
-              alt="Salle d'IRM du Centre d'Imagerie Al Amal à Casablanca"
+              alt="Salle d'IRM du Centre d'Imagerie Médicale à Casablanca"
               width={1280}
               height={960}
               className="h-52 w-full object-cover xl:h-60"
@@ -171,14 +171,14 @@ function LoginPage() {
               <div>
                 <p className="text-sm font-bold tracking-tight">RadioCRM</p>
                 <p className="text-xs text-muted-foreground">
-                  Centre d'Imagerie Al Amal
+                  Centre d'Imagerie Médicale
                 </p>
               </div>
             </div>
             <figure className="relative mt-5 overflow-hidden rounded-2xl">
               <img
                 src={centreRadiologie}
-                alt="Salle d'IRM du Centre d'Imagerie Al Amal"
+                alt="Salle d'IRM du Centre d'Imagerie Médicale"
                 width={1280}
                 height={960}
                 className="h-36 w-full object-cover"

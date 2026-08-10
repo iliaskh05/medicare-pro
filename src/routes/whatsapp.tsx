@@ -29,13 +29,13 @@ import {
 export const Route = createFileRoute("/whatsapp")({
   head: () => ({
     meta: [
-      { title: "Chatbot WhatsApp patients — Centre Al Amal" },
+      { title: "Chatbot WhatsApp patients — Centre d'Imagerie Médicale" },
       {
         name: "description",
         content:
-          "Console WhatsApp du centre d'imagerie Al Amal : conversations patients traitées par l'IA, prise de rendez-vous et envoi des comptes rendus.",
+          "Console WhatsApp du centre d'imagerie médicale : conversations patients traitées par l'IA, prise de rendez-vous et envoi des comptes rendus.",
       },
-      { property: "og:title", content: "Chatbot WhatsApp patients — Centre Al Amal" },
+      { property: "og:title", content: "Chatbot WhatsApp patients — Centre d'Imagerie Médicale" },
       {
         property: "og:description",
         content: "Console de supervision des conversations WhatsApp automatisées avec les patients.",
