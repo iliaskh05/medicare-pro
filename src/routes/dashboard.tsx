@@ -41,6 +41,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useRole } from "@/hooks/use-role";
+import { DocumentMenu } from "@/components/document-menu";
 import { PageHeader, Pill, IconTile } from "@/components/ui-kit";
 import { ProbabilityBar } from "@/components/probability-gauge";
 import {
@@ -88,6 +89,7 @@ const kpis = [
     positive: true,
     icon: Wallet,
     tone: "success" as const,
+    finance: true,
   },
   {
     label: "Examens en attente",
@@ -104,6 +106,7 @@ const kpis = [
     positive: false,
     icon: AlertTriangle,
     tone: "destructive" as const,
+    finance: true,
   },
 ];
 
@@ -189,6 +192,7 @@ function Dashboard() {
   };
 
   const { profile } = useRole();
+  const visibleKpis = kpis.filter((k) => !("finance" in k && k.finance) || profile.canSeeFinance);
   return (
 
     <div className="space-y-6">
@@ -196,7 +200,8 @@ function Dashboard() {
         title="Tableau de bord"
         subtitle="Mercredi 5 août 2026 · Centre d'Imagerie Médicale, Casablanca"
         actions={
-          <>
+          <div data-tour="actions" className="flex flex-wrap items-center gap-2">
+            <DocumentMenu />
             <Dialog open={botOpen} onOpenChange={setBotOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline">
@@ -260,12 +265,22 @@ function Dashboard() {
             <Button asChild>
               <Link to="/facturation">Nouvel acte</Link>
             </Button>
-          </>
+            {profile.canExportCompta ? (
+              <Button variant="secondary" disabled={exporting} onClick={exportComptable}>
+                {exporting ? (
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                ) : (
+                  <FileSpreadsheet className="mr-2 size-4" />
+                )}
+                Export comptable
+              </Button>
+            ) : null}
+          </div>
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {kpis.map((kpi) => (
+      <div data-tour="kpis" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {visibleKpis.map((kpi) => (
           <Card key={kpi.label}>
             <CardContent className="flex items-start gap-4 p-5">
               <IconTile tone={kpi.tone}>
@@ -332,6 +347,7 @@ function Dashboard() {
         </Card>
 
         {/* Widget 2 — Urgences Fraude & Anomalies */}
+        {profile.canSeeFinance ? (
         <Card className="lg:col-span-1">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
@@ -369,8 +385,10 @@ function Dashboard() {
             ))}
           </CardContent>
         </Card>
+        ) : null}
 
         {/* Widget 3 — Synchronisation Comptable */}
+        {profile.canSeeFinance ? (
         <Card className="lg:col-span-1">
           <CardHeader className="pb-3">
             <div className="flex items-center gap-3">
@@ -429,6 +447,7 @@ function Dashboard() {
             )}
           </CardContent>
         </Card>
+        ) : null}
       </div>
 
       <div className="grid gap-4 lg:grid-cols-5">
@@ -472,6 +491,7 @@ function Dashboard() {
           </CardContent>
         </Card>
 
+        {profile.canSeeFinance ? (
         <Card className="lg:col-span-2">
           <CardHeader className="flex-row items-center justify-between">
             <CardTitle>Dernières alertes détectées</CardTitle>
@@ -499,15 +519,9 @@ function Dashboard() {
             ))}
           </CardContent>
         </Card>
+        ) : null}
       </div>
 
-      <footer className="flex items-start gap-2 border-t border-border pt-5 text-xs text-muted-foreground">
-        <ShieldCheck className="mt-0.5 size-4 shrink-0 text-success" />
-        <p>
-          Hébergement sécurisé HDS — Conforme aux directives de la CNDP (Loi 09-08) sur la
-          protection des données médicales personnelles.
-        </p>
-      </footer>
     </div>
   );
 }
