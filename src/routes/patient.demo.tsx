@@ -725,9 +725,9 @@ function PatientRecordPage() {
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex min-w-0 items-center gap-2">
                           <AlertTriangle className={cn("size-4 shrink-0", m.text)} />
-                          <p className="truncate text-sm font-bold">{a.titre}</p>
+                          <p className="text-sm font-bold leading-snug">{a.titre}</p>
                         </div>
-                        <Pill tone={m.tone}>{m.label}</Pill>
+                        <Pill tone={m.tone} className="shrink-0">{m.label}</Pill>
                       </div>
                       <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
                         {a.detail}
