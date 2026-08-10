@@ -340,7 +340,7 @@ function RiskDonut({ value, blocked }: { value: number; blocked: boolean }) {
             stroke="var(--muted)"
             strokeWidth={stroke}
           />
-      <SimulationNotice contexte="Dossier, analyses et scores de fraude entièrement fictifs (démonstration)." />
+          <SimulationNotice contexte="Dossier, analyses et scores de fraude entièrement fictifs (démonstration)." />
           <circle
             cx={size / 2}
             cy={size / 2}

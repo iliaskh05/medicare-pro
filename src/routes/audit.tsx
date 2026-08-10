@@ -130,7 +130,7 @@ function ScoreMeter({ score }: { score: number }) {
           className={`h-full rounded-full transition-all duration-500 ${riskBarClass[tone]}`}
           style={{ width: `${score}%` }}
         />
-      <SimulationNotice contexte="Scores de risque et clusters produits par un modèle de démonstration sur des factures fictives." />
+        <SimulationNotice contexte="Scores de risque et clusters produits par un modèle de démonstration sur des factures fictives." />
       </div>
       <Pill tone={tone}>
         {score}% · {riskLabel(score)}
