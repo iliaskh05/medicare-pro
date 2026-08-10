@@ -184,6 +184,7 @@ function LoginPage() {
                 height={960}
                 className="h-36 w-full object-cover"
               />
+              <div aria-hidden className="absolute inset-0 bg-black/40" />
               <div
                 aria-hidden
                 className="absolute inset-0 bg-gradient-to-t from-[oklch(0.18_0.05_264)]/95 to-transparent"
