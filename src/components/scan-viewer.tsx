@@ -99,6 +99,31 @@ export function ScanViewer({ scan }: { scan: Scan }) {
               className="size-full object-cover"
               style={{ filter: `contrast(${contraste}%)` }}
             />
+            {calqueIA ? (
+              <svg
+                viewBox="0 0 100 100"
+                preserveAspectRatio="none"
+                className="pointer-events-none absolute inset-0 size-full"
+                aria-hidden
+              >
+                <path
+                  d="M38 42 C44 33, 60 33, 66 43 C72 53, 66 66, 54 68 C42 70, 33 60, 36 50 Z"
+                  fill="var(--destructive)"
+                  fillOpacity="0.16"
+                  stroke="var(--destructive)"
+                  strokeWidth="0.9"
+                  strokeDasharray="3 1.5"
+                  className="animate-pulse"
+                />
+                <path
+                  d="M56 52 C60 48, 68 50, 69 56 C70 62, 63 65, 59 61 Z"
+                  fill="none"
+                  stroke="var(--destructive)"
+                  strokeWidth="0.7"
+                />
+              </svg>
+            ) : null}
+
             {surbrillance
               ? scan.annotations.map((a) => {
                   const isActive = a.id === activeId;
