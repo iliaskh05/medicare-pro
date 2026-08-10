@@ -25,6 +25,7 @@ export function ScanViewer({ scan }: { scan: Scan }) {
   const [zoom, setZoom] = useState(1);
   const [contraste, setContraste] = useState(100);
   const [surbrillance, setSurbrillance] = useState(true);
+  const [calqueIA, setCalqueIA] = useState(true);
   const [activeId, setActiveId] = useState<string | null>(scan.annotations[0]?.id ?? null);
 
   const reset = () => {
@@ -182,6 +183,18 @@ export function ScanViewer({ scan }: { scan: Scan }) {
             Surbrillance des analyses IA
           </Label>
           <Switch id="surbrillance" checked={surbrillance} onCheckedChange={setSurbrillance} />
+        </div>
+
+        <div className="flex items-center justify-between rounded-xl border border-border bg-card px-3 py-2.5">
+          <div>
+            <Label htmlFor="calque-ia" className="text-sm">
+              Activer le calque IA
+            </Label>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
+              Segmentation automatique (contour rouge)
+            </p>
+          </div>
+          <Switch id="calque-ia" checked={calqueIA} onCheckedChange={setCalqueIA} />
         </div>
 
         <ul className="space-y-2">
