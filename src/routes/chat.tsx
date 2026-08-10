@@ -22,7 +22,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useChatSocket, useEventSource } from "@/hooks/use-realtime";
 import { apiFetch } from "@/lib/api-client";
@@ -252,10 +252,7 @@ function ChatPage() {
 
   const senderId = `local-${profile.id}`;
 
-  const channels = useMemo(
-    () => [...groupesTravail, ...discussionsPrivees],
-    [],
-  );
+  const channels = useMemo(() => [...groupesTravail, ...discussionsPrivees], []);
   const activeChannel = channels.find((c) => c.id === roomId) ?? channels[0]!;
   const isGroup = groupesTravail.some((g) => g.id === activeChannel.id);
 
@@ -298,18 +295,14 @@ function ChatPage() {
     }
   });
 
-  const remote = Array.isArray(messagesQuery.data?.messages)
-    ? messagesQuery.data!.messages
-    : [];
+  const remote = Array.isArray(messagesQuery.data?.messages) ? messagesQuery.data!.messages : [];
 
   const timeline = useMemo(() => {
     const merged: LocalMessage[] = [
       ...local.filter((m) => m.roomId === roomId),
       ...remote.map((m) => ({ ...m }) as LocalMessage),
     ];
-    return merged.sort(
-      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
-    );
+    return merged.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
   }, [local, remote, roomId]);
 
   useEffect(() => {
@@ -397,7 +390,11 @@ function ChatPage() {
         subtitle="Discussions privées et groupes de travail — radiologues, techniciens & direction"
         actions={
           <div className="flex items-center gap-2">
-            <Pill tone={transportLabel === "WebSocket" || transportLabel === "SSE" ? "success" : "warning"}>
+            <Pill
+              tone={
+                transportLabel === "WebSocket" || transportLabel === "SSE" ? "success" : "warning"
+              }
+            >
               <Radio className="mr-1 size-3" />
               {transportLabel}
             </Pill>
@@ -526,50 +523,52 @@ function ChatPage() {
                 sendMut.mutate();
               }}
             >
-              <div className="flex items-center gap-1">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      aria-label="Joindre une image"
-                      onClick={() => joindre("image")}
-                    >
-                      <ImageIcon className="size-5 text-primary" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Joindre une image / capture PACS</TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      aria-label="Enregistrer un message vocal"
-                      onClick={() => joindre("audio")}
-                    >
-                      <Mic className="size-5 text-success" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Dictée / message vocal</TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      aria-label="Joindre un document PDF"
-                      onClick={() => joindre("file")}
-                    >
-                      <FileText className="size-5 text-destructive" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Joindre un compte rendu PDF</TooltipContent>
-                </Tooltip>
-              </div>
+              <TooltipProvider delayDuration={200}>
+                <div className="flex items-center gap-1">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Joindre une image"
+                        onClick={() => joindre("image")}
+                      >
+                        <ImageIcon className="size-5 text-primary" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Joindre une image / capture PACS</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Enregistrer un message vocal"
+                        onClick={() => joindre("audio")}
+                      >
+                        <Mic className="size-5 text-success" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Dictée / message vocal</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Joindre un document PDF"
+                        onClick={() => joindre("file")}
+                      >
+                        <FileText className="size-5 text-destructive" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Joindre un compte rendu PDF</TooltipContent>
+                  </Tooltip>
+                </div>
+              </TooltipProvider>
 
               <Input
                 value={body}
