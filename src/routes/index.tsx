@@ -142,7 +142,9 @@ function PlanningHeatmap({ data }: { data: PlanningSlot[] }) {
 }
 
 function Dashboard() {
+  const { profile } = useRole();
   return (
+
     <div className="space-y-6">
       <PageHeader
         title="Tableau de bord"
