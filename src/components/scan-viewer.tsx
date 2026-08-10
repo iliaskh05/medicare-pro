@@ -185,7 +185,10 @@ export function ScanViewer({ scan }: { scan: Scan }) {
           <Switch id="surbrillance" checked={surbrillance} onCheckedChange={setSurbrillance} />
         </div>
 
-        <div className="flex items-center justify-between rounded-xl border border-border bg-card px-3 py-2.5">
+        <div
+          data-tour="ai-layer"
+          className="flex items-center justify-between rounded-xl border border-border bg-card px-3 py-2.5"
+        >
           <div>
             <Label htmlFor="calque-ia" className="text-sm">
               Activer le calque IA

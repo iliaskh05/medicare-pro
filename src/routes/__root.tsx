@@ -9,6 +9,10 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
+import { ShieldCheck } from "lucide-react";
+
+import { TourProvider } from "@/components/guided-tour";
+
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -155,22 +159,32 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <RoleProvider>
         <AppStoreProvider>
-          <SidebarProvider>
-            <div className="flex min-h-screen w-full bg-background">
-              <AppSidebar />
-              <div className="flex min-w-0 flex-1 flex-col">
-                <AppHeader />
-                <main className="flex-1 px-3 py-5 sm:px-6 sm:py-7">
-                  {/* Required: nested routes render here. */}
-                  <Outlet />
-                </main>
+          <TourProvider>
+            <SidebarProvider>
+              <div className="flex min-h-screen w-full bg-background">
+                <AppSidebar />
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <AppHeader />
+                  <main className="flex-1 px-3 py-5 sm:px-6 sm:py-7">
+                    {/* Required: nested routes render here. */}
+                    <Outlet />
+                  </main>
+                  <footer className="border-t border-border px-3 py-4 sm:px-6">
+                    <p className="flex items-start gap-2 text-xs text-muted-foreground">
+                      <ShieldCheck className="mt-0.5 size-4 shrink-0 text-success" />
+                      Hébergement sécurisé HDS - Conforme aux directives de la CNDP (Loi 09-08) sur
+                      la protection des données.
+                    </p>
+                  </footer>
+                </div>
               </div>
-            </div>
-          </SidebarProvider>
-          <MessagerieDock />
+            </SidebarProvider>
+            <MessagerieDock />
+          </TourProvider>
         </AppStoreProvider>
       </RoleProvider>
       <Toaster />
     </QueryClientProvider>
   );
 }
+
