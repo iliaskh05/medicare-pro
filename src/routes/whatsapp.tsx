@@ -91,7 +91,7 @@ function WhatsAppPage() {
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Card className="shadow-none">
+        <Card>
           <CardContent className="flex items-start gap-4 p-5">
             <IconTile tone="primary">
               <MessageCircle className="size-5" />
@@ -105,7 +105,7 @@ function WhatsAppPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="shadow-none">
+        <Card>
           <CardContent className="flex items-start gap-4 p-5">
             <IconTile tone="success">
               <CheckCircle2 className="size-5" />
@@ -121,7 +121,7 @@ function WhatsAppPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="shadow-none">
+        <Card>
           <CardContent className="flex items-start gap-4 p-5">
             <IconTile tone="warning">
               <UserRound className="size-5" />
@@ -135,7 +135,7 @@ function WhatsAppPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="shadow-none">
+        <Card>
           <CardContent className="flex items-start gap-4 p-5">
             <IconTile tone="neutral">
               <Timer className="size-5" />
@@ -154,7 +154,7 @@ function WhatsAppPage() {
         </Card>
       </div>
 
-      <Card className="shadow-none">
+      <Card>
         <CardHeader>
           <CardTitle>Volume de conversations sur 7 jours</CardTitle>
         </CardHeader>
@@ -181,7 +181,7 @@ function WhatsAppPage() {
         </CardContent>
       </Card>
 
-      <Card className="shadow-none">
+      <Card>
         <CardHeader className="flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle>Interactions récentes</CardTitle>
           <div className="flex flex-col gap-2 sm:flex-row">

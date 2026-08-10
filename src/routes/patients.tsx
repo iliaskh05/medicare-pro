@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Search, UserPlus, FileText, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, SearchX, UserPlus, FileText, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 
 import { Card, CardContent } from "@/components/ui/card";
@@ -31,8 +31,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { PageHeader, Pill } from "@/components/ui-kit";
-import { patients, typesExamen, type Mutuelle } from "@/data/mock";
+import { PageHeader, Pill, EmptyState } from "@/components/ui-kit";
+import { typesExamen, type Mutuelle } from "@/data/mock";
+import { useAppStore } from "@/store/app-store";
 
 export const Route = createFileRoute("/patients")({
   head: () => ({
@@ -62,11 +63,47 @@ const mutuelleTone: Record<Mutuelle, "primary" | "success" | "warning" | "neutra
 
 const PAGE_SIZE = 8;
 
+const emptyDraft = {
+  nom: "",
+  cin: "",
+  telephone: "",
+  naissance: "",
+  mutuelle: "AMO" as Mutuelle,
+  dernierExamen: "",
+};
+
+function ageFromBirthDate(value: string): number {
+  const birth = new Date(value);
+  if (Number.isNaN(birth.getTime())) return 0;
+  const diff = Date.now() - birth.getTime();
+  return Math.max(0, Math.floor(diff / (365.25 * 24 * 3600 * 1000)));
+}
+
 function PatientsPage() {
+  const { patients, addPatient } = useAppStore();
   const [query, setQuery] = useState("");
   const [mutuelle, setMutuelle] = useState<string>("toutes");
   const [page, setPage] = useState(1);
   const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState(emptyDraft);
+
+  const canSubmit = draft.nom.trim() !== "" && draft.cin.trim() !== "";
+
+  const submitDraft = () => {
+    const created = addPatient({
+      nom: draft.nom.trim(),
+      cin: draft.cin.trim().toUpperCase(),
+      age: ageFromBirthDate(draft.naissance),
+      telephone: draft.telephone.trim() || "—",
+      mutuelle: draft.mutuelle,
+      ville: "Casablanca",
+      dernierExamen: draft.dernierExamen || "À planifier",
+    });
+    setDraft(emptyDraft);
+    setOpen(false);
+    setPage(1);
+    toast.success(`Dossier ${created.id} créé pour ${created.nom}`);
+  };
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -79,7 +116,7 @@ function PatientsPage() {
       const matchM = mutuelle === "toutes" || p.mutuelle === mutuelle;
       return matchQ && matchM;
     });
-  }, [query, mutuelle]);
+  }, [patients, query, mutuelle]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const current = Math.min(page, pageCount);
@@ -107,23 +144,46 @@ function PatientsPage() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2 sm:col-span-2">
                   <Label htmlFor="nom">Nom complet</Label>
-                  <Input id="nom" placeholder="Ex. Youssef El Amrani" />
+                  <Input
+                    id="nom"
+                    placeholder="Ex. Youssef El Amrani"
+                    value={draft.nom}
+                    onChange={(e) => setDraft((d) => ({ ...d, nom: e.target.value }))}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="cin">CIN</Label>
-                  <Input id="cin" placeholder="Ex. BE884512" />
+                  <Input
+                    id="cin"
+                    placeholder="Ex. BE884512"
+                    value={draft.cin}
+                    onChange={(e) => setDraft((d) => ({ ...d, cin: e.target.value }))}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="tel">Téléphone</Label>
-                  <Input id="tel" placeholder="06 61 23 45 78" />
+                  <Input
+                    id="tel"
+                    placeholder="06 61 23 45 78"
+                    value={draft.telephone}
+                    onChange={(e) => setDraft((d) => ({ ...d, telephone: e.target.value }))}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="naissance">Date de naissance</Label>
-                  <Input id="naissance" type="date" />
+                  <Input
+                    id="naissance"
+                    type="date"
+                    value={draft.naissance}
+                    onChange={(e) => setDraft((d) => ({ ...d, naissance: e.target.value }))}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>Mutuelle</Label>
-                  <Select defaultValue="AMO">
+                  <Select
+                    value={draft.mutuelle}
+                    onValueChange={(v) => setDraft((d) => ({ ...d, mutuelle: v as Mutuelle }))}
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -137,7 +197,10 @@ function PatientsPage() {
                 </div>
                 <div className="space-y-2 sm:col-span-2">
                   <Label>Examen prévu</Label>
-                  <Select>
+                  <Select
+                    value={draft.dernierExamen}
+                    onValueChange={(v) => setDraft((d) => ({ ...d, dernierExamen: v }))}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Sélectionner un examen" />
                     </SelectTrigger>
@@ -155,12 +218,7 @@ function PatientsPage() {
                 <Button variant="outline" onClick={() => setOpen(false)}>
                   Annuler
                 </Button>
-                <Button
-                  onClick={() => {
-                    setOpen(false);
-                    toast.success("Dossier patient créé (démonstration)");
-                  }}
-                >
+                <Button disabled={!canSubmit} onClick={submitDraft}>
                   Enregistrer le dossier
                 </Button>
               </DialogFooter>
@@ -169,7 +227,7 @@ function PatientsPage() {
         }
       />
 
-      <Card className="shadow-none">
+      <Card>
         <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
           <div className="relative flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -204,7 +262,7 @@ function PatientsPage() {
         </CardContent>
       </Card>
 
-      <Card className="shadow-none">
+      <Card>
         <CardContent className="px-0 py-0">
           <div className="overflow-x-auto">
             <Table>
@@ -245,9 +303,13 @@ function PatientsPage() {
                   </TableRow>
                 ))}
                 {rows.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
-                      Aucun patient ne correspond à cette recherche.
+                  <TableRow className="hover:bg-transparent">
+                    <TableCell colSpan={7} className="p-0">
+                      <EmptyState
+                        icon={SearchX}
+                        title="Aucun patient trouvé"
+                        description="Aucun dossier ne correspond à cette recherche. Vérifiez l'orthographe ou élargissez le filtre mutuelle."
+                      />
                     </TableCell>
                   </TableRow>
                 ) : null}

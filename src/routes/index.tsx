@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useMemo } from "react";
 import {
   Users,
   Wallet,
@@ -10,6 +11,7 @@ import {
   CalendarDays,
   FileSpreadsheet,
   ShieldAlert,
+  ShieldCheck,
 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,15 +24,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { PageHeader, Pill, IconTile } from "@/components/ui-kit";
+import { PageHeader, Pill, IconTile, EmptyState } from "@/components/ui-kit";
 import { ProbabilityBar } from "@/components/probability-gauge";
+import { formatFrenchDate } from "@/lib/date";
+import { useAppStore } from "@/store/app-store";
+import { anomalyRiskLevel } from "@/utils/anomalyDetection";
 import {
   alertes,
   comptabilite,
   formatMAD,
   planningTension,
   salleAttente,
-  urgencesFraude,
   type PlanningSlot,
 } from "@/data/mock";
 
@@ -53,40 +57,42 @@ export const Route = createFileRoute("/")({
   component: Dashboard,
 });
 
-const kpis = [
-  {
-    label: "Patients du jour",
-    value: "38",
-    hint: "+6 vs hier",
-    positive: true,
-    icon: Users,
-    tone: "primary" as const,
-  },
-  {
-    label: "Chiffre d'affaires mensuel",
-    value: formatMAD(742500),
-    hint: "+12,4 % vs juillet",
-    positive: true,
-    icon: Wallet,
-    tone: "success" as const,
-  },
-  {
-    label: "Examens en attente",
-    value: "14",
-    hint: "3 depuis plus de 45 min",
-    positive: false,
-    icon: Clock,
-    tone: "warning" as const,
-  },
-  {
-    label: "Alertes de facturation",
-    value: "5",
-    hint: "2 critiques à traiter",
-    positive: false,
-    icon: AlertTriangle,
-    tone: "destructive" as const,
-  },
-];
+function buildKpis({ alertes, critiques }: { alertes: number; critiques: number }) {
+  return [
+    {
+      label: "Patients du jour",
+      value: "38",
+      hint: "+6 vs hier",
+      positive: true,
+      icon: Users,
+      tone: "primary" as const,
+    },
+    {
+      label: "Chiffre d'affaires mensuel",
+      value: formatMAD(742500),
+      hint: "+12,4 % vs juillet",
+      positive: true,
+      icon: Wallet,
+      tone: "success" as const,
+    },
+    {
+      label: "Examens en attente",
+      value: "14",
+      hint: "3 depuis plus de 45 min",
+      positive: false,
+      icon: Clock,
+      tone: "warning" as const,
+    },
+    {
+      label: "Alertes de facturation",
+      value: String(alertes),
+      hint: `${critiques} critique(s) à traiter`,
+      positive: alertes === 0,
+      icon: AlertTriangle,
+      tone: "destructive" as const,
+    },
+  ];
+}
 
 const statutTone = {
   "En cours": "primary",
@@ -141,11 +147,23 @@ function PlanningHeatmap({ data }: { data: PlanningSlot[] }) {
 }
 
 function Dashboard() {
+  const { alertesEnAttente, urgences, montantEnJeu } = useAppStore();
+
+  const today = useMemo(() => formatFrenchDate(), []);
+  const kpis = useMemo(
+    () =>
+      buildKpis({
+        alertes: alertesEnAttente.length,
+        critiques: alertesEnAttente.filter((a) => anomalyRiskLevel(a.score) === "critique").length,
+      }),
+    [alertesEnAttente],
+  );
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Tableau de bord"
-        subtitle="Mercredi 5 août 2026 · Centre d'imagerie Al Amal, Casablanca"
+        subtitle={`${today} · Centre d'Imagerie Médicale Al Amal, Casablanca`}
         actions={
           <>
             <Button variant="outline" asChild>
@@ -160,7 +178,7 @@ function Dashboard() {
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {kpis.map((kpi) => (
-          <Card key={kpi.label} className="shadow-none">
+          <Card key={kpi.label}>
             <CardContent className="flex items-start gap-4 p-5">
               <IconTile tone={kpi.tone}>
                 <kpi.icon className="size-5" />
@@ -190,7 +208,7 @@ function Dashboard() {
 
       <div className="grid gap-4 lg:grid-cols-3">
         {/* Widget 1 — Tension du planning */}
-        <Card className="shadow-none lg:col-span-1">
+        <Card className="lg:col-span-1">
           <CardHeader className="pb-3">
             <div className="flex items-center gap-3">
               <IconTile tone="primary">
@@ -226,7 +244,7 @@ function Dashboard() {
         </Card>
 
         {/* Widget 2 — Urgences Fraude & Anomalies */}
-        <Card className="shadow-none lg:col-span-1">
+        <Card className="lg:col-span-1">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -235,7 +253,10 @@ function Dashboard() {
                 </IconTile>
                 <div>
                   <CardTitle className="text-base">Urgences Fraude</CardTitle>
-                  <p className="text-xs text-muted-foreground">3 dernières alertes critiques IA</p>
+                  <p className="text-xs text-muted-foreground">
+                    {alertesEnAttente.length} dossier(s) non traité(s) ·{" "}
+                    {formatMAD(montantEnJeu)} d'écart
+                  </p>
                 </div>
               </div>
               <Button variant="ghost" size="sm" className="h-8 text-xs" asChild>
@@ -244,28 +265,42 @@ function Dashboard() {
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
-            {urgencesFraude.map((u) => (
-              <div
-                key={u.id}
-                className="flex items-center justify-between gap-3 rounded-xl border border-border bg-background p-3"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold">{u.patient}</p>
-                  <p className="text-xs text-muted-foreground">{u.anomalie}</p>
-                  <div className="mt-2">
-                    <ProbabilityBar value={u.score / 100} />
+            {urgences.length === 0 ? (
+              <EmptyState
+                compact
+                icon={ShieldCheck}
+                title="Aucune urgence en attente"
+                description="Tous les dossiers signalés par le moteur IA ont été arbitrés."
+              />
+            ) : (
+              urgences.map((u) => (
+                <div
+                  key={u.id}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-border bg-background p-3 transition-shadow duration-200 hover:shadow-sm"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold">{u.patient}</p>
+                    <p className="truncate text-xs text-muted-foreground">{u.motifs.join(" · ")}</p>
+                    <div className="mt-2">
+                      <ProbabilityBar value={u.score / 100} />
+                    </div>
                   </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 whitespace-nowrap text-xs"
+                    asChild
+                  >
+                    <Link to="/audit">Traiter</Link>
+                  </Button>
                 </div>
-                <Button variant="outline" size="sm" className="h-8 whitespace-nowrap text-xs" asChild>
-                  <Link to="/audit">Traiter</Link>
-                </Button>
-              </div>
-            ))}
+              ))
+            )}
           </CardContent>
         </Card>
 
         {/* Widget 3 — Synchronisation Comptable */}
-        <Card className="shadow-none lg:col-span-1">
+        <Card className="lg:col-span-1">
           <CardHeader className="pb-3">
             <div className="flex items-center gap-3">
               <IconTile tone="success">
@@ -312,7 +347,7 @@ function Dashboard() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-5">
-        <Card className="shadow-none lg:col-span-3">
+        <Card className="lg:col-span-3">
           <CardHeader className="flex-row items-center justify-between">
             <CardTitle>Prochains patients en salle d'attente</CardTitle>
             <Button variant="ghost" size="sm" asChild>
@@ -352,7 +387,7 @@ function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-none lg:col-span-2">
+        <Card className="lg:col-span-2">
           <CardHeader className="flex-row items-center justify-between">
             <CardTitle>Dernières alertes détectées</CardTitle>
             <Button variant="ghost" size="sm" asChild>

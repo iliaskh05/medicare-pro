@@ -8,7 +8,7 @@ export interface ReportInputData {
 }
 
 function getOpenAIClient(): OpenAI {
-  const apiKey = import.meta.env.VITE_OPENAI_API_KEY?.trim();
+  const apiKey = import.meta.env["VITE_OPENAI_API_KEY"]?.trim();
   console.log("[reportService] Clé API présente:", Boolean(apiKey), "| longueur:", apiKey?.length ?? 0);
 
   if (!apiKey) {

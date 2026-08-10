@@ -29,10 +29,9 @@ const items = [
   { title: "Patients", url: "/patients", icon: Users },
   { title: "Actes & Facturation", url: "/facturation", icon: ReceiptText },
   { title: "Visionneuse IA", url: "/viewer", icon: ScanLine },
-  { title: "Visionneuse de scans", url: "/imagerie", icon: ScanLine },
   { title: "Chat médecins", url: "/chat", icon: MessagesSquare },
-  { title: "Chatbot WhatsApp", url: "/whatsapp", icon: MessageCircle },
-  { title: "Médecins prescripteurs", url: "/medecins", icon: Stethoscope },
+  { title: "WhatsApp", url: "/whatsapp", icon: MessageCircle },
+  { title: "Médecins", url: "/medecins", icon: Stethoscope },
   { title: "Audit & Conformité", url: "/audit", icon: ShieldAlert },
 ] as const;
 
@@ -47,8 +46,10 @@ export function AppSidebar() {
             <Scan className="size-5" />
           </div>
           <div className="min-w-0 group-data-[collapsible=icon]:hidden">
-            <p className="truncate text-sm font-bold tracking-tight">Centre Radiologie</p>
-            <p className="truncate text-xs text-muted-foreground">Al Amal · Casablanca</p>
+            <p className="truncate text-sm font-bold tracking-tight">RadioCRM</p>
+            <p className="truncate text-xs text-muted-foreground">
+              Centre d&apos;Imagerie Médicale Al Amal
+            </p>
           </div>
         </div>
       </SidebarHeader>
@@ -80,7 +81,7 @@ export function AppSidebar() {
       <SidebarFooter className="border-t border-sidebar-border">
         <div className="rounded-lg bg-accent px-3 py-2 group-data-[collapsible=icon]:hidden">
           <p className="text-xs font-semibold text-accent-foreground">Module IA Fraude actif</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">Dernier scan : aujourd'hui 08:00</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">Casablanca · Al Amal</p>
         </div>
       </SidebarFooter>
     </Sidebar>

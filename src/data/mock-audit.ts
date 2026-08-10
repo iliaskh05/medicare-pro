@@ -10,10 +10,14 @@ export type TypeExamen =
 export type MotifSuspect =
   | "Montant atypique"
   | "Fréquence rapprochée"
+  | "Fréquence anormale"
+  | "Horaire atypique"
   | "Doublon de saisie"
   | "Acte non prescrit"
   | "Incohérence dossier"
-  | "Mutuelle expirée";
+  | "Mutuelle expirée"
+  | "Signal faible"
+  | "Comportement nominal";
 
 export type StatutAnomalie = "pending" | "confirmed" | "dismissed";
 

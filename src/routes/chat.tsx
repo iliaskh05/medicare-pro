@@ -136,7 +136,7 @@ function ChatPage() {
       />
 
       <div className="grid gap-4 lg:grid-cols-[240px_1fr]">
-        <Card className="shadow-none">
+        <Card>
           <CardHeader>
             <CardTitle className="text-base">Salons</CardTitle>
           </CardHeader>
@@ -157,7 +157,7 @@ function ChatPage() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-none flex min-h-[520px] flex-col">
+        <Card className="flex min-h-[520px] flex-col">
           <CardHeader className="flex-row items-center justify-between space-y-0">
             <CardTitle className="flex items-center gap-2 text-base">
               <MessageSquare className="size-4" />

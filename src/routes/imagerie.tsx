@@ -38,7 +38,7 @@ function ImageriePage() {
       />
 
       <div className="grid gap-4 xl:grid-cols-[16rem_minmax(0,1fr)]">
-        <Card className="shadow-none">
+        <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Examens disponibles</CardTitle>
           </CardHeader>
@@ -79,7 +79,7 @@ function ImageriePage() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-none">
+        <Card>
           <CardHeader className="flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <CardTitle>{active.examen}</CardTitle>

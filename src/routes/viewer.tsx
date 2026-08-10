@@ -5,6 +5,7 @@ import {
   Activity,
   AlertCircle,
   FileText,
+  FolderOpen,
   Loader2,
   ScanLine,
   Sparkles,
@@ -12,7 +13,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { PageHeader, Pill, IconTile } from "@/components/ui-kit";
+import { PageHeader, Pill, IconTile, EmptyState } from "@/components/ui-kit";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,8 +21,11 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { apiFetch, getApiKey } from "@/lib/api-client";
-import { generateStructuredReport } from "@/services/reportService";
-import type { ImageAnalysisResult, ImagingStudy } from "@/server/store/types";
+import type {
+  ImageAnalysisResult,
+  ImagingStudy,
+  StructuredReport,
+} from "@/server/store/types";
 
 export type SelectedStudy = {
   id: string;
@@ -41,6 +45,24 @@ function toSelectedStudy(study: ImagingStudy): SelectedStudy {
     bodyPart: study.bodyPart,
     status: study.status,
   };
+}
+
+function formatStructuredReport(report: StructuredReport): string {
+  return [
+    "1. Renseignements cliniques",
+    report.sections.indication,
+    "",
+    "2. Technique",
+    report.sections.technique,
+    "",
+    "3. Résultats",
+    report.sections.resultats,
+    "",
+    "4. Conclusion",
+    report.sections.conclusion,
+    "",
+    `— ${report.model}${report.draft ? " · brouillon" : ""} · ${report.id}`,
+  ].join("\n");
 }
 
 export const Route = createFileRoute("/viewer")({
@@ -83,6 +105,13 @@ function ViewerPage() {
     }
   }, [studies, selectedStudy]);
 
+  // C5 — révoquer l'object URL au démontage / changement
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
   const detailQuery = useQuery({
     queryKey: ["imaging-study", selectedStudy?.id],
     enabled: !!selectedStudy?.id,
@@ -121,18 +150,10 @@ function ViewerPage() {
   });
 
   const handleGenerateCR = async () => {
-    console.log("[viewer] Clic « Générer le CR »", {
-      selectedStudy,
-      clinicalContext,
-      dictationNotes,
-      isGenerating,
-    });
-
     setErrorMessage(null);
 
     if (!selectedStudy) {
       const msg = "Sélectionnez une étude avant de générer le compte rendu.";
-      console.warn("[viewer] Validation échouée:", msg);
       setErrorMessage(msg);
       toast.error(msg);
       return;
@@ -140,31 +161,29 @@ function ViewerPage() {
 
     if (!dictationNotes.trim()) {
       const msg = "Les notes de dictée sont vides. Saisissez une dictée avant de générer le CR.";
-      console.warn("[viewer] Validation échouée:", msg);
       setErrorMessage(msg);
       toast.error(msg);
       return;
     }
 
-    const payload = {
-      patientName: selectedStudy.patientName,
-      studyType: selectedStudy.studyType,
-      clinicalContext,
-      dictationNotes,
-    };
-
-    console.log("[viewer] Données envoyées à generateStructuredReport:", payload);
     setIsGenerating(true);
     setStructuredReport(null);
 
     try {
-      const report = await generateStructuredReport(payload);
-      console.log("[viewer] Retour API OK — longueur CR:", report.length, "| aperçu:", report.slice(0, 200));
-      setStructuredReport(report);
+      // C2 — génération via API serveur (clé OpenAI non exposée au navigateur)
+      const report = await apiFetch<StructuredReport>("/api/reports/structure", {
+        method: "POST",
+        body: JSON.stringify({
+          studyId: selectedStudy.id,
+          clinicalContext,
+          rawNotes: dictationNotes,
+          draft: true,
+        }),
+      });
+      setStructuredReport(formatStructuredReport(report));
       setErrorMessage(null);
       toast.success("Compte rendu structuré généré");
     } catch (error) {
-      console.error("[viewer] Erreur dans handleGenerateCR (catch):", error);
       const message =
         error instanceof Error
           ? error.message
@@ -172,7 +191,6 @@ function ViewerPage() {
       setErrorMessage(message);
       toast.error(message);
     } finally {
-      console.log("[viewer] Fin handleGenerateCR — isGenerating → false");
       setIsGenerating(false);
     }
   };
@@ -183,7 +201,7 @@ function ViewerPage() {
     <div className="space-y-6">
       <PageHeader
         title="Visionneuse radiologique"
-        subtitle="Pipeline d'analyse d'images + structuration LLM des comptes rendus"
+        subtitle="Pipeline d'analyse d'images + structuration LLM des comptes rendus · Al Amal"
         actions={
           <div className="flex flex-wrap gap-2">
             <Button
@@ -201,10 +219,7 @@ function ViewerPage() {
             <Button
               type="button"
               disabled={!selectedStudy || isGenerating}
-              onClick={() => {
-                console.log("[viewer] onClick bouton Générer le CR déclenché");
-                void handleGenerateCR();
-              }}
+              onClick={() => void handleGenerateCR()}
             >
               {isGenerating ? (
                 <Loader2 className="mr-2 size-4 animate-spin" />
@@ -218,7 +233,7 @@ function ViewerPage() {
       />
 
       <div className="grid gap-4 lg:grid-cols-[280px_1fr_340px]">
-        <Card className="shadow-none">
+        <Card>
           <CardHeader>
             <CardTitle className="text-base">Études</CardTitle>
           </CardHeader>
@@ -226,13 +241,25 @@ function ViewerPage() {
             {studiesQuery.isLoading ? (
               <p className="text-sm text-muted-foreground">Chargement…</p>
             ) : null}
+            {studiesQuery.isError ? (
+              <Alert variant="destructive">
+                <AlertCircle className="size-4" />
+                <AlertTitle>Chargement impossible</AlertTitle>
+                <AlertDescription>
+                  Impossible de récupérer les études. Vérifiez que le serveur est démarré.
+                </AlertDescription>
+              </Alert>
+            ) : null}
             {studies.map((s) => (
               <button
                 key={s.id}
                 type="button"
                 onClick={() => {
                   setSelectedStudy(toSelectedStudy(s));
-                  setPreviewUrl(null);
+                  setPreviewUrl((prev) => {
+                    if (prev) URL.revokeObjectURL(prev);
+                    return null;
+                  });
                   setFile(null);
                   setStructuredReport(null);
                   setErrorMessage(null);
@@ -251,10 +278,18 @@ function ViewerPage() {
                 </div>
               </button>
             ))}
+            {!studiesQuery.isLoading && !studiesQuery.isError && studies.length === 0 ? (
+              <EmptyState
+                compact
+                icon={FolderOpen}
+                title="Aucune étude"
+                description="Aucun examen n'est encore rattaché au centre. Importez une image pour démarrer une analyse."
+              />
+            ) : null}
           </CardContent>
         </Card>
 
-        <Card className="shadow-none overflow-hidden">
+        <Card className="overflow-hidden">
           <CardHeader className="flex-row items-center justify-between space-y-0">
             <CardTitle className="text-base">
               {selectedStudy
@@ -272,7 +307,10 @@ function ViewerPage() {
                   const f = e.target.files?.[0];
                   if (!f) return;
                   setFile(f);
-                  setPreviewUrl(URL.createObjectURL(f));
+                  setPreviewUrl((prev) => {
+                    if (prev) URL.revokeObjectURL(prev);
+                    return URL.createObjectURL(f);
+                  });
                 }}
               />
             </label>
@@ -330,7 +368,7 @@ function ViewerPage() {
         </Card>
 
         <div className="space-y-4">
-          <Card className="shadow-none">
+          <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <ScanLine className="size-4" /> Analyse pipeline
@@ -389,14 +427,17 @@ function ViewerPage() {
                   </p>
                 </>
               ) : (
-                <p className="text-sm text-muted-foreground">
-                  Aucune analyse pour cette étude. Lancez le pipeline IA.
-                </p>
+                <EmptyState
+                  compact
+                  icon={ScanLine}
+                  title="Pas encore d'analyse"
+                  description="Lancez le pipeline IA pour obtenir la qualité d'image, les métriques et les findings de cette étude."
+                />
               )}
             </CardContent>
           </Card>
 
-          <Card className="shadow-none">
+          <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <FileText className="size-4" /> Compte rendu structuré
@@ -414,17 +455,19 @@ function ViewerPage() {
               {isGenerating ? (
                 <div className="flex flex-col items-center justify-center gap-3 py-8 text-muted-foreground">
                   <Loader2 className="size-6 animate-spin text-primary" />
-                  <p>Génération du compte rendu par le LLM…</p>
-                  <p className="text-xs">Ouvrez la console (F12) pour suivre les logs `[viewer]` / `[reportService]`.</p>
+                  <p>Génération du compte rendu via l&apos;API serveur…</p>
                 </div>
               ) : structuredReport ? (
                 <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-muted-foreground">
                   {structuredReport}
                 </pre>
               ) : !errorMessage ? (
-                <p className="text-muted-foreground">
-                  Saisissez une dictée (obligatoire), puis cliquez sur « Générer le CR ».
-                </p>
+                <EmptyState
+                  compact
+                  icon={FileText}
+                  title="Aucun compte rendu"
+                  description="Saisissez une dictée (obligatoire), puis cliquez sur « Générer le CR » pour obtenir un compte rendu structuré par le LLM."
+                />
               ) : null}
             </CardContent>
           </Card>

@@ -70,7 +70,7 @@ function FacturationPage() {
       />
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="shadow-none">
+        <Card>
           <CardHeader className="flex-row items-center gap-3">
             <IconTile tone="primary">
               <Stethoscope className="size-5" />
@@ -139,7 +139,7 @@ function FacturationPage() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-none">
+        <Card>
           <CardHeader className="flex-row items-center gap-3">
             <IconTile tone="success">
               <Wallet className="size-5" />
@@ -226,7 +226,7 @@ function FacturationPage() {
         </Card>
       </div>
 
-      <Card className="shadow-none">
+      <Card>
         <CardHeader>
           <CardTitle>Historique des dernières factures</CardTitle>
           <p className="text-sm text-muted-foreground">8 dernières saisies du secrétariat</p>

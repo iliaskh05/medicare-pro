@@ -64,7 +64,7 @@ function MedecinsPage() {
         }
       />
 
-      <Card className="shadow-none">
+      <Card>
         <CardContent className="p-4">
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -80,7 +80,7 @@ function MedecinsPage() {
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {list.map((m) => (
-          <Card key={m.id} className="shadow-none transition-colors hover:border-primary/40">
+          <Card key={m.id} className="transition-colors hover:border-primary/40">
             <CardHeader className="flex-row items-start gap-3">
               <Avatar className="size-11">
                 <AvatarFallback className="bg-primary/10 text-sm font-semibold text-primary">

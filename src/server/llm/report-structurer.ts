@@ -124,6 +124,14 @@ export async function structureReport(input: StructureReportInput): Promise<Stru
   const study = getStudy(input.studyId);
   const analysis = getAnalysis(input.studyId);
 
+  if (!input.rawNotes?.trim() && !input.clinicalContext?.trim()) {
+    throw new HttpError(
+      400,
+      "Contexte clinique ou notes de dictée requis pour générer le compte rendu.",
+      "missing_notes",
+    );
+  }
+
   const prompt = [
     `Étude: ${study.id}`,
     `Patient: ${study.patientName} (${study.patientId})`,

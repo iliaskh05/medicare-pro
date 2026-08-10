@@ -12,6 +12,7 @@ import {
   ShieldAlert,
   ShieldCheck,
   Search,
+  SearchX,
   SlidersHorizontal,
   Stethoscope,
   TrendingUp,
@@ -62,16 +63,22 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { PageHeader, Pill, IconTile } from "@/components/ui-kit";
+import { PageHeader, Pill, IconTile, EmptyState } from "@/components/ui-kit";
 import { formatMAD } from "@/data/mock";
 import {
-  anomalies as anomaliesSeed,
   auditKpis,
   tendanceAnomalies,
   typesExamen,
   type Anomalie,
   type StatutAnomalie,
 } from "@/data/mock-audit";
+import { useAppStore } from "@/store/app-store";
+import {
+  anomalyRiskLabel,
+  anomalyRiskLevel,
+  anomalyRiskTone,
+  RISK_THRESHOLDS,
+} from "@/utils/anomalyDetection";
 
 export const Route = createFileRoute("/audit")({
   head: () => ({
@@ -100,15 +107,12 @@ export const Route = createFileRoute("/audit")({
 
 const PAGE_SIZE = 6;
 
-const riskTone = (s: number) =>
-  s >= 80 ? "destructive" : s >= 60 ? "warning" : s >= 40 ? "primary" : "success";
-const riskLabel = (s: number) =>
-  s >= 80 ? "Critique" : s >= 60 ? "Élevé" : s >= 40 ? "Modéré" : "Faible";
+const riskTone = anomalyRiskTone;
+const riskLabel = anomalyRiskLabel;
 
-const riskBarClass: Record<string, string> = {
+const riskBarClass: Record<"destructive" | "warning" | "success", string> = {
   destructive: "bg-destructive",
   warning: "bg-warning",
-  primary: "bg-primary",
   success: "bg-success",
 };
 
@@ -120,11 +124,11 @@ function ScoreMeter({ score }: { score: number }) {
     <div className="flex items-center gap-3">
       <div className="h-1.5 w-16 overflow-hidden rounded-full bg-muted">
         <div
-          className={`h-full rounded-full ${riskBarClass[tone]}`}
+          className={`h-full rounded-full transition-all duration-500 ${riskBarClass[tone]}`}
           style={{ width: `${score}%` }}
         />
       </div>
-      <Pill tone={tone as never}>
+      <Pill tone={tone}>
         {score}% · {riskLabel(score)}
       </Pill>
     </div>
@@ -132,8 +136,13 @@ function ScoreMeter({ score }: { score: number }) {
 }
 
 function AuditPage() {
-  const [rowsState, setRowsState] = useState<Anomalie[]>(anomaliesSeed);
-  const [seuil, setSeuil] = useState(60);
+  const {
+    anomalies: rowsState,
+    setAnomalieStatut,
+    seuil,
+    setSeuil,
+    fraudesConfirmees: confirmees,
+  } = useAppStore();
   const [query, setQuery] = useState("");
   const [niveau, setNiveau] = useState("tous");
   const [examen, setExamen] = useState("tous");
@@ -150,9 +159,7 @@ function AuditPage() {
       if (a.score < seuil) return false;
       if (now - new Date(a.date).getTime() > maxAge) return false;
       if (examen !== "tous" && a.typeExamen !== examen) return false;
-      if (niveau === "critique" && a.score < 80) return false;
-      if (niveau === "eleve" && (a.score < 60 || a.score >= 80)) return false;
-      if (niveau === "modere" && a.score >= 60) return false;
+      if (niveau !== "tous" && anomalyRiskLevel(a.score) !== niveau) return false;
       if (
         q &&
         !a.patient.toLowerCase().includes(q) &&
@@ -169,11 +176,21 @@ function AuditPage() {
   const rows = filtered.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE);
 
   const enAttente = rowsState.filter((a) => a.statut === "pending" && a.score >= seuil).length;
-  const confirmees = rowsState.filter((a) => a.statut === "confirmed");
   const montantEnJeu = filtered.reduce((s, a) => s + (a.montant - a.bareme), 0);
 
+  const hasActiveFilters =
+    query.trim() !== "" || niveau !== "tous" || examen !== "tous" || periode !== "30";
+
+  const resetFilters = () => {
+    setQuery("");
+    setNiveau("tous");
+    setExamen("tous");
+    setPeriode("30");
+    setPage(1);
+  };
+
   const setStatut = (id: string, statut: StatutAnomalie) => {
-    setRowsState((prev) => prev.map((a) => (a.id === id ? { ...a, statut } : a)));
+    setAnomalieStatut(id, statut);
     if (statut === "confirmed") {
       toast.success(`${id} confirmée comme fraude — envoyée au réentraînement supervisé`);
     } else {
@@ -234,7 +251,7 @@ function AuditPage() {
 
   const exportPdf = () => {
     toast.success(
-      `Dossier PDF préparé pour le cabinet comptable — ${(confirmees.length || filtered.length)} anomalie(s)`,
+      `Dossier PDF préparé pour le cabinet comptable — ${confirmees.length || filtered.length} anomalie(s)`,
     );
     setTimeout(() => window.print(), 250);
   };
@@ -243,7 +260,7 @@ function AuditPage() {
     <div className="space-y-6">
       <PageHeader
         title="Audit & Conformité — Détection d'anomalies"
-        subtitle="Clustering non supervisé + validation humaine · Centre d'Imagerie Médicale Al Manar, Casablanca"
+        subtitle="Clustering non supervisé + validation humaine · Centre d'Imagerie Médicale Al Amal, Casablanca"
         actions={
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -267,7 +284,7 @@ function AuditPage() {
       />
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="shadow-none">
+        <Card>
           <CardContent className="flex items-start gap-4 p-5">
             <IconTile tone="primary">
               <ShieldCheck className="size-5" />
@@ -286,7 +303,7 @@ function AuditPage() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-none ring-1 ring-inset ring-destructive/20">
+        <Card className="ring-1 ring-inset ring-destructive/20">
           <CardContent className="flex items-start gap-4 p-5">
             <IconTile tone="destructive">
               <ShieldAlert className="size-5" />
@@ -309,7 +326,7 @@ function AuditPage() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-none">
+        <Card>
           <CardContent className="flex items-start gap-4 p-5">
             <IconTile tone="success">
               <Gauge className="size-5" />
@@ -330,7 +347,7 @@ function AuditPage() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="shadow-none lg:col-span-2">
+        <Card className="lg:col-span-2">
           <CardHeader className="flex-row items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-base">
               <TrendingUp className="size-4 text-primary" /> Anomalies détectées par semaine
@@ -382,7 +399,7 @@ function AuditPage() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-none">
+        <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <SlidersHorizontal className="size-4 text-primary" /> Sensibilité de l'IA
@@ -399,7 +416,7 @@ function AuditPage() {
               max={95}
               step={5}
               onValueChange={(v) => {
-                setSeuil(v[0] ?? 60);
+                setSeuil(v[0] ?? RISK_THRESHOLDS.eleve);
                 setPage(1);
               }}
               aria-label="Seuil de sensibilité de l'IA"
@@ -410,14 +427,14 @@ function AuditPage() {
             </div>
             <Separator />
             <p className="text-xs text-muted-foreground">
-              {filtered.length} dossier(s) au-dessus du seuil · {confirmees.length} fraude(s)
+              {filtered.length} dossier(s) au-dessus du seuil — {confirmees.length} fraude(s)
               confirmée(s) prête(s) à l'export.
             </p>
           </CardContent>
         </Card>
       </div>
 
-      <Card className="shadow-none">
+      <Card>
         <CardHeader className="flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <CardTitle className="text-base">Dossiers signalés</CardTitle>
           <div className="grid gap-2 sm:grid-cols-2 lg:flex lg:flex-row">
@@ -445,9 +462,11 @@ function AuditPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="tous">Tous les risques</SelectItem>
-                <SelectItem value="critique">Critique (≥ 80)</SelectItem>
-                <SelectItem value="eleve">Élevé (60–79)</SelectItem>
-                <SelectItem value="modere">Modéré (&lt; 60)</SelectItem>
+                <SelectItem value="critique">Critique (&gt; {RISK_THRESHOLDS.critique})</SelectItem>
+                <SelectItem value="eleve">
+                  Élevé ({RISK_THRESHOLDS.eleve + 1}-{RISK_THRESHOLDS.critique})
+                </SelectItem>
+                <SelectItem value="faible">Faible (&le; {RISK_THRESHOLDS.eleve})</SelectItem>
               </SelectContent>
             </Select>
             <Select
@@ -524,9 +543,7 @@ function AuditPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <p className="text-sm font-semibold">{formatMAD(a.montant)}</p>
-                      <p className="text-xs text-muted-foreground">
-                        barème {formatMAD(a.bareme)}
-                      </p>
+                      <p className="text-xs text-muted-foreground">barème {formatMAD(a.bareme)}</p>
                     </TableCell>
                     <TableCell>
                       <ScoreMeter score={a.score} />
@@ -534,7 +551,7 @@ function AuditPage() {
                     <TableCell className="max-w-[200px]">
                       <div className="flex flex-wrap gap-1.5">
                         {a.motifs.map((m) => (
-                          <Pill key={m} tone={a.score >= 80 ? "destructive" : "warning"}>
+                          <Pill key={m} tone={riskTone(a.score)}>
                             {m}
                           </Pill>
                         ))}
@@ -574,9 +591,28 @@ function AuditPage() {
                   </TableRow>
                 ))}
                 {rows.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="py-12 text-center text-muted-foreground">
-                      Aucune anomalie au-dessus de {seuil}% pour ces filtres.
+                  <TableRow className="hover:bg-transparent">
+                    <TableCell colSpan={6} className="p-0">
+                      <EmptyState
+                        icon={hasActiveFilters ? SearchX : ShieldCheck}
+                        title={
+                          hasActiveFilters
+                            ? "Aucun dossier ne correspond aux filtres"
+                            : "Aucune anomalie au-dessus du seuil"
+                        }
+                        description={
+                          hasActiveFilters
+                            ? `Aucun dossier au-dessus de ${seuil} % avec ces critères. Élargissez la période ou abaissez le seuil de sensibilité.`
+                            : `Le moteur de clustering ne signale aucun dossier au-delà de ${seuil} % de risque sur la période analysée.`
+                        }
+                        action={
+                          hasActiveFilters ? (
+                            <Button variant="outline" size="sm" onClick={resetFilters}>
+                              Réinitialiser les filtres
+                            </Button>
+                          ) : null
+                        }
+                      />
                     </TableCell>
                   </TableRow>
                 ) : null}
@@ -638,7 +674,7 @@ function AuditPage() {
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {detail.motifs.map((m) => (
-                  <Pill key={m} tone="warning">
+                  <Pill key={m} tone={riskTone(detail.score)}>
                     {m}
                   </Pill>
                 ))}
