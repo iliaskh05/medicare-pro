@@ -35,7 +35,7 @@ import {
   type PlanningSlot,
 } from "@/data/mock";
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/dashboard")({
   head: () => ({
     meta: [
       { title: "Tableau de bord — RadioCRM Centre Al Amal" },

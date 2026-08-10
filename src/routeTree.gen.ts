@@ -9,9 +9,9 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuditRouteImport } from './routes/audit'
 import { Route as ChatRouteImport } from './routes/chat'
+import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as FacturationRouteImport } from './routes/facturation'
 import { Route as ImagerieRouteImport } from './routes/imagerie'
 import { Route as MedecinsRouteImport } from './routes/medecins'
@@ -34,11 +34,6 @@ import { Route as ApiWhatsappInboxRouteImport } from './routes/api/whatsapp/inbo
 import { Route as ApiWhatsappWebhookRouteImport } from './routes/api/whatsapp/webhook'
 import { Route as ApiImagingStudiesStudyIdRouteImport } from './routes/api/imaging/studies.$studyId'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AuditRoute = AuditRouteImport.update({
   id: '/audit',
   path: '/audit',
@@ -47,6 +42,11 @@ const AuditRoute = AuditRouteImport.update({
 const ChatRoute = ChatRouteImport.update({
   id: '/chat',
   path: '/chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FacturationRoute = FacturationRouteImport.update({
@@ -157,9 +157,9 @@ const ApiImagingStudiesStudyIdRoute =
   } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
   '/audit': typeof AuditRoute
   '/chat': typeof ChatRoute
+  '/dashboard': typeof DashboardRoute
   '/facturation': typeof FacturationRoute
   '/imagerie': typeof ImagerieRoute
   '/medecins': typeof MedecinsRoute
@@ -183,9 +183,9 @@ export interface FileRoutesByFullPath {
   '/api/imaging/studies/$studyId': typeof ApiImagingStudiesStudyIdRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
   '/audit': typeof AuditRoute
   '/chat': typeof ChatRoute
+  '/dashboard': typeof DashboardRoute
   '/facturation': typeof FacturationRoute
   '/imagerie': typeof ImagerieRoute
   '/medecins': typeof MedecinsRoute
@@ -210,9 +210,9 @@ export interface FileRoutesByTo {
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
   '/audit': typeof AuditRoute
   '/chat': typeof ChatRoute
+  '/dashboard': typeof DashboardRoute
   '/facturation': typeof FacturationRoute
   '/imagerie': typeof ImagerieRoute
   '/medecins': typeof MedecinsRoute
@@ -238,9 +238,9 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | '/'
     | '/audit'
     | '/chat'
+    | '/dashboard'
     | '/facturation'
     | '/imagerie'
     | '/medecins'
@@ -264,9 +264,9 @@ export interface FileRouteTypes {
     | '/api/imaging/studies/$studyId'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/'
     | '/audit'
     | '/chat'
+    | '/dashboard'
     | '/facturation'
     | '/imagerie'
     | '/medecins'
@@ -290,9 +290,9 @@ export interface FileRouteTypes {
     | '/api/imaging/studies/$studyId'
   id:
     | '__root__'
-    | '/'
     | '/audit'
     | '/chat'
+    | '/dashboard'
     | '/facturation'
     | '/imagerie'
     | '/medecins'
@@ -317,9 +317,9 @@ export interface FileRouteTypes {
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
   AuditRoute: typeof AuditRoute
   ChatRoute: typeof ChatRoute
+  DashboardRoute: typeof DashboardRoute
   FacturationRoute: typeof FacturationRoute
   ImagerieRoute: typeof ImagerieRoute
   MedecinsRoute: typeof MedecinsRoute
@@ -344,13 +344,6 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/audit': {
       id: '/audit'
       path: '/audit'
@@ -363,6 +356,13 @@ declare module '@tanstack/react-router' {
       path: '/chat'
       fullPath: '/chat'
       preLoaderRoute: typeof ChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/facturation': {
@@ -527,9 +527,9 @@ const ApiImagingStudiesRouteWithChildren =
   ApiImagingStudiesRoute._addFileChildren(ApiImagingStudiesRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
   AuditRoute: AuditRoute,
   ChatRoute: ChatRoute,
+  DashboardRoute: DashboardRoute,
   FacturationRoute: FacturationRoute,
   ImagerieRoute: ImagerieRoute,
   MedecinsRoute: MedecinsRoute,
