@@ -1,6 +1,6 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 
-export type AppRole = "directeur" | "radiologue" | "secretaire";
+export type AppRole = "directeur" | "radiologue";
 
 export type RoleProfile = {
   id: AppRole;
@@ -12,17 +12,20 @@ export type RoleProfile = {
   canExportCompta: boolean;
   /** Accès à la validation des anomalies de facturation */
   canValiderAnomalie: boolean;
+  /** Accès aux données financières (CA, factures, fraude caisse) */
+  canSeeFinance: boolean;
 };
 
 export const roleProfiles: Record<AppRole, RoleProfile> = {
   directeur: {
     id: "directeur",
-    label: "Directeur (Admin)",
+    label: "Directeur (Mr Adnane)",
     fonction: "Direction du centre",
     nom: "Mr Adnane",
     initiales: "MA",
     canExportCompta: true,
     canValiderAnomalie: true,
+    canSeeFinance: true,
   },
   radiologue: {
     id: "radiologue",
@@ -32,17 +35,10 @@ export const roleProfiles: Record<AppRole, RoleProfile> = {
     initiales: "NS",
     canExportCompta: false,
     canValiderAnomalie: true,
-  },
-  secretaire: {
-    id: "secretaire",
-    label: "Secrétaire Médicale",
-    fonction: "Accueil & planning",
-    nom: "Souad Bahri",
-    initiales: "SB",
-    canExportCompta: false,
-    canValiderAnomalie: false,
+    canSeeFinance: false,
   },
 };
+
 
 type RoleContextValue = {
   role: AppRole;
