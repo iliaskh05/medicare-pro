@@ -14,7 +14,6 @@ import {
   ShieldAlert,
   Loader2,
   MessageCircle,
-  ShieldCheck,
   Bot,
 } from "lucide-react";
 
