@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuditRouteImport } from './routes/audit'
 import { Route as ChatRouteImport } from './routes/chat'
+import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as FacturationRouteImport } from './routes/facturation'
 import { Route as ImagerieRouteImport } from './routes/imagerie'
 import { Route as MedecinsRouteImport } from './routes/medecins'
@@ -47,6 +48,11 @@ const AuditRoute = AuditRouteImport.update({
 const ChatRoute = ChatRouteImport.update({
   id: '/chat',
   path: '/chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FacturationRoute = FacturationRouteImport.update({
@@ -160,6 +166,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/audit': typeof AuditRoute
   '/chat': typeof ChatRoute
+  '/dashboard': typeof DashboardRoute
   '/facturation': typeof FacturationRoute
   '/imagerie': typeof ImagerieRoute
   '/medecins': typeof MedecinsRoute
@@ -186,6 +193,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/audit': typeof AuditRoute
   '/chat': typeof ChatRoute
+  '/dashboard': typeof DashboardRoute
   '/facturation': typeof FacturationRoute
   '/imagerie': typeof ImagerieRoute
   '/medecins': typeof MedecinsRoute
@@ -213,6 +221,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/audit': typeof AuditRoute
   '/chat': typeof ChatRoute
+  '/dashboard': typeof DashboardRoute
   '/facturation': typeof FacturationRoute
   '/imagerie': typeof ImagerieRoute
   '/medecins': typeof MedecinsRoute
@@ -241,6 +250,7 @@ export interface FileRouteTypes {
     | '/'
     | '/audit'
     | '/chat'
+    | '/dashboard'
     | '/facturation'
     | '/imagerie'
     | '/medecins'
@@ -267,6 +277,7 @@ export interface FileRouteTypes {
     | '/'
     | '/audit'
     | '/chat'
+    | '/dashboard'
     | '/facturation'
     | '/imagerie'
     | '/medecins'
@@ -293,6 +304,7 @@ export interface FileRouteTypes {
     | '/'
     | '/audit'
     | '/chat'
+    | '/dashboard'
     | '/facturation'
     | '/imagerie'
     | '/medecins'
@@ -320,6 +332,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuditRoute: typeof AuditRoute
   ChatRoute: typeof ChatRoute
+  DashboardRoute: typeof DashboardRoute
   FacturationRoute: typeof FacturationRoute
   ImagerieRoute: typeof ImagerieRoute
   MedecinsRoute: typeof MedecinsRoute
@@ -363,6 +376,13 @@ declare module '@tanstack/react-router' {
       path: '/chat'
       fullPath: '/chat'
       preLoaderRoute: typeof ChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/facturation': {
@@ -530,6 +550,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuditRoute: AuditRoute,
   ChatRoute: ChatRoute,
+  DashboardRoute: DashboardRoute,
   FacturationRoute: FacturationRoute,
   ImagerieRoute: ImagerieRoute,
   MedecinsRoute: MedecinsRoute,

@@ -5,7 +5,6 @@ import {
   ReceiptText,
   Stethoscope,
   ShieldAlert,
-  Scan,
   ScanLine,
   MessagesSquare,
   MessageCircle,
@@ -23,9 +22,10 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import logoRadioCrm from "@/assets/logo-radiocrm.png";
 
 const items = [
-  { title: "Tableau de bord", url: "/", icon: LayoutDashboard },
+  { title: "Tableau de bord", url: "/dashboard", icon: LayoutDashboard },
   { title: "Patients", url: "/patients", icon: Users },
   { title: "Actes & Facturation", url: "/facturation", icon: ReceiptText },
   { title: "Visionneuse IA", url: "/viewer", icon: ScanLine },
@@ -42,8 +42,14 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border">
         <div className="flex items-center gap-3 px-1 py-2">
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Scan className="size-5" />
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-foreground/10 ring-1 ring-inset ring-primary-foreground/15">
+            <img
+              src={logoRadioCrm}
+              alt="Logo RadioCRM"
+              width={512}
+              height={512}
+              className="size-6"
+            />
           </div>
           <div className="min-w-0 group-data-[collapsible=icon]:hidden">
             <p className="truncate text-sm font-bold tracking-tight">RadioCRM</p>
@@ -66,8 +72,17 @@ export function AppSidebar() {
                     tooltip={item.title}
                     isActive={currentPath === item.url}
                   >
-                    <Link to={item.url} className="flex items-center gap-2">
-                      <item.icon className="size-4" />
+                    <Link
+                      to={item.url}
+                      className="flex items-center gap-2 font-medium"
+                    >
+                      <item.icon
+                        className={
+                          currentPath === item.url
+                            ? "size-4 text-[oklch(0.78_0.13_235)]"
+                            : "size-4 opacity-80"
+                        }
+                      />
                       <span>{item.title}</span>
                     </Link>
                   </SidebarMenuButton>
@@ -79,9 +94,11 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border">
-        <div className="rounded-lg bg-accent px-3 py-2 group-data-[collapsible=icon]:hidden">
-          <p className="text-xs font-semibold text-accent-foreground">Module IA Fraude actif</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">Casablanca · Al Amal</p>
+        <div className="rounded-lg bg-sidebar-accent px-3 py-2 group-data-[collapsible=icon]:hidden">
+          <p className="text-xs font-semibold text-sidebar-accent-foreground">
+            Module IA Fraude actif
+          </p>
+          <p className="mt-0.5 text-xs text-sidebar-foreground/60">Casablanca · Al Amal</p>
         </div>
       </SidebarFooter>
     </Sidebar>
