@@ -87,17 +87,19 @@ export function WaConversationList({
                   <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-success/15 text-sm font-semibold text-success">
                     {c.initiales}
                   </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="flex items-baseline justify-between gap-2">
-                      <span className="truncate text-sm font-semibold text-foreground">
+                  <span className="block min-w-0 flex-1 overflow-hidden">
+                    <span className="flex min-w-0 items-baseline justify-between gap-2">
+                      <span className="block min-w-0 truncate text-sm font-semibold text-foreground">
                         {c.patient}
                       </span>
                       <span className="shrink-0 text-[11px] text-muted-foreground">
                         {c.derniereHeure}
                       </span>
                     </span>
-                    <span className="mt-0.5 flex items-center gap-2">
-                      <span className="truncate text-xs text-muted-foreground">{c.apercu}</span>
+                    <span className="mt-0.5 flex min-w-0 items-center gap-2">
+                      <span className="block min-w-0 truncate text-xs text-muted-foreground">
+                        {c.apercu}
+                      </span>
                       {c.nonLus > 0 ? (
                         <span className="ml-auto flex size-5 shrink-0 items-center justify-center rounded-full bg-success text-[11px] font-bold text-success-foreground">
                           <span className="sr-only">Messages non lus :</span>
