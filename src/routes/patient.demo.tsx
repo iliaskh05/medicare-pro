@@ -16,17 +16,21 @@ import {
   Phone,
   Pill as PillIcon,
   ReceiptText,
+  Printer,
   ScanLine,
   ShieldAlert,
   ShieldCheck,
   Sparkles,
   Stethoscope,
+  Wallet,
   ThumbsUp,
   User,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import { ActionButton } from "@/components/action-button";
+import { DocumentMenu } from "@/components/document-menu";
+import { useRole } from "@/hooks/use-role";
 import { ClusterScatter } from "@/components/cluster-scatter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -204,6 +208,16 @@ const facturation = [
   },
 ];
 
+const dossierFinancier = {
+  examen: "IRM Cérébrale",
+  total: 1500,
+  acompte: 500,
+  statutImpression: "Validé / Imprimé",
+  get reste() {
+    return this.total - this.acompte;
+  },
+};
+
 type Severite = "critique" | "eleve" | "modere";
 
 type Alerte = {
@@ -348,16 +362,10 @@ function RiskDonut({ value, blocked }: { value: number; blocked: boolean }) {
 function PatientRecordPage() {
   const [alertes, setAlertes] = useState<Alerte[]>(alertesInitiales);
   const [blocked, setBlocked] = useState(false);
+  const [solde, setSolde] = useState(dossierFinancier.reste);
+  const { profile } = useRole();
 
-  const score = blocked
-    ? 0.12
-    : alertes.length === 0
-      ? 0.18
-      : Math.min(
-          0.95,
-          alertes.reduce((acc, a) => Math.max(acc, a.confiance), 0) *
-            (1 + (alertes.length - 1) * 0.05),
-        );
+  const score = blocked ? 0.12 : alertes.length === 0 ? 0.18 : 0.92;
 
   const dismiss = (a: Alerte) => {
     setAlertes((prev) => prev.filter((x) => x.id !== a.id));
@@ -378,6 +386,15 @@ function PatientRecordPage() {
                 <ArrowLeft className="mr-2 size-4" /> Retour aux patients
               </Link>
             </Button>
+            <DocumentMenu
+              context={{
+                patient: patient.nom,
+                reference: patient.id,
+                examen: dossierFinancier.examen,
+                total: dossierFinancier.total,
+                acompte: dossierFinancier.acompte,
+              }}
+            />
             <ActionButton
               variant="outline"
               toastKind="success"
@@ -462,6 +479,47 @@ function PatientRecordPage() {
             </CardContent>
           </Card>
 
+          {profile.canSeeFinance ? (
+            <Card data-tour="finance" className="shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Wallet className="size-4 text-muted-foreground" />
+                  Détail financier de l&apos;examen en cours
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                  {[
+                    { label: "Examen", value: dossierFinancier.examen, tone: "" },
+                    { label: "Montant total", value: mad(dossierFinancier.total), tone: "" },
+                    { label: "Acompte versé", value: mad(dossierFinancier.acompte), tone: "text-success" },
+                    { label: "Statut impression", value: dossierFinancier.statutImpression, tone: "" },
+                    {
+                      label: "Reste à payer",
+                      value: solde === 0 ? "Soldé" : mad(solde),
+                      tone: solde === 0 ? "text-success" : "text-destructive",
+                    },
+                  ].map((f) => (
+                    <div key={f.label} className="rounded-xl border border-border bg-background px-3 py-2.5">
+                      <dt className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                        {f.label}
+                      </dt>
+                      <dd className={cn("mt-1 text-sm font-bold tabular-nums", f.tone)}>{f.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+                <div className="flex items-start gap-2 rounded-xl bg-destructive/8 p-3 ring-1 ring-inset ring-destructive/25">
+                  <Printer className="mt-0.5 size-4 shrink-0 text-destructive" />
+                  <p className="text-xs leading-relaxed text-muted-foreground">
+                    {solde === 0
+                      ? "Solde régularisé : les clichés remis sont couverts par un encaissement complet."
+                      : `Clichés imprimés et remis au patient alors que ${mad(solde)} restent dus — rupture du protocole d'encaissement.`}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          ) : null}
+
           <Tabs defaultValue="historique">
             <TabsList>
               <TabsTrigger value="historique">
@@ -473,9 +531,11 @@ function PatientRecordPage() {
               <TabsTrigger value="ordonnances">
                 <PillIcon /> Ordonnances
               </TabsTrigger>
-              <TabsTrigger value="facturation">
-                <ReceiptText /> Facturation
-              </TabsTrigger>
+              {profile.canSeeFinance ? (
+                <TabsTrigger value="facturation">
+                  <ReceiptText /> Facturation
+                </TabsTrigger>
+              ) : null}
             </TabsList>
 
             {/* Historique */}
@@ -651,6 +711,7 @@ function PatientRecordPage() {
         {/* --------------------- Colonne droite : dashboard IA --------------------- */}
         <aside className="space-y-4 xl:col-span-3">
           <Card
+            data-tour="ia-panel"
             className={cn(
               "overflow-hidden ring-1 ring-inset",
               blocked ? "ring-border" : "ring-destructive/25",
@@ -684,6 +745,52 @@ function PatientRecordPage() {
                   </div>
                 ))}
               </div>
+
+              {!blocked && profile.canSeeFinance ? (
+                <div className="rounded-xl bg-destructive/8 p-3.5 ring-1 ring-inset ring-destructive/30">
+                  <div className="flex items-start gap-2">
+                    <ShieldAlert className="mt-0.5 size-4 shrink-0 text-destructive" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold leading-snug text-destructive">
+                        Score de risque : 92 % — Rupture de protocole financier
+                      </p>
+                      <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+                        L&apos;IA détecte une anomalie de caisse : les clichés de l&apos;
+                        {dossierFinancier.examen} sont marqués « {dossierFinancier.statutImpression} »
+                        et remis au patient, alors que le solde de {mad(solde)} n&apos;a pas été
+                        encaissé (acompte de {mad(dossierFinancier.acompte)} seul enregistré).
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-3 space-y-2">
+                    <ActionButton
+                      className="w-full"
+                      variant="destructive"
+                      size="sm"
+                      toastKind="error"
+                      toastMessage="Remise des résultats bloquée"
+                      toastDescription={`${patient.id} · retrait des clichés suspendu jusqu'à encaissement.`}
+                      onDone={() => setBlocked(true)}
+                    >
+                      <Ban className="mr-1.5 size-4" /> Bloquer la remise des résultats
+                    </ActionButton>
+                    <ActionButton
+                      className="w-full"
+                      variant="outline"
+                      size="sm"
+                      toastKind="success"
+                      toastMessage="Solde régularisé"
+                      toastDescription={`${mad(dossierFinancier.reste)} encaissés · reçu généré automatiquement.`}
+                      onDone={() => {
+                        setSolde(0);
+                        setAlertes((prev) => prev.filter((a) => a.id !== "ALR-901"));
+                      }}
+                    >
+                      <Wallet className="mr-1.5 size-4" /> Régulariser le solde
+                    </ActionButton>
+                  </div>
+                </div>
+              ) : null}
 
               <div className="flex items-start gap-2 rounded-xl bg-primary/8 p-3 ring-1 ring-inset ring-primary/20">
                 <Sparkles className="mt-0.5 size-4 shrink-0 text-primary" />
