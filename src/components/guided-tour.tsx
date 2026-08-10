@@ -28,27 +28,91 @@ const steps: TourStep[] = [
       "Vue temps réel de l'activité : patients du jour, chiffre d'affaires mensuel, examens en attente et alertes de facturation détectées par l'IA.",
   },
   {
+    route: "/patients",
+    target: '[data-tour="patients-table"]',
+    titre: "2. Base patients unifiée",
+    texte:
+      "Recherche instantanée, mutuelle, dernier examen et accès direct au dossier complet depuis une seule ligne.",
+  },
+  {
+    route: "/patient/demo",
+    target: '[data-tour="finance"]',
+    titre: "3. Détail financier du dossier",
+    texte:
+      "Montant total, acompte encaissé, statut d'impression des clichés et reste à payer : la base du contrôle de caisse.",
+  },
+  {
     route: "/patient/demo",
     target: '[data-tour="ia-panel"]',
-    titre: "2. Analyse de Conformité (Fraude Caisse)",
+    titre: "4. Analyse de Conformité (Fraude Caisse)",
     texte:
       "Le moteur hybride score chaque dossier : score de risque, clustering des signaux faibles et rupture de protocole financier — avec validation humaine.",
   },
   {
+    route: "/audit",
+    target: '[data-tour="audit-kpis"]',
+    titre: "5. Audit & conformité",
+    texte:
+      "Dossiers analysés, alertes ouvertes et taux de conformité, avec un curseur de sensibilité IA pour ajuster le niveau de détection.",
+  },
+  {
+    route: "/audit",
+    target: '[data-tour="audit-cluster"]',
+    titre: "6. Clustering des signaux faibles",
+    texte:
+      "Visualisation des groupes d'anomalies et de l'évolution hebdomadaire : on voit d'un coup d'œil où se concentre le risque.",
+  },
+  {
+    route: "/facturation",
+    target: '[data-tour="facturation-finance"]',
+    titre: "7. Facturation & encaissements",
+    texte:
+      "Suivi acompte / solde, prise en charge mutuelle et génération des documents comptables associés au dossier.",
+  },
+  {
+    route: "/imagerie",
+    target: '[data-tour="imagerie"]',
+    titre: "8. Bibliothèque d'examens",
+    texte:
+      "Toutes les études disponibles (IRM, scanner, radio) avec leurs annotations IA prêtes à être ouvertes dans la visionneuse.",
+  },
+  {
     route: "/viewer",
     target: '[data-tour="ai-layer"]',
-    titre: "3. Calque IA de segmentation",
+    titre: "9. Calque IA de segmentation",
     texte:
       "Un simple interrupteur superpose la segmentation automatique (contour rouge) sur les coupes IRM, avec le niveau de confiance de chaque lésion détectée.",
   },
   {
+    route: "/medecins",
+    target: '[data-tour="medecins"]',
+    titre: "10. Réseau de médecins prescripteurs",
+    texte:
+      "Suivi des prescripteurs, volume d'examens adressés et contact direct pour fluidifier la relation confrère.",
+  },
+  {
+    route: "/whatsapp",
+    target: '[data-tour="whatsapp-demo"]',
+    titre: "11. Chatbot patient WhatsApp",
+    texte:
+      "Réponses automatiques, prise de rendez-vous et envoi du compte rendu PDF — le tout traçable dans le CRM.",
+  },
+  {
+    route: "/chat",
+    target: '[data-tour="chat-thread"]',
+    titre: "12. Messagerie interne sécurisée",
+    texte:
+      "Échanges entre radiologues, secrétariat et direction : images, notes vocales et comptes rendus PDF dans un canal conforme.",
+  },
+  {
     route: "/dashboard",
     target: '[data-tour="actions"]',
-    titre: "4. Actions & exports",
+    titre: "13. Actions & exports",
     texte:
       "Export comptable en un clic et menu « Créer un document » : facture d'acompte, facture de solde, compte rendu médical ou demande de prise en charge.",
   },
 ];
+
 
 type TourValue = { start: () => void; running: boolean };
 
