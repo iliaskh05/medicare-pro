@@ -698,6 +698,20 @@ function PatientRecordPage() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center gap-2 text-sm">
+                <Brain className="size-4 text-muted-foreground" />
+                Clustering des signaux faibles
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pb-5">
+              <ClusterScatter />
+            </CardContent>
+          </Card>
+
+
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm">
                 <Layers className="size-4 text-muted-foreground" />
                 Alertes de Clustering
               </CardTitle>
