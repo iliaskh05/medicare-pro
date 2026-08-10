@@ -23,6 +23,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import logoRadioCrm from "@/assets/logo-radiocrm.png";
 
 const items = [
   { title: "Tableau de bord", url: "/dashboard", icon: LayoutDashboard },
