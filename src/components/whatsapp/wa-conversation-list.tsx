@@ -69,7 +69,7 @@ export function WaConversationList({
         </div>
       </div>
 
-      <ScrollArea className="min-h-0 flex-1">
+      <ScrollArea className="min-h-0 flex-1 [&_[data-radix-scroll-area-viewport]>div]:!block">
         <ul className="divide-y divide-border">
           {conversations.map((c) => {
             const isActive = c.id === activeId;
