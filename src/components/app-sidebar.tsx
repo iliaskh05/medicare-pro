@@ -23,20 +23,23 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import logoRadioCrm from "@/assets/logo-radiocrm.png";
+import { useRole } from "@/hooks/use-role";
 
 const items = [
   { title: "Tableau de bord", url: "/dashboard", icon: LayoutDashboard },
   { title: "Patients", url: "/patients", icon: Users },
-  { title: "Actes & Facturation", url: "/facturation", icon: ReceiptText },
+  { title: "Actes & Facturation", url: "/facturation", icon: ReceiptText, finance: true },
   { title: "Visionneuse IA", url: "/viewer", icon: ScanLine },
   { title: "Chat médecins", url: "/chat", icon: MessagesSquare },
   { title: "WhatsApp", url: "/whatsapp", icon: MessageCircle },
   { title: "Médecins", url: "/medecins", icon: Stethoscope },
-  { title: "Audit & Conformité", url: "/audit", icon: ShieldAlert },
+  { title: "Audit & Conformité", url: "/audit", icon: ShieldAlert, finance: true },
 ] as const;
 
 export function AppSidebar() {
   const currentPath = useRouterState({ select: (r) => r.location.pathname });
+  const { profile } = useRole();
+  const visibleItems = items.filter((i) => !("finance" in i && i.finance) || profile.canSeeFinance);
 
   return (
     <Sidebar collapsible="icon">
@@ -65,7 +68,7 @@ export function AppSidebar() {
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => (
+              {visibleItems.map((item) => (
                 <SidebarMenuItem key={item.url}>
                   <SidebarMenuButton
                     asChild
