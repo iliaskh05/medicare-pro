@@ -19,7 +19,10 @@ export const Route = createFileRoute("/api/chat/stream")({
               const ping = setInterval(() => {
                 controller.enqueue(
                   encoder.encode(
-                    toSse({ type: "system.ping", payload: { at: new Date().toISOString() } }, `ping-${++seq}`),
+                    toSse(
+                      { type: "system.ping", payload: { at: new Date().toISOString() } },
+                      `ping-${++seq}`,
+                    ),
                   ),
                 );
               }, 15000);

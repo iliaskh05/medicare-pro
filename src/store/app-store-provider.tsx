@@ -1,11 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { patients as patientsSeed, type Patient } from "@/data/mock";
-import {
-  anomalies as anomaliesSeed,
-  type Anomalie,
-  type StatutAnomalie,
-} from "@/data/mock-audit";
+import { anomalies as anomaliesSeed, type Anomalie, type StatutAnomalie } from "@/data/mock-audit";
 import { RISK_THRESHOLDS, scoreAnomalies } from "@/utils/anomalyDetection";
 import { AppStoreContext, type AppStoreValue, type NewPatientInput } from "@/store/app-store";
 

@@ -44,7 +44,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { EmptyState, IconTile, PageHeader, Pill } from "@/components/ui-kit";
+import { EmptyState, IconTile, PageHeader, Pill, SimulationNotice } from "@/components/ui-kit";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/patient/demo")({
@@ -265,7 +265,13 @@ const alertesInitiales: Alerte[] = [
 
 const severiteMeta: Record<
   Severite,
-  { label: string; tone: "destructive" | "warning" | "primary"; ring: string; bg: string; text: string }
+  {
+    label: string;
+    tone: "destructive" | "warning" | "primary";
+    ring: string;
+    bg: string;
+    text: string;
+  }
 > = {
   critique: {
     label: "Critique",
@@ -307,7 +313,13 @@ function RiskDonut({ value, blocked }: { value: number; blocked: boolean }) {
       : pct >= 60
         ? "var(--warning)"
         : "var(--success)";
-  const label = blocked ? "Dossier bloqué" : pct >= 80 ? "Risque élevé" : pct >= 60 ? "Risque modéré" : "Risque faible";
+  const label = blocked
+    ? "Dossier bloqué"
+    : pct >= 80
+      ? "Risque élevé"
+      : pct >= 60
+        ? "Risque modéré"
+        : "Risque faible";
 
   return (
     <div className="flex flex-col items-center">
@@ -328,6 +340,7 @@ function RiskDonut({ value, blocked }: { value: number; blocked: boolean }) {
             stroke="var(--muted)"
             strokeWidth={stroke}
           />
+          <SimulationNotice contexte="Dossier, analyses et scores de fraude entièrement fictifs (démonstration)." />
           <circle
             cx={size / 2}
             cy={size / 2}
@@ -463,7 +476,11 @@ function PatientRecordPage() {
                   { label: "N° affiliation", value: patient.numAffiliation, icon: BadgeCheck },
                   { label: "Médecin traitant", value: patient.medecinTraitant, icon: Stethoscope },
                   { label: "Téléphone", value: patient.telephone, icon: Phone },
-                  { label: "Prochain rendez-vous", value: patient.prochainRdv, icon: CalendarClock },
+                  {
+                    label: "Prochain rendez-vous",
+                    value: patient.prochainRdv,
+                    icon: CalendarClock,
+                  },
                 ].map((f) => (
                   <div key={f.label} className="flex min-w-0 items-start gap-3">
                     <f.icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
@@ -492,19 +509,32 @@ function PatientRecordPage() {
                   {[
                     { label: "Examen", value: dossierFinancier.examen, tone: "" },
                     { label: "Montant total", value: mad(dossierFinancier.total), tone: "" },
-                    { label: "Acompte versé", value: mad(dossierFinancier.acompte), tone: "text-success" },
-                    { label: "Statut impression", value: dossierFinancier.statutImpression, tone: "" },
+                    {
+                      label: "Acompte versé",
+                      value: mad(dossierFinancier.acompte),
+                      tone: "text-success",
+                    },
+                    {
+                      label: "Statut impression",
+                      value: dossierFinancier.statutImpression,
+                      tone: "",
+                    },
                     {
                       label: "Reste à payer",
                       value: solde === 0 ? "Soldé" : mad(solde),
                       tone: solde === 0 ? "text-success" : "text-destructive",
                     },
                   ].map((f) => (
-                    <div key={f.label} className="rounded-xl border border-border bg-background px-3 py-2.5">
+                    <div
+                      key={f.label}
+                      className="rounded-xl border border-border bg-background px-3 py-2.5"
+                    >
                       <dt className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                         {f.label}
                       </dt>
-                      <dd className={cn("mt-1 text-sm font-bold tabular-nums", f.tone)}>{f.value}</dd>
+                      <dd className={cn("mt-1 text-sm font-bold tabular-nums", f.tone)}>
+                        {f.value}
+                      </dd>
                     </div>
                   ))}
                 </dl>
@@ -547,13 +577,22 @@ function PatientRecordPage() {
                 <CardContent className="space-y-0 pt-0">
                   <ol className="relative border-l border-border pl-6">
                     {historique.map((h, i) => (
-                      <li key={h.date + h.intitule} className={cn("relative", i === 0 ? "pb-6" : "py-6", i === historique.length - 1 && "pb-0")}>
+                      <li
+                        key={h.date + h.intitule}
+                        className={cn(
+                          "relative",
+                          i === 0 ? "pb-6" : "py-6",
+                          i === historique.length - 1 && "pb-0",
+                        )}
+                      >
                         <span className="absolute -left-[31px] top-1.5 grid size-4 place-items-center rounded-full bg-card ring-2 ring-inset ring-primary/40">
                           <span className="size-1.5 rounded-full bg-primary" />
                         </span>
                         <div className="flex flex-wrap items-center gap-2">
                           <Pill tone={h.tone}>{h.type}</Pill>
-                          <span className="text-xs font-medium text-muted-foreground">{h.date}</span>
+                          <span className="text-xs font-medium text-muted-foreground">
+                            {h.date}
+                          </span>
                         </div>
                         <p className="mt-1.5 text-sm font-semibold">{h.intitule}</p>
                         <p className="text-xs text-muted-foreground">{h.praticien}</p>
@@ -720,13 +759,14 @@ function PatientRecordPage() {
             <div
               className={cn(
                 "flex items-center gap-2 border-b px-5 py-3",
-                blocked
-                  ? "border-border bg-muted/50"
-                  : "border-destructive/20 bg-destructive/8",
+                blocked ? "border-border bg-muted/50" : "border-destructive/20 bg-destructive/8",
               )}
             >
               <ShieldAlert
-                className={cn("size-4 shrink-0", blocked ? "text-muted-foreground" : "text-destructive")}
+                className={cn(
+                  "size-4 shrink-0",
+                  blocked ? "text-muted-foreground" : "text-destructive",
+                )}
               />
               <p className="text-sm font-bold tracking-tight">Analyse de Conformité IA</p>
             </div>
@@ -756,8 +796,8 @@ function PatientRecordPage() {
                       </p>
                       <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
                         L&apos;IA détecte une anomalie de caisse : les clichés de l&apos;
-                        {dossierFinancier.examen} sont marqués « {dossierFinancier.statutImpression} »
-                        et remis au patient, alors que le solde de {mad(solde)} n&apos;a pas été
+                        {dossierFinancier.examen} sont marqués « {dossierFinancier.statutImpression}{" "}
+                        » et remis au patient, alors que le solde de {mad(solde)} n&apos;a pas été
                         encaissé (acompte de {mad(dossierFinancier.acompte)} seul enregistré).
                       </p>
                     </div>
@@ -815,8 +855,6 @@ function PatientRecordPage() {
             </CardContent>
           </Card>
 
-
-
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center gap-2 text-sm">
@@ -849,7 +887,9 @@ function PatientRecordPage() {
                           <AlertTriangle className={cn("size-4 shrink-0", m.text)} />
                           <p className="text-sm font-bold leading-snug">{a.titre}</p>
                         </div>
-                        <Pill tone={m.tone} className="shrink-0">{m.label}</Pill>
+                        <Pill tone={m.tone} className="shrink-0">
+                          {m.label}
+                        </Pill>
                       </div>
                       <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
                         {a.detail}

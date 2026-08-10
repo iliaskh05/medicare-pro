@@ -31,7 +31,10 @@ export type InvoiceLike = {
   date?: string;
 };
 
-export function extractFeatures(invoice: InvoiceLike, all: InvoiceLike[] = factures): FraudFeatureVector {
+export function extractFeatures(
+  invoice: InvoiceLike,
+  all: InvoiceLike[] = factures,
+): FraudFeatureVector {
   const patient = patients.find((p) => p.nom === invoice.patient);
   const bareme = BAREMES[invoice.examen] ?? invoice.total;
   const samePatient = all.filter((f) => f.patient === invoice.patient);
@@ -47,8 +50,7 @@ export function extractFeatures(invoice: InvoiceLike, all: InvoiceLike[] = factu
   const isGenderIncoherent = genderMale && FEMALE_PELVIC.test(invoice.examen) ? 1 : 0;
 
   // Flag expired cover when mutuelle share is claimed but patient mutuelle looks stale in mock
-  const mutuelleExpired =
-    (invoice.partMutuelle ?? 0) > 0 && /expir/i.test(invoice.id) ? 1 : 0;
+  const mutuelleExpired = (invoice.partMutuelle ?? 0) > 0 && /expir/i.test(invoice.id) ? 1 : 0;
 
   // Stable-ish synthetic signals from id hash for demo continuity
   const idHash = [...invoice.id].reduce((a, c) => a + c.charCodeAt(0), 0);

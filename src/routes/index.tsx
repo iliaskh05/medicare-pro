@@ -34,8 +34,7 @@ export const Route = createFileRoute("/")({
       },
       {
         property: "og:description",
-        content:
-          "Plateforme sécurisée de gestion du centre d'imagerie médicale, Casablanca.",
+        content: "Plateforme sécurisée de gestion du centre d'imagerie médicale, Casablanca.",
       },
     ],
   }),
@@ -46,20 +45,17 @@ const atouts = [
   {
     icon: BrainCircuit,
     titre: "IA de détection de fraude",
-    detail:
-      "Clustering des signaux faibles et scoring des anomalies de facturation.",
+    detail: "Clustering des signaux faibles et scoring des anomalies de facturation.",
   },
   {
     icon: ScanLine,
     titre: "Imagerie augmentée",
-    detail:
-      "Surbrillance des zones suspectes et compte rendu structuré automatique.",
+    detail: "Surbrillance des zones suspectes et compte rendu structuré automatique.",
   },
   {
     icon: Activity,
     titre: "Automatisation du parcours",
-    detail:
-      "Chatbot WhatsApp, planning intelligent et export comptable.",
+    detail: "Chatbot WhatsApp, planning intelligent et export comptable.",
   },
 ];
 
@@ -102,9 +98,7 @@ function LoginPage() {
             <Sparkles className="size-3.5" />
             Plateforme médicale augmentée par l'IA
           </p>
-          <h1 className="page-title mt-6 text-5xl text-primary-foreground xl:text-6xl">
-            RadioCRM
-          </h1>
+          <h1 className="page-title mt-6 text-5xl text-primary-foreground xl:text-6xl">RadioCRM</h1>
           <p className="mt-3 text-lg font-semibold text-primary-foreground/85">
             Centre d'Imagerie Médicale
           </p>
@@ -140,12 +134,8 @@ function LoginPage() {
                   <a.icon className="size-4 text-primary-foreground" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-primary-foreground">
-                    {a.titre}
-                  </p>
-                  <p className="text-xs text-primary-foreground/60">
-                    {a.detail}
-                  </p>
+                  <p className="text-sm font-semibold text-primary-foreground">{a.titre}</p>
+                  <p className="text-xs text-primary-foreground/60">{a.detail}</p>
                 </div>
               </div>
             ))}
@@ -154,8 +144,7 @@ function LoginPage() {
 
         <p className="relative flex items-center gap-2 text-xs text-primary-foreground/55">
           <ShieldCheck className="size-4" />
-          Hébergement conforme · Journalisation des accès · Données patients
-          chiffrées
+          Hébergement conforme · Journalisation des accès · Données patients chiffrées
         </p>
       </div>
 
@@ -173,9 +162,7 @@ function LoginPage() {
               />
               <div>
                 <p className="text-sm font-bold tracking-tight">RadioCRM</p>
-                <p className="text-xs text-muted-foreground">
-                  Centre d'Imagerie Médicale
-                </p>
+                <p className="text-xs text-muted-foreground">Centre d'Imagerie Médicale</p>
               </div>
             </div>
             <figure className="relative mt-5 overflow-hidden rounded-2xl">
@@ -228,10 +215,7 @@ function LoginPage() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">Mot de passe</Label>
-                <button
-                  type="button"
-                  className="text-xs font-medium text-primary hover:underline"
-                >
+                <button type="button" className="text-xs font-medium text-primary hover:underline">
                   Mot de passe oublié ?
                 </button>
               </div>
@@ -251,19 +235,12 @@ function LoginPage() {
 
             <div className="flex items-center gap-2">
               <Checkbox id="remember" defaultChecked />
-              <Label
-                htmlFor="remember"
-                className="text-sm font-normal text-muted-foreground"
-              >
+              <Label htmlFor="remember" className="text-sm font-normal text-muted-foreground">
                 Garder ma session active sur ce poste
               </Label>
             </div>
 
-            <Button
-              type="submit"
-              size="lg"
-              className="h-12 w-full text-base shadow-sm"
-            >
+            <Button type="submit" size="lg" className="h-12 w-full text-base shadow-sm">
               Se connecter
             </Button>
           </form>
@@ -295,7 +272,6 @@ function LoginPage() {
               "Continuer en mode démonstration"
             )}
           </Button>
-
         </div>
       </div>
     </div>

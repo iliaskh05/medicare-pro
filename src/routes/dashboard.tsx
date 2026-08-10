@@ -130,10 +130,16 @@ function PlanningHeatmap({ data }: { data: PlanningSlot[] }) {
   const days = Array.from(new Map(data.map((d) => [d.dayLabel, d])).values());
   return (
     <div className="space-y-2">
-      <div className="grid" style={{ gridTemplateColumns: `3.5rem repeat(${days.length}, minmax(0, 1fr))` }}>
+      <div
+        className="grid"
+        style={{ gridTemplateColumns: `3.5rem repeat(${days.length}, minmax(0, 1fr))` }}
+      >
         <div />
         {days.map((d) => (
-          <div key={d.dayLabel} className="text-center text-[11px] font-medium text-muted-foreground">
+          <div
+            key={d.dayLabel}
+            className="text-center text-[11px] font-medium text-muted-foreground"
+          >
             {d.dayLabel}
           </div>
         ))}
@@ -193,7 +199,6 @@ function Dashboard() {
   const { profile } = useRole();
   const visibleKpis = kpis.filter((k) => !("finance" in k && k.finance) || profile.canSeeFinance);
   return (
-
     <div className="space-y-6">
       <PageHeader
         title="Tableau de bord"
@@ -347,105 +352,113 @@ function Dashboard() {
 
         {/* Widget 2 — Urgences Fraude & Anomalies */}
         {profile.canSeeFinance ? (
-        <Card className="lg:col-span-1">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <IconTile tone="destructive">
-                  <ShieldAlert className="size-5" />
-                </IconTile>
-                <div>
-                  <CardTitle className="text-base">Urgences Fraude</CardTitle>
-                  <p className="text-xs text-muted-foreground">3 dernières alertes critiques IA</p>
-                </div>
-              </div>
-              <Button variant="ghost" size="sm" className="h-8 text-xs" asChild>
-                <Link to="/audit">Voir tout</Link>
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {urgencesFraude.map((u) => (
-              <div
-                key={u.id}
-                className="flex items-center justify-between gap-3 rounded-xl border border-border bg-background p-3"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold">{u.patient}</p>
-                  <p className="text-xs text-muted-foreground">{u.anomalie}</p>
-                  <div className="mt-2">
-                    <ProbabilityBar value={u.score / 100} />
+          <Card className="lg:col-span-1">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <IconTile tone="destructive">
+                    <ShieldAlert className="size-5" />
+                  </IconTile>
+                  <div>
+                    <CardTitle className="text-base">Urgences Fraude</CardTitle>
+                    <p className="text-xs text-muted-foreground">
+                      3 dernières alertes critiques IA
+                    </p>
                   </div>
                 </div>
-                <Button variant="outline" size="sm" className="h-8 whitespace-nowrap text-xs" asChild>
-                  <Link to="/audit">Traiter</Link>
+                <Button variant="ghost" size="sm" className="h-8 text-xs" asChild>
+                  <Link to="/audit">Voir tout</Link>
                 </Button>
               </div>
-            ))}
-          </CardContent>
-        </Card>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {urgencesFraude.map((u) => (
+                <div
+                  key={u.id}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-border bg-background p-3"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold">{u.patient}</p>
+                    <p className="text-xs text-muted-foreground">{u.anomalie}</p>
+                    <div className="mt-2">
+                      <ProbabilityBar value={u.score / 100} />
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 whitespace-nowrap text-xs"
+                    asChild
+                  >
+                    <Link to="/audit">Traiter</Link>
+                  </Button>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
         ) : null}
 
         {/* Widget 3 — Synchronisation Comptable */}
         {profile.canSeeFinance ? (
-        <Card className="lg:col-span-1">
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-3">
-              <IconTile tone="success">
-                <FileSpreadsheet className="size-5" />
-              </IconTile>
+          <Card className="lg:col-span-1">
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-3">
+                <IconTile tone="success">
+                  <FileSpreadsheet className="size-5" />
+                </IconTile>
+                <div>
+                  <CardTitle className="text-base">Synchronisation comptable</CardTitle>
+                  <p className="text-xs text-muted-foreground">Export comptable validé</p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-5">
               <div>
-                <CardTitle className="text-base">Synchronisation comptable</CardTitle>
-                <p className="text-xs text-muted-foreground">Export comptable validé</p>
+                <p className="text-3xl font-bold tracking-tight">{comptabilite.validated}</p>
+                <p className="text-sm text-muted-foreground">actes validés prêts pour l'export</p>
               </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-5">
-            <div>
-              <p className="text-3xl font-bold tracking-tight">{comptabilite.validated}</p>
-              <p className="text-sm text-muted-foreground">actes validés prêts pour l'export</p>
-            </div>
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>Progression vers clôture</span>
-                <span className="font-medium text-foreground">
-                  {Math.round(
-                    (comptabilite.validated / (comptabilite.validated + comptabilite.pending)) * 100,
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>Progression vers clôture</span>
+                  <span className="font-medium text-foreground">
+                    {Math.round(
+                      (comptabilite.validated / (comptabilite.validated + comptabilite.pending)) *
+                        100,
+                    )}
+                    %
+                  </span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full rounded-full bg-success transition-all duration-700"
+                    style={{
+                      width: `${(comptabilite.validated / (comptabilite.validated + comptabilite.pending)) * 100}%`,
+                    }}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {comptabilite.pending} actes en attente · Dernier export {comptabilite.lastExport}
+                </p>
+              </div>
+              {profile.canExportCompta ? (
+                <Button className="w-full shadow-sm" disabled={exporting} onClick={exportComptable}>
+                  {exporting ? (
+                    <>
+                      <Loader2 className="mr-2 size-4 animate-spin" /> Génération de l'export…
+                    </>
+                  ) : (
+                    <>
+                      <FileSpreadsheet className="mr-2 size-4" /> Export comptable (CSV)
+                    </>
                   )}
-                  %
-                </span>
-              </div>
-              <div className="h-2 overflow-hidden rounded-full bg-muted">
-                <div
-                  className="h-full rounded-full bg-success transition-all duration-700"
-                  style={{
-                    width: `${(comptabilite.validated / (comptabilite.validated + comptabilite.pending)) * 100}%`,
-                  }}
-                />
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {comptabilite.pending} actes en attente · Dernier export {comptabilite.lastExport}
-              </p>
-            </div>
-            {profile.canExportCompta ? (
-              <Button className="w-full shadow-sm" disabled={exporting} onClick={exportComptable}>
-                {exporting ? (
-                  <>
-                    <Loader2 className="mr-2 size-4 animate-spin" /> Génération de l'export…
-                  </>
-                ) : (
-                  <>
-                    <FileSpreadsheet className="mr-2 size-4" /> Export comptable (CSV)
-                  </>
-                )}
-              </Button>
-            ) : (
-              <p className="rounded-lg border border-dashed border-border bg-muted/40 px-3 py-2.5 text-center text-xs text-muted-foreground">
-                Export comptable réservé au profil Directeur
-              </p>
-            )}
-          </CardContent>
-        </Card>
+                </Button>
+              ) : (
+                <p className="rounded-lg border border-dashed border-border bg-muted/40 px-3 py-2.5 text-center text-xs text-muted-foreground">
+                  Export comptable réservé au profil Directeur
+                </p>
+              )}
+            </CardContent>
+          </Card>
         ) : null}
       </div>
 
@@ -491,36 +504,35 @@ function Dashboard() {
         </Card>
 
         {profile.canSeeFinance ? (
-        <Card className="lg:col-span-2">
-          <CardHeader className="flex-row items-center justify-between">
-            <CardTitle>Dernières alertes détectées</CardTitle>
-            <Button variant="ghost" size="sm" asChild>
-              <Link to="/audit">
-                Audit <ArrowRight className="ml-1 size-4" />
-              </Link>
-            </Button>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {alertes.map((a) => (
-              <div
-                key={a.id}
-                className="rounded-xl border border-border bg-background p-3 transition-colors hover:border-primary/40"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-semibold">{a.titre}</p>
-                  <Pill tone={niveauTone[a.niveau]}>{niveauLabel[a.niveau]}</Pill>
+          <Card className="lg:col-span-2">
+            <CardHeader className="flex-row items-center justify-between">
+              <CardTitle>Dernières alertes détectées</CardTitle>
+              <Button variant="ghost" size="sm" asChild>
+                <Link to="/audit">
+                  Audit <ArrowRight className="ml-1 size-4" />
+                </Link>
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {alertes.map((a) => (
+                <div
+                  key={a.id}
+                  className="rounded-xl border border-border bg-background p-3 transition-colors hover:border-primary/40"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-semibold">{a.titre}</p>
+                    <Pill tone={niveauTone[a.niveau]}>{niveauLabel[a.niveau]}</Pill>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">{a.detail}</p>
+                  <p className="mt-2 font-mono text-[11px] text-muted-foreground">
+                    {a.id} · {a.temps}
+                  </p>
                 </div>
-                <p className="mt-1 text-xs text-muted-foreground">{a.detail}</p>
-                <p className="mt-2 font-mono text-[11px] text-muted-foreground">
-                  {a.id} · {a.temps}
-                </p>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
+              ))}
+            </CardContent>
+          </Card>
         ) : null}
       </div>
-
     </div>
   );
 }

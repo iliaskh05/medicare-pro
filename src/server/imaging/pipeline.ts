@@ -49,7 +49,10 @@ function modalityPriors(modality: StudyModality, bodyPart: string, seed: number)
   if (modality === "CT" && bodyPart.includes("thorax")) {
     findings.push({
       code: "FIND-LUNG",
-      label: roll(4) > 0.5 ? "Nodule pulmonaire sous-pleural < 6 mm" : "Parenchyme pulmonaire sans foyer",
+      label:
+        roll(4) > 0.5
+          ? "Nodule pulmonaire sous-pleural < 6 mm"
+          : "Parenchyme pulmonaire sans foyer",
       confidence: 0.68 + roll(5) * 0.2,
       severity: roll(4) > 0.5 ? "moderate" : "info",
       region: "poumons",
@@ -60,7 +63,10 @@ function modalityPriors(modality: StudyModality, bodyPart: string, seed: number)
   if (modality === "XR") {
     findings.push({
       code: "FIND-XR",
-      label: roll(7) > 0.6 ? "Opacité basale à corréler cliniquement" : "Cage thoracique sans anomalie osseuse",
+      label:
+        roll(7) > 0.6
+          ? "Opacité basale à corréler cliniquement"
+          : "Cage thoracique sans anomalie osseuse",
       confidence: 0.7 + roll(8) * 0.15,
       severity: roll(7) > 0.6 ? "moderate" : "info",
       region: bodyPart,
@@ -147,7 +153,10 @@ export async function analyzeImageBuffer(
       0,
       Math.min(
         100,
-        (1 - noiseEstimate) * 35 + sharpness * 35 + contrast * 20 + (meanIntensity > 0.15 && meanIntensity < 0.85 ? 10 : 0),
+        (1 - noiseEstimate) * 35 +
+          sharpness * 35 +
+          contrast * 20 +
+          (meanIntensity > 0.15 && meanIntensity < 0.85 ? 10 : 0),
       ),
     ),
   );

@@ -185,8 +185,8 @@ function FacturationPage() {
                 {formatMAD(reste)}
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Taux de prise en charge :{" "}
-                {total > 0 ? Math.round((partMutuelle / total) * 100) : 0} %
+                Taux de prise en charge : {total > 0 ? Math.round((partMutuelle / total) * 100) : 0}{" "}
+                %
               </p>
             </div>
 
@@ -290,7 +290,10 @@ function FacturationPage() {
                               { label: "Date", valeur: f.date },
                               { label: "Total facturé", valeur: formatMAD(f.total) },
                               { label: "Part mutuelle", valeur: formatMAD(f.partMutuelle) },
-                              { label: "Reste à charge patient", valeur: formatMAD(f.resteACharge) },
+                              {
+                                label: "Reste à charge patient",
+                                valeur: formatMAD(f.resteACharge),
+                              },
                               { label: "Mode de paiement", valeur: f.paiement },
                               { label: "Statut", valeur: f.statut },
                             ],

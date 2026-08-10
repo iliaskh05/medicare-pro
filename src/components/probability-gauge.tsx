@@ -63,7 +63,10 @@ export function ProbabilityGauge({
         />
       </svg>
       <div className="-mt-2 text-center">
-        <p className="text-lg font-bold leading-none tracking-tight" style={{ color: toneVar[tone] }}>
+        <p
+          className="text-lg font-bold leading-none tracking-tight"
+          style={{ color: toneVar[tone] }}
+        >
           {Math.round(clamped * 100)} %
         </p>
         {label ? <p className="mt-1 text-xs text-muted-foreground">{label}</p> : null}

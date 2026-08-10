@@ -64,10 +64,9 @@ function buildHeuristicReport(
     resultats: [findingsText, rawNotes?.trim() ? `\nNotes dictée:\n${rawNotes.trim()}` : ""]
       .filter(Boolean)
       .join("\n"),
-    conclusion:
-      findings.some((f) => f.severity !== "info")
-        ? "Anomalies décrites ci-dessus. Corrélation clinique et suivi selon les recommandations en vigueur. Compte rendu à valider par le radiologue."
-        : "Pas d'anomalie significative détectée dans les limites de l'examen. Validation radiologue obligatoire.",
+    conclusion: findings.some((f) => f.severity !== "info")
+      ? "Anomalies décrites ci-dessus. Corrélation clinique et suivi selon les recommandations en vigueur. Compte rendu à valider par le radiologue."
+      : "Pas d'anomalie significative détectée dans les limites de l'examen. Validation radiologue obligatoire.",
     codes: findings.slice(0, 3).map((f) => ({
       system: "RadioCRM-FIND",
       code: f.code,
@@ -144,8 +143,7 @@ export async function structureReport(input: StructureReportInput): Promise<Stru
 
   const llm = await callLlmJson(prompt);
   const structured =
-    llm ??
-    buildHeuristicReport(input.studyId, analysis, input.clinicalContext, input.rawNotes);
+    llm ?? buildHeuristicReport(input.studyId, analysis, input.clinicalContext, input.rawNotes);
 
   const report: StructuredReport = {
     id: `CR-${study.id}-${Date.now().toString(36)}`,

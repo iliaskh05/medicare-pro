@@ -19,7 +19,11 @@ export function extractCredential(request: Request): string | null {
   const auth = request.headers.get("authorization");
   if (auth) {
     const [scheme, token] = auth.split(/\s+/);
-    if (scheme && token && (scheme.toLowerCase() === "bearer" || scheme.toLowerCase() === "apikey")) {
+    if (
+      scheme &&
+      token &&
+      (scheme.toLowerCase() === "bearer" || scheme.toLowerCase() === "apikey")
+    ) {
       return token.trim();
     }
   }

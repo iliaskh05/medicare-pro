@@ -35,7 +35,8 @@ function reasonsFromFeatures(
   if (unsupervised.isWeakSignal) {
     reasons.push(`Signal faible (distance cluster ${unsupervised.anomalyDistance.toFixed(2)})`);
   }
-  if (proba >= 0.75 && reasons.length === 0) reasons.push("Profil similaire aux fraudes historiques");
+  if (proba >= 0.75 && reasons.length === 0)
+    reasons.push("Profil similaire aux fraudes historiques");
   if (reasons.length === 0) reasons.push("Revue de routine");
   return reasons;
 }
@@ -135,10 +136,15 @@ export async function scoreInvoice(
     amount: invoice.total,
     score,
     niveau: niveauFromScore(score),
-    raison: reasonsFromFeatures(invoice, features, {
-      isWeakSignal,
-      anomalyDistance: cluster.distance,
-    }, proba),
+    raison: reasonsFromFeatures(
+      invoice,
+      features,
+      {
+        isWeakSignal,
+        anomalyDistance: cluster.distance,
+      },
+      proba,
+    ),
     unsupervised: {
       clusterId: cluster.clusterId,
       anomalyDistance: Math.round(cluster.distance * 1000) / 1000,

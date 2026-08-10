@@ -58,8 +58,7 @@ export function useChatSocket(
 
   useEffect(() => {
     if (!enabled || !roomId) return;
-    const base =
-      (import.meta.env.VITE_WS_URL as string | undefined) ?? "ws://127.0.0.1:8788/chat";
+    const base = (import.meta.env.VITE_WS_URL as string | undefined) ?? "ws://127.0.0.1:8788/chat";
     const url = `${base}?apiKey=${encodeURIComponent(getApiKey())}&roomId=${encodeURIComponent(roomId)}`;
     setStatus("connecting");
     const ws = new WebSocket(url);

@@ -10,10 +10,7 @@ export type ApiEnvelope<T> = {
   ts?: string;
 };
 
-export async function apiFetch<T>(
-  path: string,
-  init: RequestInit = {},
-): Promise<T> {
+export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
   if (!headers.has("x-api-key")) headers.set("x-api-key", API_KEY);
   if (init.body && !headers.has("content-type")) {

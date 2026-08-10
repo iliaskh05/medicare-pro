@@ -64,7 +64,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { PageHeader, Pill, IconTile, EmptyState } from "@/components/ui-kit";
+import { PageHeader, Pill, IconTile, EmptyState, SimulationNotice } from "@/components/ui-kit";
 import { useRole } from "@/hooks/use-role";
 import { telechargerDossierPdf } from "@/lib/pdf-export";
 import { formatMAD } from "@/data/mock";
@@ -130,6 +130,7 @@ function ScoreMeter({ score }: { score: number }) {
           className={`h-full rounded-full transition-all duration-500 ${riskBarClass[tone]}`}
           style={{ width: `${score}%` }}
         />
+        <SimulationNotice contexte="Scores de risque et clusters produits par un modèle de démonstration sur des factures fictives." />
       </div>
       <Pill tone={tone}>
         {score}% · {riskLabel(score)}
@@ -318,7 +319,6 @@ function AuditPage() {
             <Pill tone="neutral">Export comptable réservé à la direction</Pill>
           )
         }
-
       />
 
       <div data-tour="audit-kpis" className="grid gap-4 lg:grid-cols-3">
@@ -394,7 +394,10 @@ function AuditPage() {
           </CardHeader>
           <CardContent className="h-[180px] pr-4">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={tendanceAnomalies} margin={{ top: 5, right: 8, bottom: 0, left: -20 }}>
+              <LineChart
+                data={tendanceAnomalies}
+                margin={{ top: 5, right: 8, bottom: 0, left: -20 }}
+              >
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                 <XAxis
                   dataKey="semaine"

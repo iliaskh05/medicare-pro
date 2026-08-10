@@ -77,8 +77,18 @@ export function ClusterScatter({
               }}
               formatter={(value: number, name) => [value, name]}
             />
-            <Scatter name="Cluster conforme" data={clusterStandard} fill="var(--primary)" fillOpacity={0.45} />
-            <Scatter name="Signaux faibles" data={clusterSuspect} fill="var(--warning)" fillOpacity={0.75} />
+            <Scatter
+              name="Cluster conforme"
+              data={clusterStandard}
+              fill="var(--primary)"
+              fillOpacity={0.45}
+            />
+            <Scatter
+              name="Signaux faibles"
+              data={clusterSuspect}
+              fill="var(--warning)"
+              fillOpacity={0.75}
+            />
             <Scatter
               name="Dossier analysé"
               data={dossierAnalyse}

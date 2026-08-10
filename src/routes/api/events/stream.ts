@@ -24,14 +24,20 @@ export const Route = createFileRoute("/api/events/stream")({
               let seq = 0;
               controller.enqueue(
                 encoder.encode(
-                  toSse({ type: "system.ping", payload: { at: new Date().toISOString() } }, "hello"),
+                  toSse(
+                    { type: "system.ping", payload: { at: new Date().toISOString() } },
+                    "hello",
+                  ),
                 ),
               );
 
               const ping = setInterval(() => {
                 controller.enqueue(
                   encoder.encode(
-                    toSse({ type: "system.ping", payload: { at: new Date().toISOString() } }, `ping-${++seq}`),
+                    toSse(
+                      { type: "system.ping", payload: { at: new Date().toISOString() } },
+                      `ping-${++seq}`,
+                    ),
                   ),
                 );
               }, 20000);

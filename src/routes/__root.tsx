@@ -13,7 +13,6 @@ import { ShieldCheck } from "lucide-react";
 
 import { TourProvider } from "@/components/guided-tour";
 
-
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -21,6 +20,8 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { AppHeader } from "@/components/app-header";
 import { Toaster } from "@/components/ui/sonner";
 import { MessagerieDock } from "@/components/messagerie-dock";
+import { PlatformAssistant } from "@/components/assistant/platform-assistant";
+import { DemoBanner } from "@/components/demo-banner";
 import { RoleProvider } from "@/hooks/use-role";
 import { AppStoreProvider } from "@/store/app-store-provider";
 
@@ -165,6 +166,7 @@ function RootComponent() {
                 <AppSidebar />
                 <div className="flex min-w-0 flex-1 flex-col">
                   <AppHeader />
+                  <DemoBanner />
                   <main className="flex-1 px-3 py-5 sm:px-6 sm:py-7">
                     {/* Required: nested routes render here. */}
                     <Outlet />
@@ -180,6 +182,7 @@ function RootComponent() {
               </div>
             </SidebarProvider>
             <MessagerieDock />
+            <PlatformAssistant />
           </TourProvider>
         </AppStoreProvider>
       </RoleProvider>
@@ -187,4 +190,3 @@ function RootComponent() {
     </QueryClientProvider>
   );
 }
-

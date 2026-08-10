@@ -207,7 +207,9 @@ export function ScanViewer({ scan }: { scan: Scan }) {
                 onClick={() => setActiveId(a.id)}
                 className={cn(
                   "w-full rounded-xl border bg-card p-3 text-left transition-colors",
-                  a.id === activeId ? "border-primary bg-accent" : "border-border hover:bg-accent/60",
+                  a.id === activeId
+                    ? "border-primary bg-accent"
+                    : "border-border hover:bg-accent/60",
                 )}
               >
                 <div className="flex items-start justify-between gap-2">

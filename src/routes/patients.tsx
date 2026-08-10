@@ -47,7 +47,8 @@ export const Route = createFileRoute("/patients")({
       { property: "og:title", content: "Gestion des patients — RadioCRM" },
       {
         property: "og:description",
-        content: "Base patients du centre de radiologie avec CIN, mutuelle et historique d'examens.",
+        content:
+          "Base patients du centre de radiologie avec CIN, mutuelle et historique d'examens.",
       },
     ],
   }),
