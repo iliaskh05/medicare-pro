@@ -51,7 +51,7 @@ export function fitKMeans(X: number[][], k = 4, maxIter = 40): KMeansModel {
     centroids.push([...X[idx]!]);
   }
 
-  let assignments = new Array(X.length).fill(0);
+  const assignments = new Array(X.length).fill(0);
   let iter = 0;
   for (; iter < maxIter; iter++) {
     let changed = false;
@@ -85,7 +85,10 @@ export function fitKMeans(X: number[][], k = 4, maxIter = 40): KMeansModel {
   return { k, centroids, inertia, iterations: iter + 1 };
 }
 
-export function predictCluster(model: KMeansModel, x: number[]): {
+export function predictCluster(
+  model: KMeansModel,
+  x: number[],
+): {
   clusterId: number;
   distance: number;
 } {

@@ -1,11 +1,6 @@
 /* Données factices du module Audit & Conformité (détection d'anomalies de facturation) */
 
-export type TypeExamen =
-  | "IRM"
-  | "Scanner"
-  | "Échographie"
-  | "Mammographie"
-  | "Radiologie";
+export type TypeExamen = "IRM" | "Scanner" | "Échographie" | "Mammographie" | "Radiologie";
 
 export type MotifSuspect =
   | "Montant atypique"

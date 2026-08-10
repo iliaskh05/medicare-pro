@@ -318,7 +318,6 @@ function AuditPage() {
             <Pill tone="neutral">Export comptable réservé à la direction</Pill>
           )
         }
-
       />
 
       <div data-tour="audit-kpis" className="grid gap-4 lg:grid-cols-3">
@@ -394,7 +393,10 @@ function AuditPage() {
           </CardHeader>
           <CardContent className="h-[180px] pr-4">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={tendanceAnomalies} margin={{ top: 5, right: 8, bottom: 0, left: -20 }}>
+              <LineChart
+                data={tendanceAnomalies}
+                margin={{ top: 5, right: 8, bottom: 0, left: -20 }}
+              >
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                 <XAxis
                   dataKey="semaine"

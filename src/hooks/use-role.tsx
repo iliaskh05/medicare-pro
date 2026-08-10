@@ -39,7 +39,6 @@ export const roleProfiles: Record<AppRole, RoleProfile> = {
   },
 };
 
-
 type RoleContextValue = {
   role: AppRole;
   profile: RoleProfile;
@@ -50,10 +49,7 @@ const RoleContext = createContext<RoleContextValue | null>(null);
 
 export function RoleProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<AppRole>("directeur");
-  const value = useMemo(
-    () => ({ role, profile: roleProfiles[role], setRole }),
-    [role],
-  );
+  const value = useMemo(() => ({ role, profile: roleProfiles[role], setRole }), [role]);
   return <RoleContext.Provider value={value}>{children}</RoleContext.Provider>;
 }
 

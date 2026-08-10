@@ -77,10 +77,7 @@ function sameExamFamily(a: string, b: string): boolean {
  * @param study Acte à scorer
  * @param history Corpus d'actes (même patient / examens récents) — clustering simulé
  */
-export function calculateAnomalyScore(
-  study: Study,
-  history: Study[] = [],
-): AnomalyScoreResult {
+export function calculateAnomalyScore(study: Study, history: Study[] = []): AnomalyScoreResult {
   const contributions: { rule: string; points: number }[] = [];
   const motifs: string[] = [];
   const bareme = resolveBareme(study);
@@ -263,7 +260,7 @@ export function augmentHistoryForFrequency(studies: Study[]): Study[] {
   const extras: Study[] = [];
   for (const s of studies) {
     const hash = [...s.id].reduce((a, c) => a + c.charCodeAt(0), 0);
-    if (hash % 3 !== 0 && (s.amount / Math.max(1, s.bareme ?? s.amount)) < 1.6) continue;
+    if (hash % 3 !== 0 && s.amount / Math.max(1, s.bareme ?? s.amount) < 1.6) continue;
     const prior = new Date(s.recordedAt);
     prior.setDate(prior.getDate() - (1 + (hash % 3)));
     extras.push({

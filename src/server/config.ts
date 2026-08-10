@@ -22,7 +22,7 @@ export const serverConfig = {
   jwtSecret: env("RADIOCRM_JWT_SECRET", "dev-jwt-secret-change-me"),
   llm: {
     // Préférer OPENAI_API_KEY (serveur). Fallback VITE_* uniquement en local pour la démo.
-    apiKey: env("OPENAI_API_KEY") || env("LLM_API_KEY") || env("VITE_OPENAI_API_KEY"),
+    apiKey: env("OPENAI_API_KEY") || env("LLM_API_KEY"),
     baseUrl: env("LLM_BASE_URL", "https://api.openai.com/v1"),
     model: env("LLM_MODEL", "gpt-4o-mini"),
   },

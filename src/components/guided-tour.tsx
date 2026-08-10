@@ -113,7 +113,6 @@ const steps: TourStep[] = [
   },
 ];
 
-
 type TourValue = { start: () => void; running: boolean };
 
 const TourContext = createContext<TourValue>({ start: () => {}, running: false });
@@ -185,13 +184,22 @@ export function TourProvider({ children }: { children: ReactNode }) {
 
   const isLast = index !== null && index === steps.length - 1;
   const pad = 8;
-  const cardTop = rect ? Math.min(rect.top + rect.height + 16, (typeof window !== "undefined" ? window.innerHeight : 800) - 230) : 0;
+  const cardTop = rect
+    ? Math.min(
+        rect.top + rect.height + 16,
+        (typeof window !== "undefined" ? window.innerHeight : 800) - 230,
+      )
+    : 0;
 
   return (
     <TourContext.Provider value={value}>
       {children}
       {step ? (
-        <div className="fixed inset-0 z-[70]" role="dialog" aria-label="Visite guidée Démo Directeur">
+        <div
+          className="fixed inset-0 z-[70]"
+          role="dialog"
+          aria-label="Visite guidée Démo Directeur"
+        >
           {rect ? (
             <div
               className="pointer-events-none absolute rounded-xl ring-2 ring-primary transition-all duration-500"
@@ -211,7 +219,16 @@ export function TourProvider({ children }: { children: ReactNode }) {
             className="absolute w-[min(24rem,calc(100vw-2rem))] rounded-2xl border border-border bg-card p-5 shadow-xl transition-all duration-500"
             style={
               rect
-                ? { top: cardTop, left: Math.max(16, Math.min(rect.left, (typeof window !== "undefined" ? window.innerWidth : 1200) - 400)) }
+                ? {
+                    top: cardTop,
+                    left: Math.max(
+                      16,
+                      Math.min(
+                        rect.left,
+                        (typeof window !== "undefined" ? window.innerWidth : 1200) - 400,
+                      ),
+                    ),
+                  }
                 : { top: "50%", left: "50%", transform: "translate(-50%, -50%)" }
             }
           >

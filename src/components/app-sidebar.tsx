@@ -75,10 +75,7 @@ export function AppSidebar() {
                     tooltip={item.title}
                     isActive={currentPath === item.url}
                   >
-                    <Link
-                      to={item.url}
-                      className="flex items-center gap-2 font-medium"
-                    >
+                    <Link to={item.url} className="flex items-center gap-2 font-medium">
                       <item.icon
                         className={
                           currentPath === item.url

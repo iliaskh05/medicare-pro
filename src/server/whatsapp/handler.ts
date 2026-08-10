@@ -10,7 +10,12 @@ export function verifyWhatsAppChallenge(url: URL): string {
   const token = url.searchParams.get("hub.verify_token");
   const challenge = url.searchParams.get("hub.challenge");
 
-  if (mode === "subscribe" && token && safeEqual(token, serverConfig.whatsapp.verifyToken) && challenge) {
+  if (
+    mode === "subscribe" &&
+    token &&
+    safeEqual(token, serverConfig.whatsapp.verifyToken) &&
+    challenge
+  ) {
     return challenge;
   }
   throw new HttpError(403, "Vérification WhatsApp refusée", "wa_verify_failed");

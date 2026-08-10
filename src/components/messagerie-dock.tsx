@@ -6,7 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { conversationsInternes, type ConversationInterne, type MessageInterne } from "@/data/mock-extra";
+import {
+  conversationsInternes,
+  type ConversationInterne,
+  type MessageInterne,
+} from "@/data/mock-extra";
 
 export function MessagerieDock() {
   const [open, setOpen] = useState(false);
@@ -38,7 +42,9 @@ export function MessagerieDock() {
     const message: MessageInterne = { id: `m-${Date.now()}`, auteur: "moi", texte, heure };
     setThreads((prev) =>
       prev.map((t) =>
-        t.id === active.id ? { ...t, messages: [...t.messages, message], dernierMessage: texte } : t,
+        t.id === active.id
+          ? { ...t, messages: [...t.messages, message], dernierMessage: texte }
+          : t,
       ),
     );
     setDraft("");
@@ -48,7 +54,7 @@ export function MessagerieDock() {
     return (
       <Button
         onClick={() => setOpen(true)}
-        className="fixed bottom-5 right-5 z-40 h-12 gap-2 rounded-full pl-4 pr-5 shadow-elevated"
+        className="fixed bottom-[4.75rem] right-5 z-40 h-11 gap-2 rounded-full pl-4 pr-5 shadow-elevated"
       >
         <MessageSquare className="size-5" />
         <span className="hidden sm:inline">Messagerie médecins</span>
@@ -64,7 +70,7 @@ export function MessagerieDock() {
   return (
     <section
       aria-label="Messagerie interne"
-      className="fixed bottom-5 right-5 z-40 flex h-[30rem] w-[min(22rem,calc(100vw-2.5rem))] flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-elevated"
+      className="fixed bottom-[4.75rem] right-5 z-40 flex h-[30rem] w-[min(22rem,calc(100vw-2.5rem))] flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-elevated"
     >
       <header className="flex items-center gap-2 border-b border-border bg-primary px-3 py-2.5 text-primary-foreground">
         {active ? (

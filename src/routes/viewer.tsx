@@ -23,11 +23,7 @@ import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { apiFetch, getApiKey } from "@/lib/api-client";
 import { telechargerDossierPdf } from "@/lib/pdf-export";
-import type {
-  ImageAnalysisResult,
-  ImagingStudy,
-  StructuredReport,
-} from "@/server/store/types";
+import type { ImageAnalysisResult, ImagingStudy, StructuredReport } from "@/server/store/types";
 
 export const Route = createFileRoute("/viewer")({
   head: () => ({
@@ -41,8 +37,7 @@ export const Route = createFileRoute("/viewer")({
       { property: "og:title", content: "Visionneuse & analyse IA — RadioCRM" },
       {
         property: "og:description",
-        content:
-          "Analysez les examens et générez des comptes rendus structurés en un clic.",
+        content: "Analysez les examens et générez des comptes rendus structurés en un clic.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -161,15 +156,16 @@ function ViewerPage() {
       toast.success("Analyse d'image terminée");
       void qc.invalidateQueries({ queryKey: ["imaging-study", selectedId] });
     },
-    onError: (e: unknown) =>
-      toast.error(e instanceof Error ? e.message : "Analyse échouée"),
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Analyse échouée"),
   });
 
   const reportMut = useMutation({
     mutationFn: async (): Promise<string> => {
       if (!selectedId) throw new Error("Sélectionnez une étude avant de générer le compte rendu.");
       if (!dictationNotes.trim()) {
-        throw new Error("Les notes de dictée sont vides. Saisissez une dictée avant de générer le CR.");
+        throw new Error(
+          "Les notes de dictée sont vides. Saisissez une dictée avant de générer le CR.",
+        );
       }
       const report = await apiFetch<StructuredReport>("/api/reports/structure", {
         method: "POST",
@@ -494,7 +490,7 @@ function ViewerPage() {
                                   : "neutral"
                             }
                           >
-                            {((Number(f?.confidence ?? 0)) * 100).toFixed(0)}%
+                            {(Number(f?.confidence ?? 0) * 100).toFixed(0)}%
                           </Pill>
                         </div>
                       </li>

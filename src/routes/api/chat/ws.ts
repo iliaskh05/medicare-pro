@@ -27,9 +27,12 @@ export const Route = createFileRoute("/api/chat/ws")({
               webSocket?: unknown;
             };
             if ("webSocket" in maybe) {
-              return new Response("WebSocket upgrade non supporté sur ce runtime — utilisez le serveur WS dédié", {
-                status: 426,
-              });
+              return new Response(
+                "WebSocket upgrade non supporté sur ce runtime — utilisez le serveur WS dédié",
+                {
+                  status: 426,
+                },
+              );
             }
             return new Response(
               "Utilisez le serveur WebSocket dédié (port 8788) ou le flux SSE /api/chat/stream",
@@ -40,7 +43,7 @@ export const Route = createFileRoute("/api/chat/ws")({
           return jsonOk({
             transport: "websocket",
             path: serverConfig.wsPath,
-            dedicatedUrl: process.env['WS_PUBLIC_URL'] ?? "ws://127.0.0.1:8788/chat",
+            dedicatedUrl: process.env["WS_PUBLIC_URL"] ?? "ws://127.0.0.1:8788/chat",
             sseFallback: "/api/chat/stream",
             protocol: {
               join: { type: "join", roomId: "room-staff" },
