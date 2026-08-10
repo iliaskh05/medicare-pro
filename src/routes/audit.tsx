@@ -501,6 +501,7 @@ function AuditPage() {
                   <TableHead className="text-right">Montant facturé</TableHead>
                   <TableHead>Score de risque</TableHead>
                   <TableHead>Motif suspect</TableHead>
+                  <TableHead>Dossier</TableHead>
                   <TableHead className="pr-6 text-right">Décision</TableHead>
                 </TableRow>
               </TableHeader>
@@ -576,7 +577,7 @@ function AuditPage() {
                 ))}
                 {rows.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="py-12 text-center text-muted-foreground">
+                    <TableCell colSpan={7} className="py-12 text-center text-muted-foreground">
                       Aucune anomalie au-dessus de {seuil}% pour ces filtres.
                     </TableCell>
                   </TableRow>
