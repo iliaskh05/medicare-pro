@@ -15,6 +15,8 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppHeader } from "@/components/app-header";
 import { Toaster } from "@/components/ui/sonner";
+import { MessagerieDock } from "@/components/messagerie-dock";
+import { RoleProvider } from "@/hooks/use-role";
 import { AppStoreProvider } from "@/store/app-store-provider";
 
 function NotFoundComponent() {
@@ -82,12 +84,24 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
+      {
+        name: "google-site-verification",
+        content: "-Aw4JQVobB_qGDCCLQN75AKThKyMpS7zxMe46p9A4Fg",
+      },
+
       { title: "RadioCRM — CRM du centre de radiologie" },
       {
         name: "description",
         content:
           "CRM médical pour centre de radiologie au Maroc : patients, facturation MAD, prescripteurs et audit IA.",
       },
+      { property: "og:title", content: "RadioCRM — CRM du centre de radiologie" },
+      {
+        property: "og:description",
+        content:
+          "CRM médical pour centre de radiologie au Maroc : patients, facturation MAD, prescripteurs et audit IA.",
+      },
+      { property: "og:site_name", content: "RadioCRM" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -127,20 +141,23 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AppStoreProvider>
-        <SidebarProvider>
-          <div className="flex min-h-screen w-full bg-background">
-            <AppSidebar />
-            <div className="flex min-w-0 flex-1 flex-col">
-              <AppHeader />
-              <main className="flex-1 px-3 py-5 sm:px-6 sm:py-7">
-                {/* Required: nested routes render here. */}
-                <Outlet />
-              </main>
+      <RoleProvider>
+        <AppStoreProvider>
+          <SidebarProvider>
+            <div className="flex min-h-screen w-full bg-background">
+              <AppSidebar />
+              <div className="flex min-w-0 flex-1 flex-col">
+                <AppHeader />
+                <main className="flex-1 px-3 py-5 sm:px-6 sm:py-7">
+                  {/* Required: nested routes render here. */}
+                  <Outlet />
+                </main>
+              </div>
             </div>
-          </div>
-        </SidebarProvider>
-      </AppStoreProvider>
+          </SidebarProvider>
+          <MessagerieDock />
+        </AppStoreProvider>
+      </RoleProvider>
       <Toaster />
     </QueryClientProvider>
   );

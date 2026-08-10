@@ -24,6 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useRole } from "@/hooks/use-role";
 import { PageHeader, Pill, IconTile, EmptyState } from "@/components/ui-kit";
 import { ProbabilityBar } from "@/components/probability-gauge";
 import { formatFrenchDate } from "@/lib/date";
@@ -147,6 +148,7 @@ function PlanningHeatmap({ data }: { data: PlanningSlot[] }) {
 }
 
 function Dashboard() {
+  const { profile } = useRole();
   const { alertesEnAttente, urgences, montantEnJeu } = useAppStore();
 
   const today = useMemo(() => formatFrenchDate(), []);
@@ -160,6 +162,7 @@ function Dashboard() {
   );
 
   return (
+
     <div className="space-y-6">
       <PageHeader
         title="Tableau de bord"
@@ -339,9 +342,15 @@ function Dashboard() {
                 {comptabilite.pending} actes en attente · Dernier export {comptabilite.lastExport}
               </p>
             </div>
-            <Button className="w-full" asChild>
-              <Link to="/audit">Exporter vers EFIBEC (CSV)</Link>
-            </Button>
+            {profile.canExportCompta ? (
+              <Button className="w-full shadow-sm" asChild>
+                <Link to="/audit">Exporter vers EFIBEC (CSV)</Link>
+              </Button>
+            ) : (
+              <p className="rounded-lg border border-dashed border-border bg-muted/40 px-3 py-2.5 text-center text-xs text-muted-foreground">
+                Export comptable réservé au profil Directeur
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>
