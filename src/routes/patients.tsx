@@ -298,15 +298,11 @@ function PatientsPage() {
                       {p.dernierExamen}
                     </TableCell>
                     <TableCell className="pr-6 text-right">
-                      <ActionButton
-                        variant="outline"
-                        size="sm"
-                        toastKind="info"
-                        toastMessage="Accès sécurisé au dossier patient en cours..."
-                        toastDescription={`${p.nom} · dossier ${p.id}`}
-                      >
-                        <FileText className="mr-1.5 size-4" /> Voir dossier
-                      </ActionButton>
+                      <Button variant="outline" size="sm" asChild>
+                        <Link to="/patient/demo">
+                          <FileText className="mr-1.5 size-4" /> Voir dossier
+                        </Link>
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
