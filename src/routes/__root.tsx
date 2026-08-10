@@ -16,6 +16,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { AppHeader } from "@/components/app-header";
 import { Toaster } from "@/components/ui/sonner";
 import { MessagerieDock } from "@/components/messagerie-dock";
+import { RoleProvider } from "@/hooks/use-role";
 
 function NotFoundComponent() {
   return (
@@ -139,6 +140,7 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <RoleProvider>
       <SidebarProvider>
         <div className="flex min-h-screen w-full bg-background">
           <AppSidebar />
@@ -152,6 +154,7 @@ function RootComponent() {
         </div>
       </SidebarProvider>
       <MessagerieDock />
+      </RoleProvider>
       <Toaster />
     </QueryClientProvider>
   );
