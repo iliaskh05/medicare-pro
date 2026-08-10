@@ -37,7 +37,7 @@ function ImageriePage() {
         subtitle="Imagerie du jour avec surbrillance des zones analysées automatiquement"
       />
 
-      <div className="grid gap-4 xl:grid-cols-[16rem_minmax(0,1fr)]">
+      <div data-tour="imagerie" className="grid gap-4 xl:grid-cols-[16rem_minmax(0,1fr)]">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Examens disponibles</CardTitle>

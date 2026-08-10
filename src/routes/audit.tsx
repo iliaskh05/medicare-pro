@@ -321,7 +321,7 @@ function AuditPage() {
 
       />
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div data-tour="audit-kpis" className="grid gap-4 lg:grid-cols-3">
         <Card>
           <CardContent className="flex items-start gap-4 p-5">
             <IconTile tone="primary">
@@ -384,7 +384,7 @@ function AuditPage() {
         </Card>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div data-tour="audit-cluster" className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader className="flex-row items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-base">

@@ -84,7 +84,7 @@ function MedecinsPage() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div data-tour="medecins" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {list.map((m) => (
           <Card key={m.id} className="transition-colors hover:border-primary/40">
             <CardHeader className="flex-row items-start gap-3">

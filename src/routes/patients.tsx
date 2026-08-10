@@ -263,7 +263,7 @@ function PatientsPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card data-tour="patients-table">
         <CardContent className="px-0 py-0">
           <div className="overflow-x-auto">
             <Table>

@@ -444,7 +444,7 @@ function ChatPage() {
           </CardContent>
         </Card>
 
-        <Card className="flex min-h-[580px] flex-col shadow-sm">
+        <Card data-tour="chat-thread" className="flex min-h-[580px] flex-col shadow-sm">
           <CardHeader className="flex-row items-center justify-between space-y-0 border-b border-border pb-4">
             <div className="flex items-center gap-3">
               <Avatar className="size-10">
