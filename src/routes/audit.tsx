@@ -276,7 +276,7 @@ function AuditPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `efibec_fraudes_validees_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `export_comptable_fraudes_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
     toast.success(`Export CSV comptable généré — ${source.length} dossier(s)`);

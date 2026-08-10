@@ -27,6 +27,7 @@ import {
 import { toast } from "sonner";
 
 import { ActionButton } from "@/components/action-button";
+import { ClusterScatter } from "@/components/cluster-scatter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -694,6 +695,20 @@ function PatientRecordPage() {
               </div>
             </CardContent>
           </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <Brain className="size-4 text-muted-foreground" />
+                Clustering des signaux faibles
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pb-5">
+              <ClusterScatter />
+            </CardContent>
+          </Card>
+
+
 
           <Card>
             <CardHeader className="pb-2">

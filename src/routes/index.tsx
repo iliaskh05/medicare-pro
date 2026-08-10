@@ -1,8 +1,9 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import {
   Activity,
   BrainCircuit,
+  Loader2,
   Lock,
   Mail,
   ScanLine,
@@ -64,8 +65,9 @@ const atouts = [
 
 function LoginPage() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("direction@alamal.ma");
+  const [email, setEmail] = useState("direction@centre-imagerie.ma");
   const [password, setPassword] = useState("demo1234");
+  const [demoLoading, setDemoLoading] = useState(false);
 
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
@@ -116,6 +118,7 @@ function LoginPage() {
               height={960}
               className="h-52 w-full object-cover xl:h-60"
             />
+            <div aria-hidden className="absolute inset-0 bg-black/40" />
             <div
               aria-hidden
               className="absolute inset-0 bg-gradient-to-t from-[oklch(0.18_0.05_264)]/95 via-[oklch(0.18_0.05_264)]/25 to-transparent"
@@ -183,6 +186,7 @@ function LoginPage() {
                 height={960}
                 className="h-36 w-full object-cover"
               />
+              <div aria-hidden className="absolute inset-0 bg-black/40" />
               <div
                 aria-hidden
                 className="absolute inset-0 bg-gradient-to-t from-[oklch(0.18_0.05_264)]/95 to-transparent"
@@ -215,7 +219,7 @@ function LoginPage() {
                   autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="prenom.nom@alamal.ma"
+                  placeholder="prenom.nom@centre-imagerie.ma"
                   className="h-11 bg-background pl-9"
                 />
               </div>
@@ -267,14 +271,31 @@ function LoginPage() {
           <Separator className="my-8" />
 
           <p className="text-center text-xs text-muted-foreground">
-            Accès réservé au personnel autorisé du centre.{" "}
-            <Link
-              to="/dashboard"
-              className="font-medium text-primary hover:underline"
-            >
-              Continuer en mode démonstration
-            </Link>
+            Accès réservé au personnel autorisé du centre.
           </p>
+          <Button
+            type="button"
+            variant="outline"
+            className="mt-3 h-11 w-full"
+            disabled={demoLoading}
+            onClick={() => {
+              if (demoLoading) return;
+              setDemoLoading(true);
+              window.setTimeout(() => {
+                navigate({ to: "/dashboard" });
+              }, 1500);
+            }}
+          >
+            {demoLoading ? (
+              <>
+                <Loader2 className="mr-2 size-4 animate-spin" />
+                Authentification sécurisée en cours...
+              </>
+            ) : (
+              "Continuer en mode démonstration"
+            )}
+          </Button>
+
         </div>
       </div>
     </div>

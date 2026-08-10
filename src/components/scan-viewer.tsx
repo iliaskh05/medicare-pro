@@ -25,6 +25,7 @@ export function ScanViewer({ scan }: { scan: Scan }) {
   const [zoom, setZoom] = useState(1);
   const [contraste, setContraste] = useState(100);
   const [surbrillance, setSurbrillance] = useState(true);
+  const [calqueIA, setCalqueIA] = useState(true);
   const [activeId, setActiveId] = useState<string | null>(scan.annotations[0]?.id ?? null);
 
   const reset = () => {
@@ -99,6 +100,31 @@ export function ScanViewer({ scan }: { scan: Scan }) {
               className="size-full object-cover"
               style={{ filter: `contrast(${contraste}%)` }}
             />
+            {calqueIA ? (
+              <svg
+                viewBox="0 0 100 100"
+                preserveAspectRatio="none"
+                className="pointer-events-none absolute inset-0 size-full"
+                aria-hidden
+              >
+                <path
+                  d="M38 42 C44 33, 60 33, 66 43 C72 53, 66 66, 54 68 C42 70, 33 60, 36 50 Z"
+                  fill="var(--destructive)"
+                  fillOpacity="0.16"
+                  stroke="var(--destructive)"
+                  strokeWidth="0.9"
+                  strokeDasharray="3 1.5"
+                  className="animate-pulse"
+                />
+                <path
+                  d="M56 52 C60 48, 68 50, 69 56 C70 62, 63 65, 59 61 Z"
+                  fill="none"
+                  stroke="var(--destructive)"
+                  strokeWidth="0.7"
+                />
+              </svg>
+            ) : null}
+
             {surbrillance
               ? scan.annotations.map((a) => {
                   const isActive = a.id === activeId;
@@ -157,6 +183,18 @@ export function ScanViewer({ scan }: { scan: Scan }) {
             Surbrillance des analyses IA
           </Label>
           <Switch id="surbrillance" checked={surbrillance} onCheckedChange={setSurbrillance} />
+        </div>
+
+        <div className="flex items-center justify-between rounded-xl border border-border bg-card px-3 py-2.5">
+          <div>
+            <Label htmlFor="calque-ia" className="text-sm">
+              Activer le calque IA
+            </Label>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
+              Segmentation automatique (contour rouge)
+            </p>
+          </div>
+          <Switch id="calque-ia" checked={calqueIA} onCheckedChange={setCalqueIA} />
         </div>
 
         <ul className="space-y-2">
