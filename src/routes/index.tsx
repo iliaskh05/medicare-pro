@@ -269,14 +269,31 @@ function LoginPage() {
           <Separator className="my-8" />
 
           <p className="text-center text-xs text-muted-foreground">
-            Accès réservé au personnel autorisé du centre.{" "}
-            <Link
-              to="/dashboard"
-              className="font-medium text-primary hover:underline"
-            >
-              Continuer en mode démonstration
-            </Link>
+            Accès réservé au personnel autorisé du centre.
           </p>
+          <Button
+            type="button"
+            variant="outline"
+            className="mt-3 h-11 w-full"
+            disabled={demoLoading}
+            onClick={() => {
+              if (demoLoading) return;
+              setDemoLoading(true);
+              window.setTimeout(() => {
+                navigate({ to: "/dashboard" });
+              }, 1500);
+            }}
+          >
+            {demoLoading ? (
+              <>
+                <Loader2 className="mr-2 size-4 animate-spin" />
+                Authentification sécurisée en cours...
+              </>
+            ) : (
+              "Continuer en mode démonstration"
+            )}
+          </Button>
+
         </div>
       </div>
     </div>
