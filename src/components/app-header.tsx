@@ -45,6 +45,17 @@ export function AppHeader() {
       </div>
 
       <div className="ml-auto flex items-center gap-2">
+        <Button
+          onClick={start}
+          className="h-9 gap-2 shadow-sm"
+          aria-label="Lancer la visite guidée Démo Directeur"
+        >
+          <PlayCircle className="size-4" />
+          <span className="hidden sm:inline">Lancer la Démo Directeur</span>
+          <span className="sm:hidden">Démo</span>
+        </Button>
+
+
         <ActionButton
           variant="ghost"
           size="icon"
