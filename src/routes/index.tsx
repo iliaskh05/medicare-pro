@@ -1,6 +1,14 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { Activity, BrainCircuit, Lock, Mail, ScanLine, ShieldCheck, Sparkles } from "lucide-react";
+import {
+  Activity,
+  BrainCircuit,
+  Lock,
+  Mail,
+  ScanLine,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,16 +21,20 @@ import centreRadiologie from "@/assets/centre-radiologie.jpg";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Connexion ? RadioCRM Centre d'Imagerie Al Amal" },
+      { title: "Connexion â€” RadioCRM Centre d'Imagerie Al Amal" },
       {
         name: "description",
         content:
-          "Accédez à RadioCRM, la plateforme du Centre d'Imagerie Al Amal : patients, facturation MAD, imagerie et détection de fraude par IA.",
+          "AccÃ©dez Ã  RadioCRM, la plateforme du Centre d'Imagerie Al Amal : patients, facturation MAD, imagerie et dÃ©tection de fraude par IA.",
       },
-      { property: "og:title", content: "Connexion ? RadioCRM Centre d'Imagerie Al Amal" },
+      {
+        property: "og:title",
+        content: "Connexion â€” RadioCRM Centre d'Imagerie Al Amal",
+      },
       {
         property: "og:description",
-        content: "Plateforme sécurisée de gestion du centre de radiologie Al Amal, Casablanca.",
+        content:
+          "Plateforme sÃ©curisÃ©e de gestion du centre de radiologie Al Amal, Casablanca.",
       },
     ],
   }),
@@ -32,18 +44,21 @@ export const Route = createFileRoute("/")({
 const atouts = [
   {
     icon: BrainCircuit,
-    titre: "IA de détection de fraude",
-    detail: "Clustering des signaux faibles et scoring des anomalies de facturation.",
+    titre: "IA de dÃ©tection de fraude",
+    detail:
+      "Clustering des signaux faibles et scoring des anomalies de facturation.",
   },
   {
     icon: ScanLine,
-    titre: "Imagerie augmentée",
-    detail: "Surbrillance des zones suspectes et compte rendu structuré automatique.",
+    titre: "Imagerie augmentÃ©e",
+    detail:
+      "Surbrillance des zones suspectes et compte rendu structurÃ© automatique.",
   },
   {
     icon: Activity,
     titre: "Automatisation du parcours",
-    detail: "Chatbot WhatsApp, planning intelligent et export comptable EFIBEC.",
+    detail:
+      "Chatbot WhatsApp, planning intelligent et export comptable EFIBEC.",
   },
 ];
 
@@ -54,7 +69,7 @@ function LoginPage() {
 
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
-      {/* Moitié gauche ? branding */}
+      {/* MoitiÃ© gauche â€” branding */}
       <div className="relative hidden overflow-hidden bg-gradient-to-br from-[oklch(0.24_0.06_264)] via-[oklch(0.30_0.07_258)] to-[oklch(0.42_0.05_250)] p-12 lg:flex lg:flex-col lg:justify-between">
         <div
           aria-hidden
@@ -69,7 +84,7 @@ function LoginPage() {
           <div className="flex size-11 items-center justify-center rounded-xl bg-primary-foreground/10 ring-1 ring-inset ring-primary-foreground/20 backdrop-blur">
             <img
               src={logoRadioCrm}
-              alt="Logo RadioCRM ? Centre d'Imagerie Al Amal"
+              alt="Logo RadioCRM â€” Centre d'Imagerie Al Amal"
               width={512}
               height={512}
               className="size-7"
@@ -83,9 +98,11 @@ function LoginPage() {
         <div className="relative max-w-xl">
           <p className="inline-flex items-center gap-2 rounded-full bg-primary-foreground/10 px-3 py-1 text-xs font-semibold text-primary-foreground/80 ring-1 ring-inset ring-primary-foreground/20">
             <Sparkles className="size-3.5" />
-            Plateforme médicale augmentée par l'IA
+            Plateforme mÃ©dicale augmentÃ©e par l'IA
           </p>
-          <h1 className="page-title mt-6 text-5xl text-primary-foreground xl:text-6xl">RadioCRM</h1>
+          <h1 className="page-title mt-6 text-5xl text-primary-foreground xl:text-6xl">
+            RadioCRM
+          </h1>
           <p className="mt-3 text-lg font-semibold text-primary-foreground/85">
             Centre d'Imagerie Al Amal
           </p>
@@ -94,7 +111,7 @@ function LoginPage() {
           <figure className="relative mt-6 overflow-hidden rounded-2xl ring-1 ring-inset ring-primary-foreground/15">
             <img
               src={centreRadiologie}
-              alt="Salle d'IRM du Centre d'Imagerie Al Amal à Casablanca"
+              alt="Salle d'IRM du Centre d'Imagerie Al Amal Ã  Casablanca"
               width={1280}
               height={960}
               className="h-52 w-full object-cover xl:h-60"
@@ -105,10 +122,10 @@ function LoginPage() {
             />
             <figcaption className="absolute inset-x-0 bottom-0 p-4">
               <p className="text-base font-bold leading-snug text-primary-foreground">
-                « Voir plus clair, décider plus vite. »
+                Â« Voir plus clair, dÃ©cider plus vite. Â»
               </p>
               <p className="mt-1 text-xs text-primary-foreground/70">
-                Imagerie de précision · Casablanca
+                Imagerie de prÃ©cision Â· Casablanca
               </p>
             </figcaption>
           </figure>
@@ -120,8 +137,12 @@ function LoginPage() {
                   <a.icon className="size-4 text-primary-foreground" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-primary-foreground">{a.titre}</p>
-                  <p className="text-xs text-primary-foreground/60">{a.detail}</p>
+                  <p className="text-sm font-semibold text-primary-foreground">
+                    {a.titre}
+                  </p>
+                  <p className="text-xs text-primary-foreground/60">
+                    {a.detail}
+                  </p>
                 </div>
               </div>
             ))}
@@ -130,11 +151,12 @@ function LoginPage() {
 
         <p className="relative flex items-center gap-2 text-xs text-primary-foreground/55">
           <ShieldCheck className="size-4" />
-          Hébergement conforme · Journalisation des accès · Données patients chiffrées
+          HÃ©bergement conforme Â· Journalisation des accÃ¨s Â· DonnÃ©es patients
+          chiffrÃ©es
         </p>
       </div>
 
-      {/* Moitié droite ? formulaire */}
+      {/* MoitiÃ© droite â€” formulaire */}
       <div className="flex items-center justify-center bg-surface px-6 py-12 sm:px-12">
         <div className="w-full max-w-sm">
           <div className="mb-8 lg:hidden">
@@ -148,7 +170,9 @@ function LoginPage() {
               />
               <div>
                 <p className="text-sm font-bold tracking-tight">RadioCRM</p>
-                <p className="text-xs text-muted-foreground">Centre d'Imagerie Al Amal</p>
+                <p className="text-xs text-muted-foreground">
+                  Centre d'Imagerie Al Amal
+                </p>
               </div>
             </div>
             <figure className="relative mt-5 overflow-hidden rounded-2xl">
@@ -164,14 +188,14 @@ function LoginPage() {
                 className="absolute inset-0 bg-gradient-to-t from-[oklch(0.18_0.05_264)]/95 to-transparent"
               />
               <figcaption className="absolute inset-x-0 bottom-0 p-3 text-sm font-bold text-primary-foreground">
-                « Voir plus clair, décider plus vite. »
+                Â« Voir plus clair, dÃ©cider plus vite. Â»
               </figcaption>
             </figure>
           </div>
 
           <h2 className="page-title text-2xl">Bienvenue</h2>
           <p className="mt-1.5 text-sm text-muted-foreground">
-            Connectez-vous pour accéder au tableau de bord du centre.
+            Connectez-vous pour accÃ©der au tableau de bord du centre.
           </p>
 
           <form
@@ -204,7 +228,7 @@ function LoginPage() {
                   type="button"
                   className="text-xs font-medium text-primary hover:underline"
                 >
-                  Mot de passe oublié ?
+                  Mot de passe oubliÃ© ?
                 </button>
               </div>
               <div className="relative">
@@ -215,7 +239,7 @@ function LoginPage() {
                   autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="????????"
+                  placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
                   className="h-11 bg-background pl-9"
                 />
               </div>
@@ -223,12 +247,19 @@ function LoginPage() {
 
             <div className="flex items-center gap-2">
               <Checkbox id="remember" defaultChecked />
-              <Label htmlFor="remember" className="text-sm font-normal text-muted-foreground">
+              <Label
+                htmlFor="remember"
+                className="text-sm font-normal text-muted-foreground"
+              >
                 Garder ma session active sur ce poste
               </Label>
             </div>
 
-            <Button type="submit" size="lg" className="h-12 w-full text-base shadow-sm">
+            <Button
+              type="submit"
+              size="lg"
+              className="h-12 w-full text-base shadow-sm"
+            >
               Se connecter
             </Button>
           </form>
@@ -236,9 +267,12 @@ function LoginPage() {
           <Separator className="my-8" />
 
           <p className="text-center text-xs text-muted-foreground">
-            Accès réservé au personnel autorisé du centre.{" "}
-            <Link to="/dashboard" className="font-medium text-primary hover:underline">
-              Continuer en mode démonstration
+            AccÃ¨s rÃ©servÃ© au personnel autorisÃ© du centre.{" "}
+            <Link
+              to="/dashboard"
+              className="font-medium text-primary hover:underline"
+            >
+              Continuer en mode dÃ©monstration
             </Link>
           </p>
         </div>
