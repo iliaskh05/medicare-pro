@@ -248,6 +248,7 @@ function ViewerPage() {
           title="Visionneuse radiologique"
           subtitle="Pipeline d'analyse d'images + structuration des comptes rendus"
         />
+      <SimulationNotice contexte="Analyses d'images et comptes rendus générés par un pipeline simulé — aucun diagnostic." />
         <Card>
           <CardContent>
             <LoadingSpinner label="Chargement des études…" />
