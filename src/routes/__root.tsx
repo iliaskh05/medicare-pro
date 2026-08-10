@@ -9,6 +9,10 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
+import { ShieldCheck } from "lucide-react";
+
+import { TourProvider } from "@/components/guided-tour";
+
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
