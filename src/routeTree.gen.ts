@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuditRouteImport } from './routes/audit'
 import { Route as ChatRouteImport } from './routes/chat'
 import { Route as DashboardRouteImport } from './routes/dashboard'
@@ -34,6 +35,11 @@ import { Route as ApiWhatsappInboxRouteImport } from './routes/api/whatsapp/inbo
 import { Route as ApiWhatsappWebhookRouteImport } from './routes/api/whatsapp/webhook'
 import { Route as ApiImagingStudiesStudyIdRouteImport } from './routes/api/imaging/studies.$studyId'
 
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuditRoute = AuditRouteImport.update({
   id: '/audit',
   path: '/audit',
@@ -157,6 +163,7 @@ const ApiImagingStudiesStudyIdRoute =
   } as any)
 
 export interface FileRoutesByFullPath {
+  '/': typeof IndexRoute
   '/audit': typeof AuditRoute
   '/chat': typeof ChatRoute
   '/dashboard': typeof DashboardRoute
@@ -183,6 +190,7 @@ export interface FileRoutesByFullPath {
   '/api/imaging/studies/$studyId': typeof ApiImagingStudiesStudyIdRoute
 }
 export interface FileRoutesByTo {
+  '/': typeof IndexRoute
   '/audit': typeof AuditRoute
   '/chat': typeof ChatRoute
   '/dashboard': typeof DashboardRoute
@@ -210,6 +218,7 @@ export interface FileRoutesByTo {
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
+  '/': typeof IndexRoute
   '/audit': typeof AuditRoute
   '/chat': typeof ChatRoute
   '/dashboard': typeof DashboardRoute
@@ -238,6 +247,7 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
+    | '/'
     | '/audit'
     | '/chat'
     | '/dashboard'
@@ -264,6 +274,7 @@ export interface FileRouteTypes {
     | '/api/imaging/studies/$studyId'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/'
     | '/audit'
     | '/chat'
     | '/dashboard'
@@ -290,6 +301,7 @@ export interface FileRouteTypes {
     | '/api/imaging/studies/$studyId'
   id:
     | '__root__'
+    | '/'
     | '/audit'
     | '/chat'
     | '/dashboard'
@@ -317,6 +329,7 @@ export interface FileRouteTypes {
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
+  IndexRoute: typeof IndexRoute
   AuditRoute: typeof AuditRoute
   ChatRoute: typeof ChatRoute
   DashboardRoute: typeof DashboardRoute
@@ -344,6 +357,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/audit': {
       id: '/audit'
       path: '/audit'
@@ -527,6 +547,7 @@ const ApiImagingStudiesRouteWithChildren =
   ApiImagingStudiesRoute._addFileChildren(ApiImagingStudiesRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
+  IndexRoute: IndexRoute,
   AuditRoute: AuditRoute,
   ChatRoute: ChatRoute,
   DashboardRoute: DashboardRoute,
