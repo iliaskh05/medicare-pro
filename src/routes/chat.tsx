@@ -346,16 +346,19 @@ function ChatPage() {
 
   const joindre = (kind: ChatAttachment["kind"]) => {
     if (kind === "image") {
-      pushLocal({
-        body: "Capture d'écran de la console PACS partagée.",
-        attachment: {
-          kind: "image",
-          url: seedMessages.find((m) => m.attachment?.kind === "image")!
-            .attachment as unknown as never,
-          caption: "",
-          meta: "",
-        } as ChatAttachment,
-      });
+      const modele = seedMessages.find((m) => m.attachment?.kind === "image")?.attachment;
+      if (modele && modele.kind === "image") {
+        pushLocal({
+          body: "Capture PACS partagée pour avis.",
+          attachment: {
+            kind: "image",
+            url: modele.url,
+            caption: "Capture PACS",
+            meta: "Partagée depuis la console de lecture",
+          },
+        });
+      }
+      toast.success("Image partagée dans la conversation");
       return;
     }
     if (kind === "audio") {
