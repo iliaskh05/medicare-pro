@@ -90,7 +90,7 @@ export const Route = createFileRoute("/audit")({
       {
         name: "description",
         content:
-          "Détection d'anomalies de facturation par clustering : scores de risque, motifs suspects, validation humaine et export vers l'expertise comptable (EFIBEC).",
+          "Détection d'anomalies de facturation par clustering : scores de risque, motifs suspects, validation humaine et export vers l'expertise comptable.",
       },
       {
         property: "og:title",
@@ -160,10 +160,10 @@ function dossierAnomalie(a: Anomalie) {
       {
         titre: "Recommandation",
         contenu:
-          "Dossier à confronter aux pièces justificatives (ordonnance, accord préalable mutuelle) avant transmission au cabinet comptable EFIBEC.",
+          "Dossier à confronter aux pièces justificatives (ordonnance, accord préalable mutuelle) avant transmission au cabinet comptable.",
       },
     ],
-    mention: "Dossier d'audit — Centre d'Imagerie Al Amal · confidentiel, transmission comptable EFIBEC.",
+    mention: "Dossier d'audit — Centre d'Imagerie Médicale · confidentiel, transmission comptable.",
   };
 }
 
@@ -279,7 +279,7 @@ function AuditPage() {
     a.download = `efibec_fraudes_validees_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success(`Export CSV EFIBEC généré — ${source.length} dossier(s)`);
+    toast.success(`Export CSV comptable généré — ${source.length} dossier(s)`);
   };
 
   const exportPdf = () => {
@@ -293,7 +293,7 @@ function AuditPage() {
     <div className="space-y-6">
       <PageHeader
         title="Audit & Conformité — Détection d'anomalies"
-        subtitle="Clustering non supervisé + validation humaine · Centre d'Imagerie Médicale Al Amal, Casablanca"
+        subtitle="Clustering non supervisé + validation humaine · Centre d'Imagerie Médicale, Casablanca"
         actions={
           profile.canExportCompta ? (
             <DropdownMenu>
@@ -307,7 +307,7 @@ function AuditPage() {
                 <DropdownMenuLabel>Transmission expertise comptable</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={exportCsv}>
-                  <FileText className="mr-2 size-4" /> CSV — import EFIBEC
+                  <FileText className="mr-2 size-4" /> CSV — import comptable
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={exportPdf}>
                   <FileText className="mr-2 size-4" /> PDF — rapport signé

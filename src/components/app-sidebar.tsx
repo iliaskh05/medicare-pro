@@ -54,7 +54,7 @@ export function AppSidebar() {
           <div className="min-w-0 group-data-[collapsible=icon]:hidden">
             <p className="truncate text-sm font-bold tracking-tight">RadioCRM</p>
             <p className="truncate text-xs text-muted-foreground">
-              Centre d&apos;Imagerie Médicale Al Amal
+              Centre d&apos;Imagerie Médicale
             </p>
           </div>
         </div>
@@ -98,7 +98,7 @@ export function AppSidebar() {
           <p className="text-xs font-semibold text-sidebar-accent-foreground">
             Module IA Fraude actif
           </p>
-          <p className="mt-0.5 text-xs text-sidebar-foreground/60">Casablanca · Al Amal</p>
+          <p className="mt-0.5 text-xs text-sidebar-foreground/60">Casablanca</p>
         </div>
       </SidebarFooter>
     </Sidebar>

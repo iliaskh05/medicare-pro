@@ -36,7 +36,7 @@ export const conversationsWhatsApp: WaConversation[] = [
     apercu: "Parfait, je confirme jeudi 10h30 alors 🙏",
     messages: [
       { id: "m1", auteur: "patient", texte: "Bonjour, mon médecin m'a prescrit une IRM lombaire. Comment prendre rendez-vous ?", heure: "09:12" },
-      { id: "m2", auteur: "bot", texte: "Bonjour M. Bennani 👋 Bienvenue au Centre d'Imagerie Al Amal. Je peux vous réserver un créneau pour une IRM du rachis lombaire. Avez-vous votre ordonnance avec vous ?", heure: "09:13" },
+      { id: "m2", auteur: "bot", texte: "Bonjour M. Bennani 👋 Bienvenue au Centre d'Imagerie Médicale. Je peux vous réserver un créneau pour une IRM du rachis lombaire. Avez-vous votre ordonnance avec vous ?", heure: "09:13" },
       { id: "m3", auteur: "patient", texte: "Oui, ordonnance du Dr. Naima Skalli, datée du 4 août.", heure: "09:16" },
       { id: "m4", auteur: "bot", texte: "Merci. Voici les créneaux disponibles pour l'IRM lombaire :\n• Jeudi 13/08 à 10h30\n• Vendredi 14/08 à 08h15\n• Samedi 15/08 à 11h00\nQuel créneau vous conviendrait ?", heure: "09:18" },
       { id: "m5", auteur: "patient", texte: "Jeudi 10h30 c'est parfait.", heure: "09:33" },

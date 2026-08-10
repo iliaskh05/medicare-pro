@@ -1,3 +1,5 @@
+import { useNavigate } from "@tanstack/react-router";
+import { toast } from "sonner";
 import { Bell, Search, ChevronDown, ShieldCheck, Stethoscope, UserCog, Check } from "lucide-react";
 
 import { SidebarTrigger } from "@/components/ui/sidebar";
@@ -12,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { ActionButton } from "@/components/action-button";
 import { roleProfiles, useRole, type AppRole } from "@/hooks/use-role";
 
 const roleIcons: Record<AppRole, typeof ShieldCheck> = {
@@ -23,6 +26,7 @@ const roleIcons: Record<AppRole, typeof ShieldCheck> = {
 
 export function AppHeader() {
   const { role, profile, setRole } = useRole();
+  const navigate = useNavigate();
   const RoleIcon = roleIcons[role];
 
   return (
@@ -39,11 +43,19 @@ export function AppHeader() {
       </div>
 
       <div className="ml-auto flex items-center gap-2">
-        <Button variant="ghost" size="icon" className="relative">
+        <ActionButton
+          variant="ghost"
+          size="icon"
+          className="relative"
+          delay={900}
+          toastKind="info"
+          toastMessage="3 notifications non lues"
+          toastDescription="2 alertes de facturation critiques · 1 compte rendu à valider."
+        >
           <Bell className="size-5" />
           <span className="absolute right-1.5 top-1.5 size-2 rounded-full bg-destructive" />
           <span className="sr-only">Notifications</span>
-        </Button>
+        </ActionButton>
 
         {/* Sélecteur de profil (RBAC visuel) */}
         <DropdownMenu>
@@ -99,11 +111,35 @@ export function AppHeader() {
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel>Mon compte</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Profil</DropdownMenuItem>
-            <DropdownMenuItem>Paramètres du centre</DropdownMenuItem>
-            <DropdownMenuItem>Journal d'activité</DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => toast.info(`Chargement des préférences de ${profile.nom}...`)}
+            >
+              Profil
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => toast.info("Module de configuration en cours d'ouverture.")}
+            >
+              Paramètres du centre
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() =>
+                toast.info("Journal d'activité", {
+                  description: "Traçabilité complète des accès aux dossiers patients.",
+                })
+              }
+            >
+              Journal d'activité
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive">Se déconnecter</DropdownMenuItem>
+            <DropdownMenuItem
+              className="text-destructive"
+              onClick={() => {
+                toast.success("Session fermée en toute sécurité.");
+                void navigate({ to: "/" });
+              }}
+            >
+              Se déconnecter
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

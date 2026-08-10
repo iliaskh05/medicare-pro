@@ -38,13 +38,13 @@ import {
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
     meta: [
-      { title: "Tableau de bord — RadioCRM Centre Al Amal" },
+      { title: "Tableau de bord — RadioCRM" },
       {
         name: "description",
         content:
           "Activité du jour du centre de radiologie : patients, chiffre d'affaires en MAD, examens en attente et alertes de facturation.",
       },
-      { property: "og:title", content: "Tableau de bord — RadioCRM Centre Al Amal" },
+      { property: "og:title", content: "Tableau de bord — RadioCRM" },
       {
         property: "og:description",
         content: "Suivi temps réel des actes, recettes et alertes du centre de radiologie.",
@@ -148,7 +148,7 @@ function Dashboard() {
     <div className="space-y-6">
       <PageHeader
         title="Tableau de bord"
-        subtitle="Mercredi 5 août 2026 · Centre d'imagerie Al Amal, Casablanca"
+        subtitle="Mercredi 5 août 2026 · Centre d'Imagerie Médicale, Casablanca"
         actions={
           <>
             <Button variant="outline" asChild>
@@ -275,7 +275,7 @@ function Dashboard() {
                 <FileSpreadsheet className="size-5" />
               </IconTile>
               <div>
-                <CardTitle className="text-base">Synchronisation EFIBEC</CardTitle>
+                <CardTitle className="text-base">Synchronisation comptable</CardTitle>
                 <p className="text-xs text-muted-foreground">Export comptable validé</p>
               </div>
             </div>
@@ -309,7 +309,7 @@ function Dashboard() {
             </div>
             {profile.canExportCompta ? (
               <Button className="w-full shadow-sm" asChild>
-                <Link to="/audit">Exporter vers EFIBEC (CSV)</Link>
+                <Link to="/audit">Exporter la comptabilité (CSV)</Link>
               </Button>
             ) : (
               <p className="rounded-lg border border-dashed border-border bg-muted/40 px-3 py-2.5 text-center text-xs text-muted-foreground">

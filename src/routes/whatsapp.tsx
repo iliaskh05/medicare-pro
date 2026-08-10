@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { ActionButton } from "@/components/action-button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
@@ -29,13 +30,13 @@ import {
 export const Route = createFileRoute("/whatsapp")({
   head: () => ({
     meta: [
-      { title: "Chatbot WhatsApp patients — Centre Al Amal" },
+      { title: "Chatbot WhatsApp patients — Centre d'Imagerie Médicale" },
       {
         name: "description",
         content:
-          "Console WhatsApp du centre d'imagerie Al Amal : conversations patients traitées par l'IA, prise de rendez-vous et envoi des comptes rendus.",
+          "Console WhatsApp du centre d'imagerie médicale : conversations patients traitées par l'IA, prise de rendez-vous et envoi des comptes rendus.",
       },
-      { property: "og:title", content: "Chatbot WhatsApp patients — Centre Al Amal" },
+      { property: "og:title", content: "Chatbot WhatsApp patients — Centre d'Imagerie Médicale" },
       {
         property: "og:description",
         content: "Console de supervision des conversations WhatsApp automatisées avec les patients.",
@@ -221,12 +222,24 @@ function WhatsAppPage() {
               </div>
               <div className="ml-auto flex items-center gap-2">
                 {active && <Pill tone={statutTone[active.statut]}>{active.statut}</Pill>}
-                <Button variant="ghost" size="icon" aria-label="Appeler le patient">
+                <ActionButton
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Appeler le patient"
+                  toastKind="info"
+                  toastMessage="Appel sortant en cours d'établissement..."
+                >
                   <Phone className="size-4" />
-                </Button>
-                <Button variant="ghost" size="icon" aria-label="Démarrer une visioconférence">
+                </ActionButton>
+                <ActionButton
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Démarrer une visioconférence"
+                  toastKind="info"
+                  toastMessage="Salle de téléconsultation en cours d'ouverture."
+                >
                   <Video className="size-4" />
-                </Button>
+                </ActionButton>
               </div>
             </header>
 
@@ -244,7 +257,7 @@ function WhatsAppPage() {
                 variant="outline"
                 className="gap-1.5"
                 onClick={() =>
-                  botRepond(reponsesDemo.pdf, { nom: "CR_IRM_Lombaire_AlAmal.pdf", taille: "526 Ko" })
+                  botRepond(reponsesDemo.pdf, { nom: "CR_IRM_Lombaire.pdf", taille: "526 Ko" })
                 }
               >
                 <FileText className="size-3.5" /> Envoyer compte rendu PDF
@@ -295,12 +308,25 @@ function WhatsAppPage() {
             </div>
 
             <footer className="flex items-center gap-2 border-t bg-card px-3 py-3">
-              <Button variant="ghost" size="icon" aria-label="Ajouter un emoji">
+              <ActionButton
+                variant="ghost"
+                size="icon"
+                aria-label="Ajouter un emoji"
+                toastKind="info"
+                toastMessage="Sélecteur d'emojis en cours d'ouverture."
+                delay={800}
+              >
                 <Smile className="size-4" />
-              </Button>
-              <Button variant="ghost" size="icon" aria-label="Joindre un document">
+              </ActionButton>
+              <ActionButton
+                variant="ghost"
+                size="icon"
+                aria-label="Joindre un document"
+                toastMessage="Compte rendu chiffré et envoyé avec succès."
+                toastDescription="Pièce jointe transmise au patient via WhatsApp."
+              >
                 <Paperclip className="size-4" />
-              </Button>
+              </ActionButton>
               <Input
                 aria-label="Écrire un message au patient"
                 placeholder="Écrivez un message…"

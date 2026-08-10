@@ -12,6 +12,7 @@ import {
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { ActionButton } from "@/components/action-button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { PageHeader, Pill } from "@/components/ui-kit";
@@ -58,9 +59,13 @@ function MedecinsPage() {
         title="Réseau des médecins prescripteurs"
         subtitle={`${medecins.length} praticiens partenaires · ${totalReferes} patients référés en août`}
         actions={
-          <Button>
+          <ActionButton
+            toastKind="info"
+            toastMessage="Module de configuration en cours d'ouverture."
+            toastDescription="Ajout d'un prescripteur au réseau du centre."
+          >
             <UserRoundPlus className="mr-2 size-4" /> Ajouter un prescripteur
-          </Button>
+          </ActionButton>
         }
       />
 
@@ -121,9 +126,14 @@ function MedecinsPage() {
                   {m.evolution} %
                 </Pill>
               </div>
-              <Button variant="outline" className="w-full">
+              <ActionButton
+                variant="outline"
+                className="w-full"
+                toastMessage="Compte rendu chiffré et envoyé avec succès."
+                toastDescription={`Destinataire : ${m.nom}`}
+              >
                 <Send className="mr-2 size-4" /> Envoyer les comptes rendus
-              </Button>
+              </ActionButton>
             </CardContent>
           </Card>
         ))}
