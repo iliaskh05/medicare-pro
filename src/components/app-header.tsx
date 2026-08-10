@@ -1,4 +1,4 @@
-import { Bell, Search, ChevronDown } from "lucide-react";
+import { Bell, Search, ChevronDown, ShieldCheck, Stethoscope, UserCog, Check } from "lucide-react";
 
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { roleProfiles, useRole, type AppRole } from "@/hooks/use-role";
+
+const roleIcons: Record<AppRole, typeof ShieldCheck> = {
+  directeur: ShieldCheck,
+  radiologue: Stethoscope,
+  secretaire: UserCog,
+};
+
 
 export function AppHeader() {
   return (
