@@ -8,6 +8,7 @@ import {
   Loader2,
   ScanLine,
   Sparkles,
+  FileDown,
   Upload,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -20,6 +21,7 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { apiFetch, getApiKey } from "@/lib/api-client";
+import { telechargerDossierPdf } from "@/lib/pdf-export";
 import type {
   ImageAnalysisResult,
   ImagingStudy,
@@ -190,6 +192,44 @@ function ViewerPage() {
   const findings = Array.isArray(analysis?.findings) ? analysis!.findings : [];
   const isGenerating = reportMut.isPending;
 
+  const exporterComptePdf = () => {
+    if (!structuredReport) {
+      toast.error("Générez d'abord le compte rendu avant de l'exporter en PDF.");
+      return;
+    }
+    telechargerDossierPdf({
+      titre: "Compte rendu radiologique",
+      reference: selectedStudy?.id ?? "Étude inconnue",
+      lignes: [
+        { label: "Patient", valeur: selectedStudy?.patientName ?? "—" },
+        { label: "Identifiant patient", valeur: selectedStudy?.patientId ?? "—" },
+        { label: "Examen", valeur: selectedStudy?.examLabel ?? "—" },
+        { label: "Modalité", valeur: selectedStudy?.modality ?? "—" },
+        { label: "Région explorée", valeur: selectedStudy?.bodyPart ?? "—" },
+        {
+          label: "Date d'acquisition",
+          valeur: selectedStudy?.acquiredAt
+            ? new Date(selectedStudy.acquiredAt).toLocaleString("fr-MA")
+            : "—",
+        },
+        { label: "Score de qualité image", valeur: analysis ? `${analysis.qualityScore}%` : "—" },
+      ],
+      blocs: [
+        { titre: "Contexte clinique", contenu: clinicalContext.trim() || "Non renseigné" },
+        { titre: "Compte rendu structuré", contenu: structuredReport },
+        {
+          titre: "Signes détectés par l'IA",
+          contenu:
+            findings.length > 0
+              ? findings.map((f) => `${f.label} (${Math.round(f.confidence * 100)}%)`).join(" · ")
+              : "Aucun signe automatique retenu",
+        },
+      ],
+      mention:
+        "Compte rendu assisté par IA — relecture et validation par un radiologue senior obligatoires avant remise au patient.",
+    });
+  };
+
   if (studiesQuery.isLoading) {
     return (
       <div className="space-y-6">
@@ -236,6 +276,15 @@ function ViewerPage() {
                 <Sparkles className="mr-2 size-4" />
               )}
               {isGenerating ? "Génération…" : "Générer le CR"}
+            </Button>
+            <Button
+              type="button"
+              className="bg-primary shadow-sm transition-shadow hover:shadow-md"
+              disabled={!structuredReport}
+              onClick={exporterComptePdf}
+            >
+              <FileDown className="mr-2 size-4" />
+              Exporter le Compte Rendu (PDF)
             </Button>
           </div>
         }
