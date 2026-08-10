@@ -43,12 +43,18 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border">
         <div className="flex items-center gap-3 px-1 py-2">
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
-            <Scan className="size-5" />
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-foreground/10 ring-1 ring-inset ring-primary-foreground/15">
+            <img
+              src={logoRadioCrm}
+              alt="Logo RadioCRM"
+              width={512}
+              height={512}
+              className="size-6"
+            />
           </div>
           <div className="min-w-0 group-data-[collapsible=icon]:hidden">
             <p className="truncate text-sm font-bold tracking-tight">Centre Radiologie</p>
-            <p className="truncate text-xs text-sidebar-foreground/55">Casablanca</p>
+            <p className="truncate text-xs text-muted-foreground">Casablanca</p>
           </div>
         </div>
       </SidebarHeader>

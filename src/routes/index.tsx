@@ -137,14 +137,36 @@ function LoginPage() {
       {/* Moitié droite — formulaire */}
       <div className="flex items-center justify-center bg-surface px-6 py-12 sm:px-12">
         <div className="w-full max-w-sm">
-          <div className="mb-8 flex items-center gap-3 lg:hidden">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-              <ScanLine className="size-5" />
+          <div className="mb-8 lg:hidden">
+            <div className="flex items-center gap-3">
+              <img
+                src={logoRadioCrm}
+                alt="Logo RadioCRM"
+                width={512}
+                height={512}
+                className="size-10"
+              />
+              <div>
+                <p className="text-sm font-bold tracking-tight">RadioCRM</p>
+                <p className="text-xs text-muted-foreground">Centre d'Imagerie Al Amal</p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm font-bold tracking-tight">RadioCRM</p>
-              <p className="text-xs text-muted-foreground">Centre d'Imagerie Al Amal</p>
-            </div>
+            <figure className="relative mt-5 overflow-hidden rounded-2xl">
+              <img
+                src={centreRadiologie}
+                alt="Salle d'IRM du Centre d'Imagerie Al Amal"
+                width={1280}
+                height={960}
+                className="h-36 w-full object-cover"
+              />
+              <div
+                aria-hidden
+                className="absolute inset-0 bg-gradient-to-t from-[oklch(0.18_0.05_264)]/95 to-transparent"
+              />
+              <figcaption className="absolute inset-x-0 bottom-0 p-3 text-sm font-bold text-primary-foreground">
+                « Voir plus clair, décider plus vite. »
+              </figcaption>
+            </figure>
           </div>
 
           <h2 className="page-title text-2xl">Bienvenue</h2>
