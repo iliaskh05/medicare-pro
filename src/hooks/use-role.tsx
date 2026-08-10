@@ -20,7 +20,7 @@ export const roleProfiles: Record<AppRole, RoleProfile> = {
     label: "Directeur (Admin)",
     fonction: "Direction du centre",
     nom: "Mr Adnane",
-    initiales: "YA",
+    initiales: "MA",
     canExportCompta: true,
     canValiderAnomalie: true,
   },
