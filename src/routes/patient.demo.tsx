@@ -44,7 +44,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { EmptyState, IconTile, PageHeader, Pill } from "@/components/ui-kit";
+import { EmptyState, IconTile, PageHeader, Pill, SimulationNotice } from "@/components/ui-kit";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/patient/demo")({

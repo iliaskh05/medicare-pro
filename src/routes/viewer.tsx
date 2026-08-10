@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { PageHeader, Pill, IconTile, EmptyState } from "@/components/ui-kit";
+import { PageHeader, Pill, IconTile, EmptyState, SimulationNotice } from "@/components/ui-kit";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

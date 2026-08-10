@@ -64,7 +64,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { PageHeader, Pill, IconTile, EmptyState } from "@/components/ui-kit";
+import { PageHeader, Pill, IconTile, EmptyState, SimulationNotice } from "@/components/ui-kit";
 import { useRole } from "@/hooks/use-role";
 import { telechargerDossierPdf } from "@/lib/pdf-export";
 import { formatMAD } from "@/data/mock";

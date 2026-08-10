@@ -114,3 +114,31 @@ export function IconTile({ children, tone = "primary" }: { children: ReactNode; 
     </div>
   );
 }
+
+/**
+ * Mention obligatoire à afficher au-dessus de tout résultat produit par un modèle
+ * (clinique, fraude ou financier) dans ce prototype de démonstration.
+ */
+export function SimulationNotice({
+  contexte = "Résultats générés par un modèle simulé, à partir de données fictives.",
+  className,
+}: {
+  contexte?: string;
+  className?: string;
+}) {
+  return (
+    <div
+      role="note"
+      className={cn(
+        "flex flex-wrap items-center gap-2 rounded-xl border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning-foreground",
+        className,
+      )}
+    >
+      <Pill tone="warning" className="text-[10px]">
+        Simulation IA
+      </Pill>
+      <span className="font-medium">{contexte}</span>
+      <span className="font-semibold">Validation humaine obligatoire.</span>
+    </div>
+  );
+}
