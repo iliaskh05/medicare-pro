@@ -62,7 +62,8 @@ export function PlatformAssistant() {
       window.sessionStorage.removeItem(STORAGE_KEY);
     }
     setHydrated(true);
-    return () => timers.current.forEach(clearTimeout);
+    const pending = timers.current;
+    return () => pending.forEach(clearTimeout);
   }, []);
 
   useEffect(() => {

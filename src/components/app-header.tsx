@@ -81,7 +81,7 @@ export function AppHeader() {
             <Button
               variant="outline"
               className="h-9 gap-2 border-border bg-background shadow-sm"
-              aria-label="Changer de profil utilisateur"
+              aria-label="Simulateur de rôle de démonstration : changer de profil"
             >
               <RoleIcon className="size-4 text-primary" />
               <span className="hidden text-sm font-semibold sm:inline">{profile.label}</span>
@@ -89,7 +89,7 @@ export function AppHeader() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-64">
-            <DropdownMenuLabel>Profil actif (démonstration RBAC)</DropdownMenuLabel>
+            <DropdownMenuLabel>Simulateur de rôle (démo)</DropdownMenuLabel>
             <DropdownMenuSeparator />
             {Object.values(roleProfiles).map((p) => {
               const Icon = roleIcons[p.id];
