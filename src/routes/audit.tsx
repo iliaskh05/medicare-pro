@@ -6,6 +6,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
+  FileDown,
   ExternalLink,
   FileText,
   Gauge,
@@ -63,6 +64,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { PageHeader, Pill, IconTile } from "@/components/ui-kit";
+import { useRole } from "@/hooks/use-role";
+import { telechargerDossierPdf } from "@/lib/pdf-export";
 import { formatMAD } from "@/data/mock";
 import {
   anomalies as anomaliesSeed,
@@ -131,7 +134,37 @@ function ScoreMeter({ score }: { score: number }) {
   );
 }
 
+function dossierAnomalie(a: Anomalie) {
+  return {
+    titre: "Dossier d'audit de facturation",
+    reference: a.id,
+    lignes: [
+      { label: "Patient", valeur: `${a.patient} (CIN ${a.cin})` },
+      { label: "Acte réalisé", valeur: `${a.acte} — ${a.typeExamen}` },
+      { label: "Date de l'acte", valeur: new Date(a.date).toLocaleDateString("fr-MA") },
+      { label: "Montant facturé", valeur: formatMAD(a.montant) },
+      { label: "Barème conventionnel", valeur: formatMAD(a.bareme) },
+      { label: "Écart au barème", valeur: formatMAD(a.montant - a.bareme) },
+      { label: "Score de risque IA", valeur: `${a.score}%` },
+      { label: "Cluster détecté", valeur: a.cluster },
+      { label: "Prescripteur", valeur: a.prescripteur },
+      { label: "Mutuelle", valeur: a.mutuelle },
+      { label: "Statut de traitement", valeur: a.statut },
+    ],
+    blocs: [
+      { titre: "Motifs suspects", contenu: a.motifs.join(" · ") },
+      {
+        titre: "Recommandation",
+        contenu:
+          "Dossier à confronter aux pièces justificatives (ordonnance, accord préalable mutuelle) avant transmission au cabinet comptable EFIBEC.",
+      },
+    ],
+    mention: "Dossier d'audit — Centre d'Imagerie Al Amal · confidentiel, transmission comptable EFIBEC.",
+  };
+}
+
 function AuditPage() {
+  const { profile } = useRole();
   const [rowsState, setRowsState] = useState<Anomalie[]>(anomaliesSeed);
   const [seuil, setSeuil] = useState(60);
   const [query, setQuery] = useState("");
@@ -542,6 +575,17 @@ function AuditPage() {
                         ))}
                       </div>
                       <p className="mt-1 text-[11px] text-muted-foreground">{a.cluster}</p>
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5 border-primary/25 bg-primary/5 font-semibold text-primary shadow-sm transition-shadow hover:bg-primary/10 hover:shadow-md"
+                        onClick={() => telechargerDossierPdf(dossierAnomalie(a))}
+                      >
+                        <FileDown className="size-4" />
+                        Télécharger (PDF)
+                      </Button>
                     </TableCell>
                     <TableCell className="pr-6">
                       <div className="flex items-center justify-end gap-1.5">
