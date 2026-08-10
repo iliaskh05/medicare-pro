@@ -101,7 +101,9 @@ function WhatsAppPage() {
     setTyping(true);
     const t = setTimeout(() => {
       setTyping(false);
-      pushMessage({ id: `b-${Date.now()}`, auteur: "bot", texte, heure: heureCourante(), piece });
+      const msg: WaMessage = { id: `b-${Date.now()}`, auteur: "bot", texte, heure: heureCourante() };
+      if (piece) msg.piece = piece;
+      pushMessage(msg);
     }, 1400);
     timers.current.push(t);
   };
@@ -118,12 +120,13 @@ function WhatsAppPage() {
     <div className="space-y-6">
       <PageHeader
         title="Chatbot WhatsApp patients"
-        description="Supervisez les conversations automatisées : qualification, prise de rendez-vous et envoi des comptes rendus."
-      >
-        <Pill tone="success">
-          <Bot className="size-3.5" /> Agent IA actif
-        </Pill>
-      </PageHeader>
+        subtitle="Supervisez les conversations automatisées : qualification, prise de rendez-vous et envoi des comptes rendus."
+        actions={
+          <Pill tone="success">
+            <Bot className="size-3.5" /> Agent IA actif
+          </Pill>
+        }
+      />
 
       <Card className="overflow-hidden p-0 shadow-sm transition-shadow hover:shadow-md">
         <div className="grid min-h-[640px] grid-cols-1 lg:grid-cols-[340px_1fr]">
