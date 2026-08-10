@@ -5,7 +5,7 @@ import {
   ReceiptText,
   Stethoscope,
   ShieldAlert,
-  Scan,
+  
   ScanLine,
   MessagesSquare,
   MessageCircle,
