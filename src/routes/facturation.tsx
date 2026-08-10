@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Stethoscope, Wallet, Save, RotateCcw } from "lucide-react";
+import { Stethoscope, Wallet, Save, RotateCcw, FileDown } from "lucide-react";
 import { toast } from "sonner";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/table";
 import { PageHeader, Pill, IconTile } from "@/components/ui-kit";
 import { factures, medecins, patients, typesExamen, formatMAD } from "@/data/mock";
+import { telechargerDossierPdf } from "@/lib/pdf-export";
 
 export const Route = createFileRoute("/facturation")({
   head: () => ({
@@ -243,7 +244,8 @@ function FacturationPage() {
                   <TableHead className="hidden text-right lg:table-cell">Mutuelle</TableHead>
                   <TableHead className="text-right">Reste</TableHead>
                   <TableHead className="hidden md:table-cell">Paiement</TableHead>
-                  <TableHead className="pr-6 text-right">Statut</TableHead>
+                  <TableHead className="text-right">Statut</TableHead>
+                  <TableHead className="pr-6 text-right">Dossier</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -265,8 +267,41 @@ function FacturationPage() {
                       {formatMAD(f.resteACharge)}
                     </TableCell>
                     <TableCell className="hidden text-sm md:table-cell">{f.paiement}</TableCell>
-                    <TableCell className="pr-6 text-right">
+                    <TableCell className="text-right">
                       <Pill tone={statutTone[f.statut]}>{f.statut}</Pill>
+                    </TableCell>
+                    <TableCell className="pr-6 text-right">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5 border-primary/25 bg-primary/5 font-semibold text-primary shadow-sm transition-shadow hover:bg-primary/10 hover:shadow-md"
+                        onClick={() =>
+                          telechargerDossierPdf({
+                            titre: "Dossier de facturation",
+                            reference: f.id,
+                            lignes: [
+                              { label: "Patient", valeur: f.patient },
+                              { label: "Examen", valeur: f.examen },
+                              { label: "Date", valeur: f.date },
+                              { label: "Total facturé", valeur: formatMAD(f.total) },
+                              { label: "Part mutuelle", valeur: formatMAD(f.partMutuelle) },
+                              { label: "Reste à charge patient", valeur: formatMAD(f.resteACharge) },
+                              { label: "Mode de paiement", valeur: f.paiement },
+                              { label: "Statut", valeur: f.statut },
+                            ],
+                            blocs: [
+                              {
+                                titre: "Mention légale",
+                                contenu:
+                                  "Facture émise en dirhams marocains (MAD). Document valable comme justificatif de remboursement auprès de la mutuelle.",
+                              },
+                            ],
+                          })
+                        }
+                      >
+                        <FileDown className="size-4" />
+                        Télécharger (PDF)
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
