@@ -163,7 +163,7 @@ function Dashboard() {
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {kpis.map((kpi) => (
-          <Card key={kpi.label} className="shadow-none">
+          <Card key={kpi.label}>
             <CardContent className="flex items-start gap-4 p-5">
               <IconTile tone={kpi.tone}>
                 <kpi.icon className="size-5" />
@@ -193,7 +193,7 @@ function Dashboard() {
 
       <div className="grid gap-4 lg:grid-cols-3">
         {/* Widget 1 — Tension du planning */}
-        <Card className="shadow-none lg:col-span-1">
+        <Card className="lg:col-span-1">
           <CardHeader className="pb-3">
             <div className="flex items-center gap-3">
               <IconTile tone="primary">
@@ -229,7 +229,7 @@ function Dashboard() {
         </Card>
 
         {/* Widget 2 — Urgences Fraude & Anomalies */}
-        <Card className="shadow-none lg:col-span-1">
+        <Card className="lg:col-span-1">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -268,7 +268,7 @@ function Dashboard() {
         </Card>
 
         {/* Widget 3 — Synchronisation Comptable */}
-        <Card className="shadow-none lg:col-span-1">
+        <Card className="lg:col-span-1">
           <CardHeader className="pb-3">
             <div className="flex items-center gap-3">
               <IconTile tone="success">
@@ -321,7 +321,7 @@ function Dashboard() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-5">
-        <Card className="shadow-none lg:col-span-3">
+        <Card className="lg:col-span-3">
           <CardHeader className="flex-row items-center justify-between">
             <CardTitle>Prochains patients en salle d'attente</CardTitle>
             <Button variant="ghost" size="sm" asChild>
@@ -361,7 +361,7 @@ function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-none lg:col-span-2">
+        <Card className="lg:col-span-2">
           <CardHeader className="flex-row items-center justify-between">
             <CardTitle>Dernières alertes détectées</CardTitle>
             <Button variant="ghost" size="sm" asChild>

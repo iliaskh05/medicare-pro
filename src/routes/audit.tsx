@@ -305,7 +305,7 @@ function AuditPage() {
       />
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="shadow-none">
+        <Card>
           <CardContent className="flex items-start gap-4 p-5">
             <IconTile tone="primary">
               <ShieldCheck className="size-5" />
@@ -324,7 +324,7 @@ function AuditPage() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-none ring-1 ring-inset ring-destructive/20">
+        <Card className="ring-1 ring-inset ring-destructive/20">
           <CardContent className="flex items-start gap-4 p-5">
             <IconTile tone="destructive">
               <ShieldAlert className="size-5" />
@@ -347,7 +347,7 @@ function AuditPage() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-none">
+        <Card>
           <CardContent className="flex items-start gap-4 p-5">
             <IconTile tone="success">
               <Gauge className="size-5" />
@@ -368,7 +368,7 @@ function AuditPage() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="shadow-none lg:col-span-2">
+        <Card className="lg:col-span-2">
           <CardHeader className="flex-row items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-base">
               <TrendingUp className="size-4 text-primary" /> Anomalies détectées par semaine
@@ -420,7 +420,7 @@ function AuditPage() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-none">
+        <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <SlidersHorizontal className="size-4 text-primary" /> Sensibilité de l'IA
@@ -455,7 +455,7 @@ function AuditPage() {
         </Card>
       </div>
 
-      <Card className="shadow-none">
+      <Card>
         <CardHeader className="flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <CardTitle className="text-base">Dossiers signalés</CardTitle>
           <div className="grid gap-2 sm:grid-cols-2 lg:flex lg:flex-row">

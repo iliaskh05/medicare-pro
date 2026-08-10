@@ -237,7 +237,7 @@ function ViewerPage() {
           title="Visionneuse radiologique"
           subtitle="Pipeline d'analyse d'images + structuration des comptes rendus"
         />
-        <Card className="shadow-none">
+        <Card>
           <CardContent>
             <LoadingSpinner label="Chargement des études…" />
           </CardContent>
@@ -303,7 +303,7 @@ function ViewerPage() {
       ) : null}
 
       <div className="grid gap-4 lg:grid-cols-[280px_1fr_340px]">
-        <Card className="shadow-none">
+        <Card>
           <CardHeader>
             <CardTitle className="text-base">Études</CardTitle>
           </CardHeader>
@@ -343,7 +343,7 @@ function ViewerPage() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-none overflow-hidden">
+        <Card className="overflow-hidden">
           <CardHeader className="flex-row items-center justify-between space-y-0">
             <CardTitle className="text-base">
               {selectedStudy
@@ -423,7 +423,7 @@ function ViewerPage() {
         </Card>
 
         <div className="space-y-4">
-          <Card className="shadow-none">
+          <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <ScanLine className="size-4" /> Analyse pipeline
@@ -494,7 +494,7 @@ function ViewerPage() {
             </CardContent>
           </Card>
 
-          <Card className="shadow-none">
+          <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <FileText className="size-4" /> Compte rendu structuré
