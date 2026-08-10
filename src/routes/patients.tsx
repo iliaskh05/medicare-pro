@@ -1,11 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Search, SearchX, UserPlus, FileText, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ActionButton } from "@/components/action-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -298,15 +297,11 @@ function PatientsPage() {
                       {p.dernierExamen}
                     </TableCell>
                     <TableCell className="pr-6 text-right">
-                      <ActionButton
-                        variant="outline"
-                        size="sm"
-                        toastKind="info"
-                        toastMessage="Accès sécurisé au dossier patient en cours..."
-                        toastDescription={`${p.nom} · dossier ${p.id}`}
-                      >
-                        <FileText className="mr-1.5 size-4" /> Voir dossier
-                      </ActionButton>
+                      <Button variant="outline" size="sm" asChild>
+                        <Link to="/patient/demo">
+                          <FileText className="mr-1.5 size-4" /> Voir dossier
+                        </Link>
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}

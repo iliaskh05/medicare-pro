@@ -21,6 +21,7 @@ import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ViewerRouteImport } from './routes/viewer'
 import { Route as WhatsappRouteImport } from './routes/whatsapp'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
+import { Route as PatientDemoRouteImport } from './routes/patient.demo'
 import { Route as ApiChatMessagesRouteImport } from './routes/api/chat/messages'
 import { Route as ApiChatRoomsRouteImport } from './routes/api/chat/rooms'
 import { Route as ApiChatStreamRouteImport } from './routes/api/chat/stream'
@@ -93,6 +94,11 @@ const WhatsappRoute = WhatsappRouteImport.update({
 const ApiHealthRoute = ApiHealthRouteImport.update({
   id: '/api/health',
   path: '/api/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PatientDemoRoute = PatientDemoRouteImport.update({
+  id: '/patient/demo',
+  path: '/patient/demo',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiChatMessagesRoute = ApiChatMessagesRouteImport.update({
@@ -175,6 +181,7 @@ export interface FileRoutesByFullPath {
   '/viewer': typeof ViewerRoute
   '/whatsapp': typeof WhatsappRoute
   '/api/health': typeof ApiHealthRoute
+  '/patient/demo': typeof PatientDemoRoute
   '/api/chat/messages': typeof ApiChatMessagesRoute
   '/api/chat/rooms': typeof ApiChatRoomsRoute
   '/api/chat/stream': typeof ApiChatStreamRoute
@@ -202,6 +209,7 @@ export interface FileRoutesByTo {
   '/viewer': typeof ViewerRoute
   '/whatsapp': typeof WhatsappRoute
   '/api/health': typeof ApiHealthRoute
+  '/patient/demo': typeof PatientDemoRoute
   '/api/chat/messages': typeof ApiChatMessagesRoute
   '/api/chat/rooms': typeof ApiChatRoomsRoute
   '/api/chat/stream': typeof ApiChatStreamRoute
@@ -230,6 +238,7 @@ export interface FileRoutesById {
   '/viewer': typeof ViewerRoute
   '/whatsapp': typeof WhatsappRoute
   '/api/health': typeof ApiHealthRoute
+  '/patient/demo': typeof PatientDemoRoute
   '/api/chat/messages': typeof ApiChatMessagesRoute
   '/api/chat/rooms': typeof ApiChatRoomsRoute
   '/api/chat/stream': typeof ApiChatStreamRoute
@@ -259,6 +268,7 @@ export interface FileRouteTypes {
     | '/viewer'
     | '/whatsapp'
     | '/api/health'
+    | '/patient/demo'
     | '/api/chat/messages'
     | '/api/chat/rooms'
     | '/api/chat/stream'
@@ -286,6 +296,7 @@ export interface FileRouteTypes {
     | '/viewer'
     | '/whatsapp'
     | '/api/health'
+    | '/patient/demo'
     | '/api/chat/messages'
     | '/api/chat/rooms'
     | '/api/chat/stream'
@@ -313,6 +324,7 @@ export interface FileRouteTypes {
     | '/viewer'
     | '/whatsapp'
     | '/api/health'
+    | '/patient/demo'
     | '/api/chat/messages'
     | '/api/chat/rooms'
     | '/api/chat/stream'
@@ -341,6 +353,7 @@ export interface RootRouteChildren {
   ViewerRoute: typeof ViewerRoute
   WhatsappRoute: typeof WhatsappRoute
   ApiHealthRoute: typeof ApiHealthRoute
+  PatientDemoRoute: typeof PatientDemoRoute
   ApiChatMessagesRoute: typeof ApiChatMessagesRoute
   ApiChatRoomsRoute: typeof ApiChatRoomsRoute
   ApiChatStreamRoute: typeof ApiChatStreamRoute
@@ -439,6 +452,13 @@ declare module '@tanstack/react-router' {
       path: '/api/health'
       fullPath: '/api/health'
       preLoaderRoute: typeof ApiHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/patient/demo': {
+      id: '/patient/demo'
+      path: '/patient/demo'
+      fullPath: '/patient/demo'
+      preLoaderRoute: typeof PatientDemoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/chat/messages': {
@@ -559,6 +579,7 @@ const rootRouteChildren: RootRouteChildren = {
   ViewerRoute: ViewerRoute,
   WhatsappRoute: WhatsappRoute,
   ApiHealthRoute: ApiHealthRoute,
+  PatientDemoRoute: PatientDemoRoute,
   ApiChatMessagesRoute: ApiChatMessagesRoute,
   ApiChatRoomsRoute: ApiChatRoomsRoute,
   ApiChatStreamRoute: ApiChatStreamRoute,
