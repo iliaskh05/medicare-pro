@@ -1,8 +1,9 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import {
   Activity,
   BrainCircuit,
+  Loader2,
   Lock,
   Mail,
   ScanLine,
@@ -64,8 +65,9 @@ const atouts = [
 
 function LoginPage() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("direction@alamal.ma");
+  const [email, setEmail] = useState("direction@centre-imagerie.ma");
   const [password, setPassword] = useState("demo1234");
+  const [demoLoading, setDemoLoading] = useState(false);
 
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
@@ -217,7 +219,7 @@ function LoginPage() {
                   autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="prenom.nom@alamal.ma"
+                  placeholder="prenom.nom@centre-imagerie.ma"
                   className="h-11 bg-background pl-9"
                 />
               </div>
