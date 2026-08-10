@@ -1,4 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
+import { toast } from "sonner";
 import {
   Users,
   Wallet,
@@ -10,10 +12,26 @@ import {
   CalendarDays,
   FileSpreadsheet,
   ShieldAlert,
+  Loader2,
+  MessageCircle,
+  ShieldCheck,
+  Bot,
 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -142,6 +160,34 @@ function PlanningHeatmap({ data }: { data: PlanningSlot[] }) {
 }
 
 function Dashboard() {
+  const [botOpen, setBotOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  const exportComptable = () => {
+    if (exporting) return;
+    setExporting(true);
+    window.setTimeout(() => {
+      const lignes = [
+        "reference;date;patient;examen;montant_mad;statut",
+        ...salleAttente.map(
+          (r, idx) =>
+            `ACT-2026-${String(idx + 1).padStart(4, "0")};2026-08-10;${r.patient};${r.examen};900;valide`,
+        ),
+      ].join("\n");
+      const blob = new Blob([`\ufeff${lignes}\n`], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "export_comptable_2026.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+      setExporting(false);
+      toast.success("Export comptable généré", {
+        description: "export_comptable_2026.csv téléchargé.",
+      });
+    }, 1000);
+  };
+
   const { profile } = useRole();
   return (
 
@@ -151,6 +197,63 @@ function Dashboard() {
         subtitle="Mercredi 5 août 2026 · Centre d'Imagerie Médicale, Casablanca"
         actions={
           <>
+            <Dialog open={botOpen} onOpenChange={setBotOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline">
+                  <MessageCircle className="mr-2 size-4" /> WhatsApp
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <Bot className="size-4 text-primary" /> Configuration du Bot Patient
+                  </DialogTitle>
+                  <DialogDescription>
+                    Paramètres du chatbot WhatsApp du centre (démonstration).
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="bot-numero">Numéro WhatsApp Business</Label>
+                    <Input id="bot-numero" defaultValue="+212 6 61 45 87 20" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="bot-delai">Délai de réponse automatique (secondes)</Label>
+                    <Input id="bot-delai" type="number" defaultValue={3} />
+                  </div>
+                  {[
+                    ["bot-rdv", "Prise de rendez-vous automatique"],
+                    ["bot-cr", "Envoi des comptes rendus PDF"],
+                    ["bot-rappel", "Rappels de rendez-vous J-1"],
+                  ].map(([id, label]) => (
+                    <div
+                      key={id}
+                      className="flex items-center justify-between rounded-xl border border-border bg-background px-3 py-2.5"
+                    >
+                      <Label htmlFor={id} className="text-sm font-normal">
+                        {label}
+                      </Label>
+                      <Switch id={id} defaultChecked />
+                    </div>
+                  ))}
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setBotOpen(false)}>
+                    Annuler
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setBotOpen(false);
+                      toast.success("Configuration du bot enregistrée", {
+                        description: "Les patients recevront les réponses automatiques.",
+                      });
+                    }}
+                  >
+                    Enregistrer
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
             <Button variant="outline" asChild>
               <Link to="/patients">Salle d'attente</Link>
             </Button>
@@ -308,8 +411,16 @@ function Dashboard() {
               </p>
             </div>
             {profile.canExportCompta ? (
-              <Button className="w-full shadow-sm" asChild>
-                <Link to="/audit">Exporter la comptabilité (CSV)</Link>
+              <Button className="w-full shadow-sm" disabled={exporting} onClick={exportComptable}>
+                {exporting ? (
+                  <>
+                    <Loader2 className="mr-2 size-4 animate-spin" /> Génération de l'export…
+                  </>
+                ) : (
+                  <>
+                    <FileSpreadsheet className="mr-2 size-4" /> Export comptable (CSV)
+                  </>
+                )}
               </Button>
             ) : (
               <p className="rounded-lg border border-dashed border-border bg-muted/40 px-3 py-2.5 text-center text-xs text-muted-foreground">
@@ -389,6 +500,14 @@ function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      <footer className="flex items-start gap-2 border-t border-border pt-5 text-xs text-muted-foreground">
+        <ShieldCheck className="mt-0.5 size-4 shrink-0 text-success" />
+        <p>
+          Hébergement sécurisé HDS — Conforme aux directives de la CNDP (Loi 09-08) sur la
+          protection des données médicales personnelles.
+        </p>
+      </footer>
     </div>
   );
 }
