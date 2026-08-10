@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
+import logoRadioCrm from "@/assets/logo-radiocrm.png";
+import centreRadiologie from "@/assets/centre-radiologie.jpg";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -65,7 +67,13 @@ function LoginPage() {
 
         <div className="relative flex items-center gap-3">
           <div className="flex size-11 items-center justify-center rounded-xl bg-primary-foreground/10 ring-1 ring-inset ring-primary-foreground/20 backdrop-blur">
-            <ScanLine className="size-6 text-primary-foreground" />
+            <img
+              src={logoRadioCrm}
+              alt="Logo RadioCRM — Centre d'Imagerie Al Amal"
+              width={512}
+              height={512}
+              className="size-7"
+            />
           </div>
           <span className="text-sm font-semibold uppercase tracking-[0.18em] text-primary-foreground/70">
             RadioCRM
@@ -81,13 +89,31 @@ function LoginPage() {
           <p className="mt-3 text-lg font-semibold text-primary-foreground/85">
             Centre d'Imagerie Al Amal
           </p>
-          <p className="mt-4 max-w-md text-sm leading-relaxed text-primary-foreground/70">
-            Pilotez l'ensemble de votre centre de radiologie depuis une seule console : l'IA analyse
-            vos actes, sécurise votre facturation et automatise le parcours patient, pendant que vos
-            équipes se concentrent sur le diagnostic.
-          </p>
 
-          <div className="mt-10 space-y-4">
+          {/* Photo du centre + slogan */}
+          <figure className="relative mt-6 overflow-hidden rounded-2xl ring-1 ring-inset ring-primary-foreground/15">
+            <img
+              src={centreRadiologie}
+              alt="Salle d'IRM du Centre d'Imagerie Al Amal à Casablanca"
+              width={1280}
+              height={960}
+              className="h-52 w-full object-cover xl:h-60"
+            />
+            <div
+              aria-hidden
+              className="absolute inset-0 bg-gradient-to-t from-[oklch(0.18_0.05_264)]/95 via-[oklch(0.18_0.05_264)]/25 to-transparent"
+            />
+            <figcaption className="absolute inset-x-0 bottom-0 p-4">
+              <p className="text-base font-bold leading-snug text-primary-foreground">
+                « Voir plus clair, décider plus vite. »
+              </p>
+              <p className="mt-1 text-xs text-primary-foreground/70">
+                Imagerie de précision · Casablanca
+              </p>
+            </figcaption>
+          </figure>
+
+          <div className="mt-8 space-y-4">
             {atouts.map((a) => (
               <div key={a.titre} className="flex items-start gap-3">
                 <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-foreground/10 ring-1 ring-inset ring-primary-foreground/15">
@@ -111,14 +137,36 @@ function LoginPage() {
       {/* Moitié droite — formulaire */}
       <div className="flex items-center justify-center bg-surface px-6 py-12 sm:px-12">
         <div className="w-full max-w-sm">
-          <div className="mb-8 flex items-center gap-3 lg:hidden">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-              <ScanLine className="size-5" />
+          <div className="mb-8 lg:hidden">
+            <div className="flex items-center gap-3">
+              <img
+                src={logoRadioCrm}
+                alt="Logo RadioCRM"
+                width={512}
+                height={512}
+                className="size-10"
+              />
+              <div>
+                <p className="text-sm font-bold tracking-tight">RadioCRM</p>
+                <p className="text-xs text-muted-foreground">Centre d'Imagerie Al Amal</p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm font-bold tracking-tight">RadioCRM</p>
-              <p className="text-xs text-muted-foreground">Centre d'Imagerie Al Amal</p>
-            </div>
+            <figure className="relative mt-5 overflow-hidden rounded-2xl">
+              <img
+                src={centreRadiologie}
+                alt="Salle d'IRM du Centre d'Imagerie Al Amal"
+                width={1280}
+                height={960}
+                className="h-36 w-full object-cover"
+              />
+              <div
+                aria-hidden
+                className="absolute inset-0 bg-gradient-to-t from-[oklch(0.18_0.05_264)]/95 to-transparent"
+              />
+              <figcaption className="absolute inset-x-0 bottom-0 p-3 text-sm font-bold text-primary-foreground">
+                « Voir plus clair, décider plus vite. »
+              </figcaption>
+            </figure>
           </div>
 
           <h2 className="page-title text-2xl">Bienvenue</h2>
