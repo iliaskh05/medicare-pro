@@ -278,25 +278,30 @@ function AuditPage() {
         title="Audit & Conformité — Détection d'anomalies"
         subtitle="Clustering non supervisé + validation humaine · Centre d'Imagerie Médicale Al Manar, Casablanca"
         actions={
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button>
-                <Download className="mr-2 size-4" />
-                Exporter les fraudes validées
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-64">
-              <DropdownMenuLabel>Transmission expertise comptable</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={exportCsv}>
-                <FileText className="mr-2 size-4" /> CSV — import EFIBEC
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={exportPdf}>
-                <FileText className="mr-2 size-4" /> PDF — rapport signé
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          profile.canExportCompta ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button className="shadow-sm">
+                  <Download className="mr-2 size-4" />
+                  Exporter les fraudes validées
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64">
+                <DropdownMenuLabel>Transmission expertise comptable</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={exportCsv}>
+                  <FileText className="mr-2 size-4" /> CSV — import EFIBEC
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={exportPdf}>
+                  <FileText className="mr-2 size-4" /> PDF — rapport signé
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Pill tone="neutral">Export comptable réservé à la direction</Pill>
+          )
         }
+
       />
 
       <div className="grid gap-4 lg:grid-cols-3">
