@@ -1,4 +1,4 @@
-import { type Referent } from "@/data/mock-referents";
+import type { Referent } from "@/types/referent";
 
 import { javaApi } from "./config";
 
@@ -14,10 +14,7 @@ export type MedecinDto = {
   quartier: string;
 };
 
-/**
- * Répertoire des médecins correspondants — appel API de production.
- * GET {JAVA_API_BASE}/api/medecins
- */
+/** GET {JAVA_API_BASE}/api/medecins */
 export async function fetchMedecins(signal?: AbortSignal): Promise<Referent[]> {
   const rows = await javaApi<MedecinDto[]>("/api/medecins", signal ? { signal } : {});
   return (rows ?? []).map((m) => ({
@@ -29,13 +26,10 @@ export async function fetchMedecins(signal?: AbortSignal): Promise<Referent[]> {
     adresse: m.adresse,
     ville: m.ville,
     quartier: m.quartier,
-  })) as Referent[];
+  }));
 }
 
-/**
- * Envoi du compte rendu au correspondant (mail sécurisé / dépôt PACS).
- * TODO backend Java : POST /api/correspondants/{id}/comptes-rendus
- */
+/** POST {JAVA_API_BASE}/api/medecins/{id}/comptes-rendus */
 export async function sendReportToReferent(referentId: string, reportId?: string): Promise<void> {
   await javaApi<void>(`/api/medecins/${encodeURIComponent(referentId)}/comptes-rendus`, {
     method: "POST",
@@ -43,10 +37,7 @@ export async function sendReportToReferent(referentId: string, reportId?: string
   });
 }
 
-/**
- * Création / mise à jour d'un correspondant.
- * TODO backend Java : POST /api/correspondants
- */
+/** POST {JAVA_API_BASE}/api/medecins */
 export async function saveReferent(payload: Omit<Referent, "id"> & { id?: string }) {
   return javaApi<Referent>("/api/medecins", { method: "POST", body: payload });
 }
