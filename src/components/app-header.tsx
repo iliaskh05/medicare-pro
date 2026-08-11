@@ -104,25 +104,16 @@ export function AppHeader() {
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel>Mon compte</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => toast.info(`Chargement des préférences de ${profile.nom}...`)}
-            >
-              Profil
+            <DropdownMenuItem asChild>
+              <Link to="/parametres">Mon profil</Link>
             </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => toast.info("Module de configuration en cours d'ouverture.")}
-            >
-              Paramètres du centre
+            <DropdownMenuItem asChild>
+              <Link to="/parametres">Préférences & paramètres</Link>
             </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() =>
-                toast.info("Journal d'activité", {
-                  description: "Traçabilité complète des accès aux dossiers patients.",
-                })
-              }
-            >
-              Journal d'activité
+            <DropdownMenuItem asChild>
+              <Link to="/parametres">Sécurité & connexions</Link>
             </DropdownMenuItem>
+
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="text-destructive"
