@@ -20,6 +20,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { MessagerieDock } from "@/components/messagerie-dock";
 import { PlatformAssistant } from "@/components/assistant/platform-assistant";
 import { RoleProvider } from "@/hooks/use-role";
+import { ThemeProvider } from "@/hooks/use-theme";
 
 function NotFoundComponent() {
   return (
@@ -166,29 +167,31 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <RoleProvider>
-        <SidebarProvider>
-          <div className="flex min-h-screen w-full bg-background">
-            <AppSidebar />
-            <div className="flex min-w-0 flex-1 flex-col">
-              <AppHeader />
-              <main className="flex-1 px-3 py-5 sm:px-6 sm:py-7">
-                {/* Required: nested routes render here. */}
-                <Outlet />
-              </main>
-              <footer className="border-t border-border px-3 py-4 sm:px-6">
-                <p className="flex items-start gap-2 text-xs text-muted-foreground">
-                  <ShieldCheck className="mt-0.5 size-4 shrink-0 text-success" />
-                  Hébergement sécurisé HDS - Conforme aux directives de la CNDP (Loi 09-08) sur la
-                  protection des données.
-                </p>
-              </footer>
+      <ThemeProvider>
+        <RoleProvider>
+          <SidebarProvider>
+            <div className="flex min-h-screen w-full bg-background">
+              <AppSidebar />
+              <div className="flex min-w-0 flex-1 flex-col">
+                <AppHeader />
+                <main className="flex-1 px-3 py-5 sm:px-6 sm:py-7">
+                  {/* Required: nested routes render here. */}
+                  <Outlet />
+                </main>
+                <footer className="border-t border-border px-3 py-4 sm:px-6">
+                  <p className="flex items-start gap-2 text-xs text-muted-foreground">
+                    <ShieldCheck className="mt-0.5 size-4 shrink-0 text-success" />
+                    Hébergement sécurisé HDS - Conforme aux directives de la CNDP (Loi 09-08) sur la
+                    protection des données.
+                  </p>
+                </footer>
+              </div>
             </div>
-          </div>
-        </SidebarProvider>
-        <MessagerieDock />
-        <PlatformAssistant />
-      </RoleProvider>
+          </SidebarProvider>
+          <MessagerieDock />
+          <PlatformAssistant />
+        </RoleProvider>
+      </ThemeProvider>
       <Toaster />
     </QueryClientProvider>
   );

@@ -9,6 +9,7 @@ import {
   MessagesSquare,
   MessageCircle,
   Contact,
+  Settings,
 } from "lucide-react";
 
 import {
@@ -36,6 +37,7 @@ const items = [
   { title: "Médecins", url: "/medecins", icon: Stethoscope },
   { title: "Correspondants", url: "/medecins-referents", icon: Contact },
   { title: "Audit & Conformité", url: "/audit", icon: ShieldAlert, fraude: true },
+  { title: "Profil & Paramètres", url: "/parametres", icon: Settings },
 ] as const;
 
 export function AppSidebar() {

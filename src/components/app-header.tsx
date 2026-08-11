@@ -1,6 +1,15 @@
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { Bell, Search, ChevronDown, ShieldCheck, Stethoscope, Check } from "lucide-react";
+import {
+  Bell,
+  Search,
+  ChevronDown,
+  ShieldCheck,
+  Stethoscope,
+  Check,
+  Moon,
+  Sun,
+} from "lucide-react";
 
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Input } from "@/components/ui/input";
@@ -16,6 +25,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ActionButton } from "@/components/action-button";
 import { roleProfiles, useRole, type AppRole } from "@/hooks/use-role";
+import { useTheme } from "@/hooks/use-theme";
 
 const roleIcons: Record<AppRole, typeof ShieldCheck> = {
   directeur: ShieldCheck,
@@ -26,7 +36,9 @@ const roleIcons: Record<AppRole, typeof ShieldCheck> = {
 
 export function AppHeader() {
   const { role, profile, setRole } = useRole();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
+
   const RoleIcon = roleIcons[role];
 
   return (
@@ -43,6 +55,15 @@ export function AppHeader() {
       </div>
 
       <div className="ml-auto flex items-center gap-2">
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={theme === "dark" ? "Passer en mode clair" : "Passer en mode sombre"}
+          onClick={toggleTheme}
+        >
+          {theme === "dark" ? <Sun className="size-5" /> : <Moon className="size-5" />}
+        </Button>
+
         <ActionButton
           variant="ghost"
           size="icon"
@@ -104,25 +125,16 @@ export function AppHeader() {
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel>Mon compte</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => toast.info(`Chargement des préférences de ${profile.nom}...`)}
-            >
-              Profil
+            <DropdownMenuItem asChild>
+              <Link to="/parametres">Mon profil</Link>
             </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => toast.info("Module de configuration en cours d'ouverture.")}
-            >
-              Paramètres du centre
+            <DropdownMenuItem asChild>
+              <Link to="/parametres">Préférences & paramètres</Link>
             </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() =>
-                toast.info("Journal d'activité", {
-                  description: "Traçabilité complète des accès aux dossiers patients.",
-                })
-              }
-            >
-              Journal d'activité
+            <DropdownMenuItem asChild>
+              <Link to="/parametres">Sécurité & connexions</Link>
             </DropdownMenuItem>
+
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="text-destructive"

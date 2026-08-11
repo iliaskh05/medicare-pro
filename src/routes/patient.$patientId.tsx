@@ -46,7 +46,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { EmptyState, IconTile, PageHeader, Pill, AiNotice } from "@/components/ui-kit";
+import {
+  EmptyState,
+  IconTile,
+  PageHeader,
+  Pill,
+  AiNotice,
+  ServiceNotice,
+} from "@/components/ui-kit";
+
 import { cn } from "@/lib/utils";
 import { fetchPatientAnomalies, updateAnomalieStatut } from "@/lib/api/audit";
 import { anomalyRiskLevel } from "@/utils/anomalyDetection";
@@ -275,16 +283,30 @@ function PatientRecordPage() {
 
   if (error || !patient) {
     return (
-      <EmptyState
-        icon={AlertTriangle}
-        title={error || "Patient introuvable"}
-        description="Une erreur est survenue lors du chargement des données."
-        action={
-          <Button onClick={() => window.location.reload()}>
-            <RefreshCw className="mr-2 size-4" /> Réessayer
-          </Button>
-        }
-      />
+      <div className="space-y-6">
+        <PageHeader
+          title="Dossier patient"
+          subtitle={`Référence ${patientId} · Centre d'Imagerie Médicale`}
+          actions={
+            <Button variant="outline" asChild>
+              <Link to="/patients">
+                <ArrowLeft className="mr-2 size-4" /> Retour aux patients
+              </Link>
+            </Button>
+          }
+        />
+        <ServiceNotice
+          message="Dossier en attente de connexion au service de données du centre."
+          onRetry={() => window.location.reload()}
+        />
+        <div className="app-card">
+          <EmptyState
+            icon={AlertTriangle}
+            title="Aucune donnée disponible"
+            description="Les informations médicales, l'imagerie et la facturation s'afficheront dès que le service répondra."
+          />
+        </div>
+      </div>
     );
   }
 
