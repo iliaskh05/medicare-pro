@@ -53,7 +53,7 @@ import {
   salleAttente,
   urgencesFraude,
   type PlanningSlot,
-} from "@/data/mock";
+} from "@/types/domain";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({

@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { HttpError, jsonError, jsonOk, parseJsonBody, requireApiAuth } from "@/server/auth/secure";
 import { decideInvoice, listAlerts, runFullScan } from "@/server/fraud/hybrid-engine";
-import { factures, facturesSuspectes } from "@/data/mock";
+import { factures, facturesSuspectes } from "@/types/domain";
 
 export const Route = createFileRoute("/api/fraud/alerts")({
   server: {

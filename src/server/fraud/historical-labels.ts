@@ -1,4 +1,4 @@
-import { factures, facturesSuspectes } from "@/data/mock";
+import { factures, facturesSuspectes } from "@/types/domain";
 import type { InvoiceLike } from "./features";
 
 /**

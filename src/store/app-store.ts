@@ -1,7 +1,7 @@
 import { createContext, useContext } from "react";
 
-import type { Patient } from "@/data/mock";
-import type { Anomalie, StatutAnomalie } from "@/data/mock-audit";
+import type { Patient } from "@/types/domain";
+import type { Anomalie, StatutAnomalie } from "@/types/audit";
 
 export type NewPatientInput = {
   nom: string;

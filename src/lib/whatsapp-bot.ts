@@ -1,4 +1,4 @@
-import type { WaConversation, WaMessage, WaQuickReply, WaStatut } from "@/data/mock-whatsapp";
+import type { WaConversation, WaMessage, WaQuickReply, WaStatut } from "@/types/whatsapp";
 
 /** Message produit par le moteur, avant attribution d'un identifiant et d'une heure. */
 export type WaDraftMessage = Omit<WaMessage, "id" | "heure">;

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { factures, facturesSuspectes } from "@/data/mock";
+import { factures, facturesSuspectes } from "@/types/domain";
 import { jsonError, jsonOk, parseJsonBody, requireApiAuth } from "@/server/auth/secure";
 import {
   engineMeta,

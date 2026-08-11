@@ -26,7 +26,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { PageHeader, Pill, IconTile } from "@/components/ui-kit";
-import { factures, medecins, patients, typesExamen, formatMAD } from "@/data/mock";
+import { factures, medecins, patients, typesExamen, formatMAD } from "@/types/domain";
 import { telechargerDossierPdf } from "@/lib/pdf-export";
 
 export const Route = createFileRoute("/facturation")({

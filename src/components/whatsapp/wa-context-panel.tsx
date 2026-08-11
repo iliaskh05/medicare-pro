@@ -16,7 +16,7 @@ import {
   waStatutTone,
   type WaConversation,
   type WaStatut,
-} from "@/data/mock-whatsapp";
+} from "@/types/whatsapp";
 
 const statuts: WaStatut[] = ["bot", "attente", "secretariat", "cloture"];
 

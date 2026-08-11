@@ -69,14 +69,14 @@ import { PageHeader, Pill, IconTile, EmptyState, SimulationNotice } from "@/comp
 import { useRole } from "@/hooks/use-role";
 import { FraudDashboard } from "@/components/fraude/fraud-dashboard";
 import { telechargerDossierPdf } from "@/lib/pdf-export";
-import { formatMAD } from "@/data/mock";
+import { formatMAD } from "@/types/domain";
 import {
   auditKpis,
   tendanceAnomalies,
   typesExamen,
   type Anomalie,
   type StatutAnomalie,
-} from "@/data/mock-audit";
+} from "@/types/audit";
 import { useAppStore } from "@/store/app-store";
 import {
   anomalyRiskLabel,

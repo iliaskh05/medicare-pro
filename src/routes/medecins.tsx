@@ -8,7 +8,7 @@ import { ActionButton } from "@/components/action-button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { PageHeader, Pill } from "@/components/ui-kit";
-import { medecins } from "@/data/mock";
+import { medecins } from "@/types/domain";
 
 export const Route = createFileRoute("/medecins")({
   head: () => ({

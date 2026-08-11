@@ -14,7 +14,7 @@ import {
 import { EmptyState, IconTile, Pill } from "@/components/ui-kit";
 import { useAsyncAction } from "@/hooks/use-async-action";
 import { fetchFraudClustering } from "@/lib/api/fraud";
-import { formatMAD } from "@/data/mock";
+import { formatMAD } from "@/types/domain";
 import { fraudSignalMeta, type FraudCaseRecord, type FraudSignalKey } from "@/types/fraud";
 
 const signalIcons: Record<FraudSignalKey, typeof Clock> = {

@@ -10,7 +10,7 @@ import {
   conversationsInternes,
   type ConversationInterne,
   type MessageInterne,
-} from "@/data/mock-extra";
+} from "@/types/imaging";
 
 export function MessagerieDock() {
   const [open, setOpen] = useState(false);

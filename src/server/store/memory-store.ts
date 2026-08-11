@@ -1,4 +1,4 @@
-import { patients, factures, facturesSuspectes } from "@/data/mock";
+import { patients, factures, facturesSuspectes } from "@/types/domain";
 import type {
   ChatMessage,
   ChatRoom,

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader, Pill } from "@/components/ui-kit";
 import { ScanViewer } from "@/components/scan-viewer";
-import { scans } from "@/data/mock-extra";
+import { scans } from "@/types/imaging";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/imagerie")({

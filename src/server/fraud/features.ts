@@ -1,4 +1,4 @@
-import { factures, patients } from "@/data/mock";
+import { factures, patients } from "@/types/domain";
 import type { FraudFeatureVector } from "../store/types";
 
 /** Official-ish barèmes MAD used for baremeRatio feature. */

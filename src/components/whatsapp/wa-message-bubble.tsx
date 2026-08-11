@@ -1,7 +1,7 @@
 import { Bot, Check, CheckCheck, FileText, Headset, Info } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import type { WaEtat, WaMessage, WaQuickReply } from "@/data/mock-whatsapp";
+import type { WaEtat, WaMessage, WaQuickReply } from "@/types/whatsapp";
 
 function EtatIcone({ etat }: { etat?: WaEtat | undefined }) {
   if (!etat) return null;

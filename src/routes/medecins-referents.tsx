@@ -23,7 +23,7 @@ import {
 import { ActionButton } from "@/components/action-button";
 import { EmptyState, PageHeader, Pill } from "@/components/ui-kit";
 import { fetchMedecins, sendReportToReferent } from "@/lib/api/referents";
-import type { Referent } from "@/data/mock-referents";
+import type { Referent } from "@/types/referent";
 
 export const Route = createFileRoute("/medecins-referents")({
   head: () => ({

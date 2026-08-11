@@ -16,7 +16,7 @@ import {
   type WaMessage,
   type WaQuickReply,
   type WaStatut,
-} from "@/data/mock-whatsapp";
+} from "@/types/whatsapp";
 import {
   reponseBot,
   scenarioMessages,

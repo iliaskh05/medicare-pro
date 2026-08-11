@@ -9,7 +9,7 @@ import {
   waStatutTone,
   type WaConversation,
   type WaStatut,
-} from "@/data/mock-whatsapp";
+} from "@/types/whatsapp";
 import { cn } from "@/lib/utils";
 
 export function WaConversationList({

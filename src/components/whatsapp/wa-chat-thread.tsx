@@ -21,7 +21,7 @@ import {
   waStatutTone,
   type WaConversation,
   type WaQuickReply,
-} from "@/data/mock-whatsapp";
+} from "@/types/whatsapp";
 import type { WaScenario } from "@/lib/whatsapp-bot";
 
 const scenarios: Array<{ key: WaScenario; label: string; icon: typeof Bot }> = [
