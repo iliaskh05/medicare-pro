@@ -20,6 +20,8 @@ import { Toaster } from "@/components/ui/sonner";
 import { MessagerieDock } from "@/components/messagerie-dock";
 import { PlatformAssistant } from "@/components/assistant/platform-assistant";
 import { RoleProvider } from "@/hooks/use-role";
+import { ThemeProvider } from "@/hooks/use-theme";
+
 
 function NotFoundComponent() {
   return (
