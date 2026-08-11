@@ -651,6 +651,11 @@ function Dashboard() {
         ) : null}
       </div>
 
+      {/* Analyse de Conformité IA (Fraude caisse) — rendu strictement Directeur */}
+      {role === "directeur" ? <CaisseFraudAlert /> : null}
+
+
+
       <div className="grid gap-4 lg:grid-cols-5">
         <Card className="lg:col-span-3">
           <CardHeader className="flex-row items-center justify-between">
