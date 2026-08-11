@@ -53,6 +53,16 @@ export function AppHeader() {
       </div>
 
       <div className="ml-auto flex items-center gap-2">
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={theme === "dark" ? "Passer en mode clair" : "Passer en mode sombre"}
+          onClick={toggleTheme}
+        >
+          {theme === "dark" ? <Sun className="size-5" /> : <Moon className="size-5" />}
+        </Button>
+
+
         <ActionButton
           variant="ghost"
           size="icon"
