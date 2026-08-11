@@ -61,9 +61,8 @@ const atouts = [
 
 function LoginPage() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("direction@centre-imagerie.ma");
-  const [password, setPassword] = useState("demo1234");
-  const [demoLoading, setDemoLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
@@ -240,7 +239,12 @@ function LoginPage() {
               </Label>
             </div>
 
-            <Button type="submit" size="lg" className="h-12 w-full text-base shadow-sm">
+            <Button
+              type="submit"
+              size="lg"
+              className="h-12 w-full text-base shadow-sm"
+              disabled={!email.trim() || !password}
+            >
               Se connecter
             </Button>
           </form>
@@ -250,26 +254,6 @@ function LoginPage() {
           <p className="text-center text-xs text-muted-foreground">
             Accès réservé au personnel autorisé du centre.
           </p>
-          <Button
-            type="button"
-            variant="outline"
-            className="mt-3 h-11 w-full"
-            disabled={demoLoading}
-            onClick={() => {
-              if (demoLoading) return;
-              setDemoLoading(true);
-              navigate({ to: "/dashboard" });
-            }}
-          >
-            {demoLoading ? (
-              <>
-                <Loader2 className="mr-2 size-4 animate-spin" />
-                Authentification sécurisée en cours...
-              </>
-            ) : (
-              "Continuer en mode démonstration"
-            )}
-          </Button>
         </div>
       </div>
     </div>
