@@ -21,21 +21,7 @@ import { Route as PatientsRouteImport } from './routes/patients'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ViewerRouteImport } from './routes/viewer'
 import { Route as WhatsappRouteImport } from './routes/whatsapp'
-import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as PatientDemoRouteImport } from './routes/patient.demo'
-import { Route as ApiChatMessagesRouteImport } from './routes/api/chat/messages'
-import { Route as ApiChatRoomsRouteImport } from './routes/api/chat/rooms'
-import { Route as ApiChatStreamRouteImport } from './routes/api/chat/stream'
-import { Route as ApiChatWsRouteImport } from './routes/api/chat/ws'
-import { Route as ApiEventsStreamRouteImport } from './routes/api/events/stream'
-import { Route as ApiFraudAlertsRouteImport } from './routes/api/fraud/alerts'
-import { Route as ApiFraudAnalyzeRouteImport } from './routes/api/fraud/analyze'
-import { Route as ApiImagingAnalyzeRouteImport } from './routes/api/imaging/analyze'
-import { Route as ApiImagingStudiesRouteImport } from './routes/api/imaging/studies'
-import { Route as ApiReportsStructureRouteImport } from './routes/api/reports/structure'
-import { Route as ApiWhatsappInboxRouteImport } from './routes/api/whatsapp/inbox'
-import { Route as ApiWhatsappWebhookRouteImport } from './routes/api/whatsapp/webhook'
-import { Route as ApiImagingStudiesStudyIdRouteImport } from './routes/api/imaging/studies.$studyId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -97,82 +83,11 @@ const WhatsappRoute = WhatsappRouteImport.update({
   path: '/whatsapp',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiHealthRoute = ApiHealthRouteImport.update({
-  id: '/api/health',
-  path: '/api/health',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const PatientDemoRoute = PatientDemoRouteImport.update({
   id: '/patient/demo',
   path: '/patient/demo',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiChatMessagesRoute = ApiChatMessagesRouteImport.update({
-  id: '/api/chat/messages',
-  path: '/api/chat/messages',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiChatRoomsRoute = ApiChatRoomsRouteImport.update({
-  id: '/api/chat/rooms',
-  path: '/api/chat/rooms',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiChatStreamRoute = ApiChatStreamRouteImport.update({
-  id: '/api/chat/stream',
-  path: '/api/chat/stream',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiChatWsRoute = ApiChatWsRouteImport.update({
-  id: '/api/chat/ws',
-  path: '/api/chat/ws',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiEventsStreamRoute = ApiEventsStreamRouteImport.update({
-  id: '/api/events/stream',
-  path: '/api/events/stream',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiFraudAlertsRoute = ApiFraudAlertsRouteImport.update({
-  id: '/api/fraud/alerts',
-  path: '/api/fraud/alerts',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiFraudAnalyzeRoute = ApiFraudAnalyzeRouteImport.update({
-  id: '/api/fraud/analyze',
-  path: '/api/fraud/analyze',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiImagingAnalyzeRoute = ApiImagingAnalyzeRouteImport.update({
-  id: '/api/imaging/analyze',
-  path: '/api/imaging/analyze',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiImagingStudiesRoute = ApiImagingStudiesRouteImport.update({
-  id: '/api/imaging/studies',
-  path: '/api/imaging/studies',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiReportsStructureRoute = ApiReportsStructureRouteImport.update({
-  id: '/api/reports/structure',
-  path: '/api/reports/structure',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiWhatsappInboxRoute = ApiWhatsappInboxRouteImport.update({
-  id: '/api/whatsapp/inbox',
-  path: '/api/whatsapp/inbox',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiWhatsappWebhookRoute = ApiWhatsappWebhookRouteImport.update({
-  id: '/api/whatsapp/webhook',
-  path: '/api/whatsapp/webhook',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiImagingStudiesStudyIdRoute =
-  ApiImagingStudiesStudyIdRouteImport.update({
-    id: '/$studyId',
-    path: '/$studyId',
-    getParentRoute: () => ApiImagingStudiesRoute,
-  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -187,21 +102,7 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/viewer': typeof ViewerRoute
   '/whatsapp': typeof WhatsappRoute
-  '/api/health': typeof ApiHealthRoute
   '/patient/demo': typeof PatientDemoRoute
-  '/api/chat/messages': typeof ApiChatMessagesRoute
-  '/api/chat/rooms': typeof ApiChatRoomsRoute
-  '/api/chat/stream': typeof ApiChatStreamRoute
-  '/api/chat/ws': typeof ApiChatWsRoute
-  '/api/events/stream': typeof ApiEventsStreamRoute
-  '/api/fraud/alerts': typeof ApiFraudAlertsRoute
-  '/api/fraud/analyze': typeof ApiFraudAnalyzeRoute
-  '/api/imaging/analyze': typeof ApiImagingAnalyzeRoute
-  '/api/imaging/studies': typeof ApiImagingStudiesRouteWithChildren
-  '/api/reports/structure': typeof ApiReportsStructureRoute
-  '/api/whatsapp/inbox': typeof ApiWhatsappInboxRoute
-  '/api/whatsapp/webhook': typeof ApiWhatsappWebhookRoute
-  '/api/imaging/studies/$studyId': typeof ApiImagingStudiesStudyIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -216,21 +117,7 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/viewer': typeof ViewerRoute
   '/whatsapp': typeof WhatsappRoute
-  '/api/health': typeof ApiHealthRoute
   '/patient/demo': typeof PatientDemoRoute
-  '/api/chat/messages': typeof ApiChatMessagesRoute
-  '/api/chat/rooms': typeof ApiChatRoomsRoute
-  '/api/chat/stream': typeof ApiChatStreamRoute
-  '/api/chat/ws': typeof ApiChatWsRoute
-  '/api/events/stream': typeof ApiEventsStreamRoute
-  '/api/fraud/alerts': typeof ApiFraudAlertsRoute
-  '/api/fraud/analyze': typeof ApiFraudAnalyzeRoute
-  '/api/imaging/analyze': typeof ApiImagingAnalyzeRoute
-  '/api/imaging/studies': typeof ApiImagingStudiesRouteWithChildren
-  '/api/reports/structure': typeof ApiReportsStructureRoute
-  '/api/whatsapp/inbox': typeof ApiWhatsappInboxRoute
-  '/api/whatsapp/webhook': typeof ApiWhatsappWebhookRoute
-  '/api/imaging/studies/$studyId': typeof ApiImagingStudiesStudyIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -246,21 +133,7 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/viewer': typeof ViewerRoute
   '/whatsapp': typeof WhatsappRoute
-  '/api/health': typeof ApiHealthRoute
   '/patient/demo': typeof PatientDemoRoute
-  '/api/chat/messages': typeof ApiChatMessagesRoute
-  '/api/chat/rooms': typeof ApiChatRoomsRoute
-  '/api/chat/stream': typeof ApiChatStreamRoute
-  '/api/chat/ws': typeof ApiChatWsRoute
-  '/api/events/stream': typeof ApiEventsStreamRoute
-  '/api/fraud/alerts': typeof ApiFraudAlertsRoute
-  '/api/fraud/analyze': typeof ApiFraudAnalyzeRoute
-  '/api/imaging/analyze': typeof ApiImagingAnalyzeRoute
-  '/api/imaging/studies': typeof ApiImagingStudiesRouteWithChildren
-  '/api/reports/structure': typeof ApiReportsStructureRoute
-  '/api/whatsapp/inbox': typeof ApiWhatsappInboxRoute
-  '/api/whatsapp/webhook': typeof ApiWhatsappWebhookRoute
-  '/api/imaging/studies/$studyId': typeof ApiImagingStudiesStudyIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -277,21 +150,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/viewer'
     | '/whatsapp'
-    | '/api/health'
     | '/patient/demo'
-    | '/api/chat/messages'
-    | '/api/chat/rooms'
-    | '/api/chat/stream'
-    | '/api/chat/ws'
-    | '/api/events/stream'
-    | '/api/fraud/alerts'
-    | '/api/fraud/analyze'
-    | '/api/imaging/analyze'
-    | '/api/imaging/studies'
-    | '/api/reports/structure'
-    | '/api/whatsapp/inbox'
-    | '/api/whatsapp/webhook'
-    | '/api/imaging/studies/$studyId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -306,21 +165,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/viewer'
     | '/whatsapp'
-    | '/api/health'
     | '/patient/demo'
-    | '/api/chat/messages'
-    | '/api/chat/rooms'
-    | '/api/chat/stream'
-    | '/api/chat/ws'
-    | '/api/events/stream'
-    | '/api/fraud/alerts'
-    | '/api/fraud/analyze'
-    | '/api/imaging/analyze'
-    | '/api/imaging/studies'
-    | '/api/reports/structure'
-    | '/api/whatsapp/inbox'
-    | '/api/whatsapp/webhook'
-    | '/api/imaging/studies/$studyId'
   id:
     | '__root__'
     | '/'
@@ -335,21 +180,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/viewer'
     | '/whatsapp'
-    | '/api/health'
     | '/patient/demo'
-    | '/api/chat/messages'
-    | '/api/chat/rooms'
-    | '/api/chat/stream'
-    | '/api/chat/ws'
-    | '/api/events/stream'
-    | '/api/fraud/alerts'
-    | '/api/fraud/analyze'
-    | '/api/imaging/analyze'
-    | '/api/imaging/studies'
-    | '/api/reports/structure'
-    | '/api/whatsapp/inbox'
-    | '/api/whatsapp/webhook'
-    | '/api/imaging/studies/$studyId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -365,20 +196,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   ViewerRoute: typeof ViewerRoute
   WhatsappRoute: typeof WhatsappRoute
-  ApiHealthRoute: typeof ApiHealthRoute
   PatientDemoRoute: typeof PatientDemoRoute
-  ApiChatMessagesRoute: typeof ApiChatMessagesRoute
-  ApiChatRoomsRoute: typeof ApiChatRoomsRoute
-  ApiChatStreamRoute: typeof ApiChatStreamRoute
-  ApiChatWsRoute: typeof ApiChatWsRoute
-  ApiEventsStreamRoute: typeof ApiEventsStreamRoute
-  ApiFraudAlertsRoute: typeof ApiFraudAlertsRoute
-  ApiFraudAnalyzeRoute: typeof ApiFraudAnalyzeRoute
-  ApiImagingAnalyzeRoute: typeof ApiImagingAnalyzeRoute
-  ApiImagingStudiesRoute: typeof ApiImagingStudiesRouteWithChildren
-  ApiReportsStructureRoute: typeof ApiReportsStructureRoute
-  ApiWhatsappInboxRoute: typeof ApiWhatsappInboxRoute
-  ApiWhatsappWebhookRoute: typeof ApiWhatsappWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -467,13 +285,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WhatsappRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/health': {
-      id: '/api/health'
-      path: '/api/health'
-      fullPath: '/api/health'
-      preLoaderRoute: typeof ApiHealthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/patient/demo': {
       id: '/patient/demo'
       path: '/patient/demo'
@@ -481,110 +292,8 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PatientDemoRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/chat/messages': {
-      id: '/api/chat/messages'
-      path: '/api/chat/messages'
-      fullPath: '/api/chat/messages'
-      preLoaderRoute: typeof ApiChatMessagesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/chat/rooms': {
-      id: '/api/chat/rooms'
-      path: '/api/chat/rooms'
-      fullPath: '/api/chat/rooms'
-      preLoaderRoute: typeof ApiChatRoomsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/chat/stream': {
-      id: '/api/chat/stream'
-      path: '/api/chat/stream'
-      fullPath: '/api/chat/stream'
-      preLoaderRoute: typeof ApiChatStreamRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/chat/ws': {
-      id: '/api/chat/ws'
-      path: '/api/chat/ws'
-      fullPath: '/api/chat/ws'
-      preLoaderRoute: typeof ApiChatWsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/events/stream': {
-      id: '/api/events/stream'
-      path: '/api/events/stream'
-      fullPath: '/api/events/stream'
-      preLoaderRoute: typeof ApiEventsStreamRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/fraud/alerts': {
-      id: '/api/fraud/alerts'
-      path: '/api/fraud/alerts'
-      fullPath: '/api/fraud/alerts'
-      preLoaderRoute: typeof ApiFraudAlertsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/fraud/analyze': {
-      id: '/api/fraud/analyze'
-      path: '/api/fraud/analyze'
-      fullPath: '/api/fraud/analyze'
-      preLoaderRoute: typeof ApiFraudAnalyzeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/imaging/analyze': {
-      id: '/api/imaging/analyze'
-      path: '/api/imaging/analyze'
-      fullPath: '/api/imaging/analyze'
-      preLoaderRoute: typeof ApiImagingAnalyzeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/imaging/studies': {
-      id: '/api/imaging/studies'
-      path: '/api/imaging/studies'
-      fullPath: '/api/imaging/studies'
-      preLoaderRoute: typeof ApiImagingStudiesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/reports/structure': {
-      id: '/api/reports/structure'
-      path: '/api/reports/structure'
-      fullPath: '/api/reports/structure'
-      preLoaderRoute: typeof ApiReportsStructureRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/whatsapp/inbox': {
-      id: '/api/whatsapp/inbox'
-      path: '/api/whatsapp/inbox'
-      fullPath: '/api/whatsapp/inbox'
-      preLoaderRoute: typeof ApiWhatsappInboxRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/whatsapp/webhook': {
-      id: '/api/whatsapp/webhook'
-      path: '/api/whatsapp/webhook'
-      fullPath: '/api/whatsapp/webhook'
-      preLoaderRoute: typeof ApiWhatsappWebhookRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/imaging/studies/$studyId': {
-      id: '/api/imaging/studies/$studyId'
-      path: '/$studyId'
-      fullPath: '/api/imaging/studies/$studyId'
-      preLoaderRoute: typeof ApiImagingStudiesStudyIdRouteImport
-      parentRoute: typeof ApiImagingStudiesRoute
-    }
   }
 }
-
-interface ApiImagingStudiesRouteChildren {
-  ApiImagingStudiesStudyIdRoute: typeof ApiImagingStudiesStudyIdRoute
-}
-
-const ApiImagingStudiesRouteChildren: ApiImagingStudiesRouteChildren = {
-  ApiImagingStudiesStudyIdRoute: ApiImagingStudiesStudyIdRoute,
-}
-
-const ApiImagingStudiesRouteWithChildren =
-  ApiImagingStudiesRoute._addFileChildren(ApiImagingStudiesRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -599,20 +308,7 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   ViewerRoute: ViewerRoute,
   WhatsappRoute: WhatsappRoute,
-  ApiHealthRoute: ApiHealthRoute,
   PatientDemoRoute: PatientDemoRoute,
-  ApiChatMessagesRoute: ApiChatMessagesRoute,
-  ApiChatRoomsRoute: ApiChatRoomsRoute,
-  ApiChatStreamRoute: ApiChatStreamRoute,
-  ApiChatWsRoute: ApiChatWsRoute,
-  ApiEventsStreamRoute: ApiEventsStreamRoute,
-  ApiFraudAlertsRoute: ApiFraudAlertsRoute,
-  ApiFraudAnalyzeRoute: ApiFraudAnalyzeRoute,
-  ApiImagingAnalyzeRoute: ApiImagingAnalyzeRoute,
-  ApiImagingStudiesRoute: ApiImagingStudiesRouteWithChildren,
-  ApiReportsStructureRoute: ApiReportsStructureRoute,
-  ApiWhatsappInboxRoute: ApiWhatsappInboxRoute,
-  ApiWhatsappWebhookRoute: ApiWhatsappWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
