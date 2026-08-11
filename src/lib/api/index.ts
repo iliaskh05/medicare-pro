@@ -5,3 +5,8 @@ export * from "./fraud";
 export * from "./referents";
 export * from "./chat";
 export * from "./reports";
+export * from "./audit";
+export * from "./dashboard";
+export * from "./imaging";
+export * from "./whatsapp";
+export * from "./anomalies";
