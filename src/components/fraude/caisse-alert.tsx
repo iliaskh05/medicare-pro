@@ -19,11 +19,11 @@ export type CaisseVariables = {
 
 function mapDto(dto: AnomalieCaisseDto): CaisseVariables {
   return {
-    delaiEncaissementMin: Number(dto.delai_encaissement ?? 0),
-    seuilDelaiMin: Number(dto.seuil_delai ?? 20),
-    tauxRemisePct: Number(dto.taux_remise ?? 0),
-    seuilRemisePct: Number(dto.seuil_remise ?? 10),
-    statutAnnulation: dto.statut_annulation ?? "Aucune",
+    delaiEncaissementMin: Number(dto.delaiReglementMinutes ?? 0),
+    seuilDelaiMin: Number(dto.seuilDelaiMinutes ?? 20),
+    tauxRemisePct: Number(dto.tauxRemise ?? 0),
+    seuilRemisePct: Number(dto.seuilRemise ?? 10),
+    statutAnnulation: dto.annulationPostActe ?? "Aucune",
     guichet: dto.guichet ?? "Accueil",
   };
 }
