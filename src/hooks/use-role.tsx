@@ -135,6 +135,7 @@ export function RoleProvider({ children }: { children: ReactNode }) {
     return {
       role,
       profile,
+      user: toUser(profile),
       setRole,
       hasPermission: (permission) => profile[permission],
     };
@@ -149,6 +150,7 @@ export function useRole(): RoleContextValue {
     return {
       role: "directeur",
       profile: roleProfiles.directeur,
+      user: toUser(roleProfiles.directeur),
       setRole: () => {},
       hasPermission: (permission) => roleProfiles.directeur[permission],
     };
