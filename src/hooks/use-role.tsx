@@ -58,7 +58,7 @@ export const roleProfiles: Record<AppRole, RoleProfile> = {
     label: "Médecin",
     fonction: "Imagerie & comptes rendus",
     nom: "Poste Médecin",
-    initiales: "NS",
+    initiales: "ME",
     canSeeFraudModule: false,
     canExportCompta: false,
     canValiderAnomalie: true,
