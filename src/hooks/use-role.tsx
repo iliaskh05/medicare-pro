@@ -157,3 +157,8 @@ export function useRole(): RoleContextValue {
   }
   return ctx;
 }
+
+/** Accès direct à l'utilisateur connecté et à son rôle métier. */
+export function useUser(): AppUser {
+  return useRole().user;
+}
