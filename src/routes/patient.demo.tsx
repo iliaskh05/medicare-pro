@@ -747,8 +747,9 @@ function PatientRecordPage() {
           </Tabs>
         </div>
 
-        {/* --------------------- Colonne droite : dashboard IA --------------------- */}
+        {/* Colonne droite : Analyse de Conformité IA — montée uniquement pour le Directeur */}
         <aside className="space-y-4 xl:col-span-3">
+          {role === "directeur" ? (
           <Card
             data-tour="ia-panel"
             className={cn(
@@ -785,6 +786,8 @@ function PatientRecordPage() {
                   </div>
                 ))}
               </div>
+
+              {!blocked ? <CaisseFraudAlert compact /> : null}
 
               {!blocked && role === "directeur" ? (
                 <div className="rounded-xl bg-destructive/8 p-3.5 ring-1 ring-inset ring-destructive/30">
