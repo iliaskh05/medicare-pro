@@ -319,36 +319,39 @@ function Dashboard() {
     return () => controller.abort();
   }, [profile.canSeeFinance, reloadKey]);
 
+  /* En cas d'indisponibilité du backend, la carte reste affichée avec une valeur neutre. */
+  const kpiValue = (value: string) => (kpisError ? "—" : value);
   const kpiCards = [
     {
       label: "Patients du jour",
-      value: String(kpis.patientsDuJour),
+      value: kpiValue(String(kpis.patientsDuJour)),
       icon: Users,
       tone: "primary" as const,
       finance: false,
     },
     {
       label: "Chiffre d'affaires mensuel",
-      value: formatMAD(kpis.chiffreAffaires),
+      value: kpiValue(formatMAD(kpis.chiffreAffaires)),
       icon: Wallet,
       tone: "success" as const,
       finance: true,
     },
     {
       label: "Taux d'occupation",
-      value: `${kpis.tauxOccupation}%`,
+      value: kpiValue(`${kpis.tauxOccupation}%`),
       icon: Clock,
       tone: "warning" as const,
       finance: false,
     },
     {
       label: "Actes réalisés",
-      value: String(kpis.actesRealises),
+      value: kpiValue(String(kpis.actesRealises)),
       icon: AlertTriangle,
       tone: "destructive" as const,
       finance: true,
     },
   ];
+
   const visibleKpis = kpiCards.filter((k) => !k.finance || profile.canSeeFinance);
 
   const comptaTotal = comptabilite.validated + comptabilite.pending;
