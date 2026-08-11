@@ -40,6 +40,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useRole } from "@/hooks/use-role";
+import { useAsyncAction } from "@/hooks/use-async-action";
 import { DocumentMenu } from "@/components/document-menu";
 import { PageHeader, Pill, IconTile } from "@/components/ui-kit";
 import { ProbabilityBar } from "@/components/probability-gauge";
@@ -169,12 +170,8 @@ function PlanningHeatmap({ data }: { data: PlanningSlot[] }) {
 
 function Dashboard() {
   const [botOpen, setBotOpen] = useState(false);
-  const [exporting, setExporting] = useState(false);
-
-  const exportComptable = () => {
-    if (exporting) return;
-    setExporting(true);
-    window.setTimeout(() => {
+  const { run: exportComptable, isLoading: exporting } = useAsyncAction(async () => {
+    {
       const lignes = [
         "reference;date;patient;examen;montant_mad;statut",
         ...salleAttente.map(
@@ -189,12 +186,14 @@ function Dashboard() {
       a.download = "export_comptable_2026.csv";
       a.click();
       URL.revokeObjectURL(url);
-      setExporting(false);
+    }
+  }, {
+    onSuccess: () =>
       toast.success("Export comptable généré", {
         description: "export_comptable_2026.csv téléchargé.",
-      });
-    }, 1000);
-  };
+      }),
+    onError: (error) => toast.error("Export impossible", { description: error.message }),
+  });
 
   const { profile } = useRole();
   const visibleKpis = kpis.filter((k) => !("finance" in k && k.finance) || profile.canSeeFinance);

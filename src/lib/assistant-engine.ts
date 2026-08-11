@@ -6,6 +6,13 @@ import {
   type AssistantRole,
 } from "@/data/assistant-knowledge";
 
+const roleLabels: Record<AssistantRole, string> = {
+  directeur: "Directeur",
+  accueil: "Accueil",
+  technicien: "Technicien",
+  medecin: "Médecin",
+};
+
 export type AssistantAction =
   | { kind: "navigate"; label: string; to: string }
   | { kind: "prompt"; label: string; prompt: string };
@@ -74,7 +81,7 @@ const rules: Rule[] = [
     motsCles: ["bonjour", "salut", "bonsoir", "salam", "hello"],
     build: (ctx) => ({
       intent: "salutation",
-      text: `Bonjour 👋 Je suis l'Assistant RadioCRM. Je vous guide dans le prototype : navigation, explication des écrans et des indicateurs simulés.\n\nProfil actif : **${ctx.role === "directeur" ? "Directeur" : "Radiologue"}** (rôle de démonstration).`,
+      text: `Bonjour 👋 Je suis l'Assistant RadioCRM. Je vous guide dans le prototype : navigation, explication des écrans et des indicateurs simulés.\n\nProfil actif : **${roleLabels[ctx.role]}** (rôle de démonstration).`,
       actions: [
         {
           kind: "prompt",
@@ -220,7 +227,7 @@ const rules: Rule[] = [
     motsCles: ["role", "profil", "droit", "permission", "rbac", "directeur", "radiologue"],
     build: (ctx) => ({
       intent: "role",
-      text: `**Simulateur de rôle** — le sélecteur du bandeau supérieur bascule entre *Directeur* (accès complet, y compris financier) et *Radiologue* (données financières masquées).\n\nProfil actif : **${ctx.role === "directeur" ? "Directeur" : "Radiologue"}**.`,
+      text: `**Simulateur de rôle** — le sélecteur du bandeau supérieur bascule entre *Directeur* (accès complet, y compris le module de détection de fraude), *Accueil*, *Technicien* et *Médecin* (modules financiers et IA restreints).\n\nProfil actif : **${roleLabels[ctx.role]}**.`,
       actions: [{ kind: "navigate", label: "Ouvrir le tableau de bord", to: "/dashboard" }],
     }),
   },

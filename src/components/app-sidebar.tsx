@@ -8,6 +8,7 @@ import {
   ScanLine,
   MessagesSquare,
   MessageCircle,
+  Contact,
 } from "lucide-react";
 
 import {
@@ -33,13 +34,18 @@ const items = [
   { title: "Chat médecins", url: "/chat", icon: MessagesSquare },
   { title: "WhatsApp", url: "/whatsapp", icon: MessageCircle },
   { title: "Médecins", url: "/medecins", icon: Stethoscope },
-  { title: "Audit & Conformité", url: "/audit", icon: ShieldAlert, finance: true },
+  { title: "Correspondants", url: "/medecins-referents", icon: Contact },
+  { title: "Audit & Conformité", url: "/audit", icon: ShieldAlert, fraude: true },
 ] as const;
 
 export function AppSidebar() {
   const currentPath = useRouterState({ select: (r) => r.location.pathname });
   const { profile } = useRole();
-  const visibleItems = items.filter((i) => !("finance" in i && i.finance) || profile.canSeeFinance);
+  const visibleItems = items.filter(
+    (i) =>
+      (!("finance" in i && i.finance) || profile.canSeeFinance) &&
+      (!("fraude" in i && i.fraude) || profile.canSeeFraudModule),
+  );
 
   return (
     <Sidebar collapsible="icon">
@@ -96,7 +102,7 @@ export function AppSidebar() {
       <SidebarFooter className="border-t border-sidebar-border">
         <div className="rounded-lg bg-sidebar-accent px-3 py-2 group-data-[collapsible=icon]:hidden">
           <p className="text-xs font-semibold text-sidebar-accent-foreground">
-            Module IA Fraude actif
+            Centre d&apos;Imagerie Médicale
           </p>
           <p className="mt-0.5 text-xs text-sidebar-foreground/60">Casablanca</p>
         </div>
