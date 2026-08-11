@@ -166,17 +166,17 @@ function AsyncSection<T>({
   if (isLoading) return <>{skeleton}</>;
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-destructive/30 bg-destructive/5 px-6 py-8 text-center">
-        <AlertTriangle className="size-6 text-destructive" />
-        <p className="text-sm text-muted-foreground">{error}</p>
-        <Button variant="outline" size="sm" onClick={onRetry}>
-          <RefreshCw className="mr-2 size-4" /> Réessayer
+      <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-muted/30 px-6 py-8 text-center">
+        <p className="text-sm font-medium text-muted-foreground">Aucune donnée disponible</p>
+        <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={onRetry}>
+          <RefreshCw className="mr-2 size-3.5" /> Réessayer
         </Button>
       </div>
     );
   }
   if (isEmpty) return <EmptyState icon={AlertTriangle} title={emptyMessage} compact />;
   return <>{children}</>;
+
 }
 
 function Dashboard() {
