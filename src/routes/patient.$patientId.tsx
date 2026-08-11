@@ -46,7 +46,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { EmptyState, IconTile, PageHeader, Pill, AiNotice } from "@/components/ui-kit";
+import {
+  EmptyState,
+  IconTile,
+  PageHeader,
+  Pill,
+  AiNotice,
+  ServiceNotice,
+} from "@/components/ui-kit";
+
 import { cn } from "@/lib/utils";
 import { fetchPatientAnomalies, updateAnomalieStatut } from "@/lib/api/audit";
 import { anomalyRiskLevel } from "@/utils/anomalyDetection";
