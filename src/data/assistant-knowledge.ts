@@ -3,7 +3,7 @@
  * 100 % fictive et déterministe : aucun appel réseau, aucun LLM.
  */
 
-export type AssistantRole = "directeur" | "radiologue";
+export type AssistantRole = "directeur" | "accueil" | "technicien" | "medecin";
 
 export type AssistantPage = {
   path: string;
@@ -159,7 +159,17 @@ export const assistantSuggestionsParRole: Record<AssistantRole, string[]> = {
     "Comment traiter une alerte de conformité ?",
     "Comment exporter la comptabilité ?",
   ],
-  radiologue: [
+  accueil: [
+    "Comment enregistrer une facture ?",
+    "Comment créer un dossier patient ?",
+    "Comment envoyer un rappel WhatsApp ?",
+  ],
+  technicien: [
+    "Où consulter les examens du jour ?",
+    "Comment transmettre une série au médecin ?",
+    "Comment fonctionne le calque IA ?",
+  ],
+  medecin: [
     "Où consulter les examens ?",
     "Comment générer un compte rendu ?",
     "Comment fonctionne le calque IA ?",

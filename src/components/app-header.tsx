@@ -28,7 +28,9 @@ import { roleProfiles, useRole, type AppRole } from "@/hooks/use-role";
 
 const roleIcons: Record<AppRole, typeof ShieldCheck> = {
   directeur: ShieldCheck,
-  radiologue: Stethoscope,
+  accueil: Stethoscope,
+  technicien: Stethoscope,
+  medecin: Stethoscope,
 };
 
 export function AppHeader() {
@@ -65,7 +67,6 @@ export function AppHeader() {
           variant="ghost"
           size="icon"
           className="relative"
-          delay={900}
           toastKind="info"
           toastMessage="3 notifications non lues"
           toastDescription="2 alertes de facturation critiques · 1 compte rendu à valider."

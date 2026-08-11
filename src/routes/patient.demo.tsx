@@ -916,7 +916,6 @@ function PatientRecordPage() {
                         <ActionButton
                           size="sm"
                           variant="ghost"
-                          delay={900}
                           toastKind="info"
                           toastMessage="Traitement du faux positif"
                           onDone={() => dismiss(a)}
