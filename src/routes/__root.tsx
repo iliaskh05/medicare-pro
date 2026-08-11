@@ -166,6 +166,8 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+
       <RoleProvider>
         <SidebarProvider>
           <div className="flex min-h-screen w-full bg-background">
