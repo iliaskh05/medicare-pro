@@ -190,10 +190,10 @@ function RootComponent() {
         </SidebarProvider>
         <MessagerieDock />
         <PlatformAssistant />
+      </RoleProvider>
       </ThemeProvider>
       <Toaster />
     </QueryClientProvider>
 
-    </QueryClientProvider>
   );
 }
