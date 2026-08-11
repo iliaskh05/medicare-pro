@@ -119,7 +119,7 @@ export function IconTile({ children, tone = "primary" }: { children: ReactNode; 
  * Mention obligatoire à afficher au-dessus de tout résultat produit par un modèle
  * d'aide à la décision (clinique, fraude ou financier).
  */
-export function SimulationNotice({
+export function AiNotice({
   contexte = "Résultats produits par le moteur d'analyse automatique du centre.",
   className,
 }: {

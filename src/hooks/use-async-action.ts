@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from "react";
 
 /**
  * Gestion d'état asynchrone standard du projet : `isLoading`, `data`, `error`.
- * Remplace les anciennes simulations `setTimeout` : le spinner s'affiche
+ * Remplace les anciennes anciens `setTimeout` : le spinner s'affiche
  * pendant la durée réelle de la requête HTTP.
  */
 export function useAsyncAction<TResult, TArgs extends unknown[] = []>(
