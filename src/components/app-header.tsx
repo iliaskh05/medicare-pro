@@ -26,6 +26,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { ActionButton } from "@/components/action-button";
 import { roleProfiles, useRole, type AppRole } from "@/hooks/use-role";
+import { useTheme } from "@/hooks/use-theme";
+
 
 const roleIcons: Record<AppRole, typeof ShieldCheck> = {
   directeur: ShieldCheck,
