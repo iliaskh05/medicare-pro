@@ -605,7 +605,6 @@ function Dashboard() {
                   </Button>
                 </div>
               ) : (
-
                 <>
                   <div>
                     <p className="text-3xl font-bold tracking-tight">{comptabilite.validated}</p>
@@ -653,8 +652,6 @@ function Dashboard() {
 
       {/* Analyse de Conformité IA (Fraude caisse) — rendu strictement Directeur */}
       {role === "directeur" ? <CaisseFraudAlert /> : null}
-
-
 
       <div className="grid gap-4 lg:grid-cols-5">
         <Card className="lg:col-span-3">
