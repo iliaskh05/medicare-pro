@@ -31,6 +31,7 @@ import { toast } from "sonner";
 import { ActionButton } from "@/components/action-button";
 import { DocumentMenu } from "@/components/document-menu";
 import { useRole } from "@/hooks/use-role";
+import { CaisseFraudAlert } from "@/components/fraude/caisse-alert";
 import { ClusterScatter } from "@/components/cluster-scatter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
