@@ -31,6 +31,7 @@ import { toast } from "sonner";
 import { ActionButton } from "@/components/action-button";
 import { DocumentMenu } from "@/components/document-menu";
 import { useRole } from "@/hooks/use-role";
+import { CaisseFraudAlert } from "@/components/fraude/caisse-alert";
 import { ClusterScatter } from "@/components/cluster-scatter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -376,7 +377,7 @@ function PatientRecordPage() {
   const [alertes, setAlertes] = useState<Alerte[]>(alertesInitiales);
   const [blocked, setBlocked] = useState(false);
   const [solde, setSolde] = useState(dossierFinancier.reste);
-  const { profile } = useRole();
+  const { profile, role } = useRole();
 
   const score = blocked ? 0.12 : alertes.length === 0 ? 0.18 : 0.92;
 
@@ -747,238 +748,259 @@ function PatientRecordPage() {
           </Tabs>
         </div>
 
-        {/* --------------------- Colonne droite : dashboard IA --------------------- */}
+        {/* Colonne droite : Analyse de Conformité IA — montée uniquement pour le Directeur */}
         <aside className="space-y-4 xl:col-span-3">
-          <Card
-            data-tour="ia-panel"
-            className={cn(
-              "overflow-hidden ring-1 ring-inset",
-              blocked ? "ring-border" : "ring-destructive/25",
-            )}
-          >
-            <div
-              className={cn(
-                "flex items-center gap-2 border-b px-5 py-3",
-                blocked ? "border-border bg-muted/50" : "border-destructive/20 bg-destructive/8",
-              )}
-            >
-              <ShieldAlert
+          {role === "directeur" ? (
+            <>
+              <Card
+                data-tour="ia-panel"
                 className={cn(
-                  "size-4 shrink-0",
-                  blocked ? "text-muted-foreground" : "text-destructive",
+                  "overflow-hidden ring-1 ring-inset",
+                  blocked ? "ring-border" : "ring-destructive/25",
                 )}
-              />
-              <p className="text-sm font-bold tracking-tight">Analyse de Conformité IA</p>
-            </div>
-            <CardContent className="space-y-5 p-5">
-              <RiskDonut value={score} blocked={blocked} />
+              >
+                <div
+                  className={cn(
+                    "flex items-center gap-2 border-b px-5 py-3",
+                    blocked
+                      ? "border-border bg-muted/50"
+                      : "border-destructive/20 bg-destructive/8",
+                  )}
+                >
+                  <ShieldAlert
+                    className={cn(
+                      "size-4 shrink-0",
+                      blocked ? "text-muted-foreground" : "text-destructive",
+                    )}
+                  />
+                  <p className="text-sm font-bold tracking-tight">Analyse de Conformité IA</p>
+                </div>
+                <CardContent className="space-y-5 p-5">
+                  <RiskDonut value={score} blocked={blocked} />
 
-              <div className="grid grid-cols-3 gap-2 text-center">
-                {[
-                  { label: "Alertes", value: String(alertes.length) },
-                  { label: "Clusters", value: "3" },
-                  { label: "Enjeu", value: "2,6 k" },
-                ].map((k) => (
-                  <div key={k.label} className="rounded-xl bg-muted/60 px-2 py-2.5">
-                    <p className="text-base font-bold tabular-nums leading-none">{k.value}</p>
-                    <p className="mt-1 text-[11px] font-medium text-muted-foreground">{k.label}</p>
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    {[
+                      { label: "Alertes", value: String(alertes.length) },
+                      { label: "Clusters", value: "3" },
+                      { label: "Enjeu", value: "2,6 k" },
+                    ].map((k) => (
+                      <div key={k.label} className="rounded-xl bg-muted/60 px-2 py-2.5">
+                        <p className="text-base font-bold tabular-nums leading-none">{k.value}</p>
+                        <p className="mt-1 text-[11px] font-medium text-muted-foreground">
+                          {k.label}
+                        </p>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
 
-              {!blocked && profile.canSeeFinance ? (
-                <div className="rounded-xl bg-destructive/8 p-3.5 ring-1 ring-inset ring-destructive/30">
-                  <div className="flex items-start gap-2">
-                    <ShieldAlert className="mt-0.5 size-4 shrink-0 text-destructive" />
-                    <div className="min-w-0">
-                      <p className="text-sm font-bold leading-snug text-destructive">
-                        Score de risque : 92 % — Rupture de protocole financier
-                      </p>
-                      <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
-                        L&apos;IA détecte une anomalie de caisse : les clichés de l&apos;
-                        {dossierFinancier.examen} sont marqués « {dossierFinancier.statutImpression}{" "}
-                        » et remis au patient, alors que le solde de {mad(solde)} n&apos;a pas été
-                        encaissé (acompte de {mad(dossierFinancier.acompte)} seul enregistré).
-                      </p>
+                  {!blocked ? <CaisseFraudAlert compact /> : null}
+
+                  {!blocked && role === "directeur" ? (
+                    <div className="rounded-xl bg-destructive/8 p-3.5 ring-1 ring-inset ring-destructive/30">
+                      <div className="flex items-start gap-2">
+                        <ShieldAlert className="mt-0.5 size-4 shrink-0 text-destructive" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold leading-snug text-destructive">
+                            Score de risque : 92 % — Rupture de protocole financier
+                          </p>
+                          <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+                            L&apos;IA détecte une anomalie de caisse : les clichés de l&apos;
+                            {dossierFinancier.examen} sont marqués «{" "}
+                            {dossierFinancier.statutImpression} » et remis au patient, alors que le
+                            solde de {mad(solde)} n&apos;a pas été encaissé (acompte de{" "}
+                            {mad(dossierFinancier.acompte)} seul enregistré).
+                          </p>
+                        </div>
+                      </div>
+                      <div className="mt-3 space-y-2">
+                        <ActionButton
+                          className="w-full"
+                          variant="destructive"
+                          size="sm"
+                          toastKind="error"
+                          toastMessage="Remise des résultats bloquée"
+                          toastDescription={`${patient.id} · retrait des clichés suspendu jusqu'à encaissement.`}
+                          onDone={() => setBlocked(true)}
+                        >
+                          <Ban className="mr-1.5 size-4" /> Bloquer la remise des résultats
+                        </ActionButton>
+                        <ActionButton
+                          className="w-full"
+                          variant="outline"
+                          size="sm"
+                          toastKind="success"
+                          toastMessage="Solde régularisé"
+                          toastDescription={`${mad(dossierFinancier.reste)} encaissés · reçu généré automatiquement.`}
+                          onDone={() => {
+                            setSolde(0);
+                            setAlertes((prev) => prev.filter((a) => a.id !== "ALR-901"));
+                          }}
+                        >
+                          <Wallet className="mr-1.5 size-4" /> Régulariser le solde
+                        </ActionButton>
+                      </div>
                     </div>
+                  ) : null}
+
+                  <div className="flex items-start gap-2 rounded-xl bg-primary/8 p-3 ring-1 ring-inset ring-primary/20">
+                    <Sparkles className="mt-0.5 size-4 shrink-0 text-primary" />
+                    <p className="text-xs leading-relaxed text-muted-foreground">
+                      Modèle hybride (K-Means + régression logistique) — dernière évaluation il y a
+                      <span className="font-semibold text-foreground"> 2 minutes</span> sur 1 284
+                      dossiers comparables.
+                    </p>
                   </div>
-                  <div className="mt-3 space-y-2">
-                    <ActionButton
-                      className="w-full"
-                      variant="destructive"
-                      size="sm"
-                      toastKind="error"
-                      toastMessage="Remise des résultats bloquée"
-                      toastDescription={`${patient.id} · retrait des clichés suspendu jusqu'à encaissement.`}
-                      onDone={() => setBlocked(true)}
-                    >
-                      <Ban className="mr-1.5 size-4" /> Bloquer la remise des résultats
-                    </ActionButton>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="flex items-center gap-2 text-sm">
+                    <Brain className="size-4 text-muted-foreground" />
+                    Clustering des signaux faibles
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pb-5">
+                  <ClusterScatter />
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="flex items-center gap-2 text-sm">
+                    <Layers className="size-4 text-muted-foreground" />
+                    Alertes de Clustering
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {alertes.length === 0 ? (
+                    <EmptyState
+                      compact
+                      icon={ShieldCheck}
+                      title="Aucune anomalie active"
+                      description="Toutes les alertes ont été traitées. Le dossier est conforme au barème."
+                    />
+                  ) : (
+                    alertes.map((a) => {
+                      const m = severiteMeta[a.severite];
+                      return (
+                        <div
+                          key={a.id}
+                          className={cn(
+                            "rounded-xl p-3.5 ring-1 ring-inset shadow-sm transition-shadow hover:shadow-md",
+                            m.bg,
+                            m.ring,
+                          )}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex min-w-0 items-center gap-2">
+                              <AlertTriangle className={cn("size-4 shrink-0", m.text)} />
+                              <p className="text-sm font-bold leading-snug">{a.titre}</p>
+                            </div>
+                            <Pill tone={m.tone} className="shrink-0">
+                              {m.label}
+                            </Pill>
+                          </div>
+                          <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                            {a.detail}
+                          </p>
+                          <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+                            <span className="inline-flex items-center gap-1 font-medium">
+                              <Brain className="size-3" /> {a.cluster}
+                            </span>
+                            <span className="font-semibold tabular-nums">
+                              Confiance {Math.round(a.confiance * 100)} %
+                            </span>
+                            <span>Impact : {a.impact}</span>
+                          </div>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            <ActionButton
+                              size="sm"
+                              variant="outline"
+                              toastKind="warning"
+                              toastMessage="Anomalie transmise au contrôle facturation"
+                              toastDescription={`${a.id} · ${a.titre}`}
+                            >
+                              <ShieldAlert className="mr-1.5 size-4" /> Investiguer
+                            </ActionButton>
+                            <ActionButton
+                              size="sm"
+                              variant="ghost"
+                              toastKind="info"
+                              toastMessage="Traitement du faux positif"
+                              onDone={() => dismiss(a)}
+                            >
+                              <ThumbsUp className="mr-1.5 size-4" /> Ignorer
+                            </ActionButton>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="space-y-2.5 p-5">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Décision (human-in-the-loop)
+                  </p>
+                  {blocked ? (
                     <ActionButton
                       className="w-full"
                       variant="outline"
-                      size="sm"
                       toastKind="success"
-                      toastMessage="Solde régularisé"
-                      toastDescription={`${mad(dossierFinancier.reste)} encaissés · reçu généré automatiquement.`}
-                      onDone={() => {
-                        setSolde(0);
-                        setAlertes((prev) => prev.filter((a) => a.id !== "ALR-901"));
-                      }}
+                      toastMessage="Dossier débloqué"
+                      toastDescription={`${patient.id} · circuit de facturation réactivé`}
+                      onDone={() => setBlocked(false)}
                     >
-                      <Wallet className="mr-1.5 size-4" /> Régulariser le solde
+                      <ShieldCheck className="mr-2 size-4" /> Débloquer le dossier
                     </ActionButton>
-                  </div>
-                </div>
-              ) : null}
-
-              <div className="flex items-start gap-2 rounded-xl bg-primary/8 p-3 ring-1 ring-inset ring-primary/20">
-                <Sparkles className="mt-0.5 size-4 shrink-0 text-primary" />
-                <p className="text-xs leading-relaxed text-muted-foreground">
-                  Modèle hybride (K-Means + régression logistique) — dernière évaluation il y a
-                  <span className="font-semibold text-foreground"> 2 minutes</span> sur 1 284
-                  dossiers comparables.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <Brain className="size-4 text-muted-foreground" />
-                Clustering des signaux faibles
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pb-5">
-              <ClusterScatter />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <Layers className="size-4 text-muted-foreground" />
-                Alertes de Clustering
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {alertes.length === 0 ? (
-                <EmptyState
-                  compact
-                  icon={ShieldCheck}
-                  title="Aucune anomalie active"
-                  description="Toutes les alertes ont été traitées. Le dossier est conforme au barème."
-                />
-              ) : (
-                alertes.map((a) => {
-                  const m = severiteMeta[a.severite];
-                  return (
-                    <div
-                      key={a.id}
-                      className={cn(
-                        "rounded-xl p-3.5 ring-1 ring-inset shadow-sm transition-shadow hover:shadow-md",
-                        m.bg,
-                        m.ring,
-                      )}
+                  ) : (
+                    <ActionButton
+                      className="w-full"
+                      variant="destructive"
+                      toastKind="error"
+                      toastMessage="Dossier bloqué"
+                      toastDescription={`${patient.id} · facturation suspendue, audit notifié`}
+                      onDone={() => setBlocked(true)}
                     >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex min-w-0 items-center gap-2">
-                          <AlertTriangle className={cn("size-4 shrink-0", m.text)} />
-                          <p className="text-sm font-bold leading-snug">{a.titre}</p>
-                        </div>
-                        <Pill tone={m.tone} className="shrink-0">
-                          {m.label}
-                        </Pill>
-                      </div>
-                      <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                        {a.detail}
-                      </p>
-                      <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
-                        <span className="inline-flex items-center gap-1 font-medium">
-                          <Brain className="size-3" /> {a.cluster}
-                        </span>
-                        <span className="font-semibold tabular-nums">
-                          Confiance {Math.round(a.confiance * 100)} %
-                        </span>
-                        <span>Impact : {a.impact}</span>
-                      </div>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <ActionButton
-                          size="sm"
-                          variant="outline"
-                          toastKind="warning"
-                          toastMessage="Anomalie transmise au contrôle facturation"
-                          toastDescription={`${a.id} · ${a.titre}`}
-                        >
-                          <ShieldAlert className="mr-1.5 size-4" /> Investiguer
-                        </ActionButton>
-                        <ActionButton
-                          size="sm"
-                          variant="ghost"
-                          toastKind="info"
-                          toastMessage="Traitement du faux positif"
-                          onDone={() => dismiss(a)}
-                        >
-                          <ThumbsUp className="mr-1.5 size-4" /> Ignorer
-                        </ActionButton>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="space-y-2.5 p-5">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Décision (human-in-the-loop)
-              </p>
-              {blocked ? (
-                <ActionButton
-                  className="w-full"
-                  variant="outline"
-                  toastKind="success"
-                  toastMessage="Dossier débloqué"
-                  toastDescription={`${patient.id} · circuit de facturation réactivé`}
-                  onDone={() => setBlocked(false)}
-                >
-                  <ShieldCheck className="mr-2 size-4" /> Débloquer le dossier
-                </ActionButton>
-              ) : (
-                <ActionButton
-                  className="w-full"
-                  variant="destructive"
-                  toastKind="error"
-                  toastMessage="Dossier bloqué"
-                  toastDescription={`${patient.id} · facturation suspendue, audit notifié`}
-                  onDone={() => setBlocked(true)}
-                >
-                  <Ban className="mr-2 size-4" /> Bloquer le dossier
-                </ActionButton>
-              )}
-              <ActionButton
-                className="w-full"
-                variant="outline"
-                toastKind="info"
-                toastMessage="Alertes classées en faux positifs"
-                toastDescription="Le modèle a été réentraîné sur ce retour."
-                onDone={() => setAlertes([])}
-              >
-                <CheckCircle className="mr-2 size-4" /> Ignorer (faux positif)
-              </ActionButton>
-              <ActionButton
-                className="w-full"
-                variant="ghost"
-                toastKind="success"
-                toastMessage="Rapport de conformité exporté"
-                toastDescription={`${patient.id} · rapport IA au format PDF`}
-              >
-                <Download className="mr-2 size-4" /> Rapport de conformité
-              </ActionButton>
-            </CardContent>
-          </Card>
+                      <Ban className="mr-2 size-4" /> Bloquer le dossier
+                    </ActionButton>
+                  )}
+                  <ActionButton
+                    className="w-full"
+                    variant="outline"
+                    toastKind="info"
+                    toastMessage="Alertes classées en faux positifs"
+                    toastDescription="Le modèle a été réentraîné sur ce retour."
+                    onDone={() => setAlertes([])}
+                  >
+                    <CheckCircle className="mr-2 size-4" /> Ignorer (faux positif)
+                  </ActionButton>
+                  <ActionButton
+                    className="w-full"
+                    variant="ghost"
+                    toastKind="success"
+                    toastMessage="Rapport de conformité exporté"
+                    toastDescription={`${patient.id} · rapport IA au format PDF`}
+                  >
+                    <Download className="mr-2 size-4" /> Rapport de conformité
+                  </ActionButton>
+                </CardContent>
+              </Card>
+            </>
+          ) : (
+            <Card>
+              <CardContent className="space-y-2 p-5">
+                <p className="text-sm font-semibold">Analyse de conformité IA</p>
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  Les scores de fraude et le clustering des signaux faibles sont réservés au
+                  Directeur (Mr Adnane). Ce module n&apos;est pas chargé pour votre profil.
+                </p>
+              </CardContent>
+            </Card>
+          )}
         </aside>
       </div>
     </div>

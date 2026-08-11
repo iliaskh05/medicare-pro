@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowUpDown, Mail, Phone, Search, Send, UserRoundPlus } from "lucide-react";
+import { Loader2, MapPin, RefreshCw, Search, Send, UserRoundPlus } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,123 +22,115 @@ import {
 } from "@/components/ui/table";
 import { ActionButton } from "@/components/action-button";
 import { EmptyState, PageHeader, Pill } from "@/components/ui-kit";
-import { useAsyncAction } from "@/hooks/use-async-action";
-import { fetchReferents, sendReportToReferent } from "@/lib/api/referents";
+import { fetchMedecins, sendReportToReferent } from "@/lib/api/referents";
 import type { Referent } from "@/data/mock-referents";
 
 export const Route = createFileRoute("/medecins-referents")({
   head: () => ({
     meta: [
-      { title: "Base des médecins correspondants — RadioCRM" },
+      { title: "Médecins correspondants — Répertoire RadioCRM" },
       {
         name: "description",
         content:
-          "Base de données des médecins correspondants du centre d'imagerie : spécialité, ville (Rabat, Témara), contact et patients adressés.",
+          "Répertoire des médecins correspondants du Centre d'Imagerie Médicale : spécialité, téléphone, email, ville (Rabat, Témara), quartier et adresse.",
       },
-      { property: "og:title", content: "Base des médecins correspondants — RadioCRM" },
+      { property: "og:title", content: "Médecins correspondants — Répertoire RadioCRM" },
       {
         property: "og:description",
         content:
-          "Recherche et filtres sur les correspondants du centre d'imagerie médicale et leur volume d'adressage.",
+          "Recherche par nom et filtres par ville et spécialité sur la base des médecins correspondants.",
       },
     ],
   }),
-  component: ReferentsPage,
+  component: MedecinsReferentsPage,
 });
 
-type SortKey = "nom" | "patientsAdresses";
+function MedecinsReferentsPage() {
+  /* Gestion d'état asynchrone réelle : isLoading / data / error. */
+  const [medecins, setMedecins] = useState<Referent[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
-function ReferentsPage() {
-  const { run: load, data, isLoading, error } = useAsyncAction(fetchReferents);
   const [query, setQuery] = useState("");
-  const [specialite, setSpecialite] = useState("toutes");
   const [ville, setVille] = useState("toutes");
-  const [sortKey, setSortKey] = useState<SortKey>("patientsAdresses");
-  const [sortAsc, setSortAsc] = useState(false);
+  const [specialite, setSpecialite] = useState("toutes");
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    let cancelled = false;
+    setIsLoading(true);
+    setError(null);
 
-  const rows: Referent[] = data ?? [];
-  const specialites = useMemo(
-    () => Array.from(new Set(rows.map((r) => r.specialite))).sort(),
-    [rows],
+    fetchMedecins()
+      .then((data) => {
+        if (!cancelled) setMedecins(data);
+      })
+      .catch((e: unknown) => {
+        if (!cancelled) {
+          setError(e instanceof Error ? e.message : "Répertoire indisponible");
+          setMedecins([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [reloadKey]);
+
+  const villes = useMemo(
+    () =>
+      Array.from(new Set(medecins.map((m) => m.ville))).sort((a, b) => a.localeCompare(b, "fr")),
+    [medecins],
   );
-  const villes = useMemo(() => Array.from(new Set(rows.map((r) => r.ville))).sort(), [rows]);
+  const specialites = useMemo(
+    () =>
+      Array.from(new Set(medecins.map((m) => m.specialite))).sort((a, b) =>
+        a.localeCompare(b, "fr"),
+      ),
+    [medecins],
+  );
 
-  const filtered = useMemo(() => {
+  const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const list = rows.filter(
-      (r) =>
-        (!q ||
-          r.nom.toLowerCase().includes(q) ||
-          r.specialite.toLowerCase().includes(q) ||
-          r.email.toLowerCase().includes(q) ||
-          r.telephone.includes(q)) &&
-        (specialite === "toutes" || r.specialite === specialite) &&
-        (ville === "toutes" || r.ville === ville),
+    return medecins.filter(
+      (m) =>
+        (!q || m.nom.toLowerCase().includes(q)) &&
+        (ville === "toutes" || m.ville === ville) &&
+        (specialite === "toutes" || m.specialite === specialite),
     );
-    return [...list].sort((a, b) => {
-      const diff =
-        sortKey === "nom"
-          ? a.nom.localeCompare(b.nom, "fr")
-          : a.patientsAdresses - b.patientsAdresses;
-      return sortAsc ? diff : -diff;
-    });
-  }, [rows, query, specialite, ville, sortKey, sortAsc]);
-
-  const toggleSort = (key: SortKey) => {
-    if (key === sortKey) setSortAsc((v) => !v);
-    else {
-      setSortKey(key);
-      setSortAsc(key === "nom");
-    }
-  };
-
-  const totalAdresses = filtered.reduce((s, r) => s + r.patientsAdresses, 0);
+  }, [medecins, query, ville, specialite]);
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Base des médecins correspondants"
-        subtitle={`${filtered.length} correspondant(s) affiché(s) · ${totalAdresses} patients adressés`}
+        title="Médecins correspondants"
+        subtitle={`Répertoire du Centre d'Imagerie Médicale · ${rows.length} médecin(s) affiché(s) sur ${medecins.length}`}
         actions={
           <ActionButton
             toastKind="info"
-            toastMessage="Formulaire correspondant"
-            toastDescription="Création d'une fiche correspondant dans la base du centre."
+            toastMessage="Fiche correspondant"
+            toastDescription="Création d'un médecin correspondant dans le répertoire du centre."
           >
-            <UserRoundPlus className="mr-2 size-4" /> Ajouter un correspondant
+            <UserRoundPlus className="mr-2 size-4" /> Ajouter un médecin
           </ActionButton>
         }
       />
 
       <Card>
-        <CardContent className="grid gap-3 p-4 md:grid-cols-[1fr_12rem_12rem]">
+        <CardContent className="grid gap-3 p-4 md:grid-cols-[1fr_13rem_13rem]">
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              aria-label="Rechercher un correspondant"
-              placeholder="Rechercher par nom, spécialité, email ou téléphone…"
+              aria-label="Rechercher un médecin par nom"
+              placeholder="Rechercher un médecin par nom…"
               className="pl-9"
             />
           </div>
-          <Select value={specialite} onValueChange={setSpecialite}>
-            <SelectTrigger aria-label="Filtrer par spécialité">
-              <SelectValue placeholder="Spécialité" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="toutes">Toutes spécialités</SelectItem>
-              {specialites.map((s) => (
-                <SelectItem key={s} value={s}>
-                  {s}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
           <Select value={ville} onValueChange={setVille}>
             <SelectTrigger aria-label="Filtrer par ville">
               <SelectValue placeholder="Ville" />
@@ -152,25 +144,47 @@ function ReferentsPage() {
               ))}
             </SelectContent>
           </Select>
+          <Select value={specialite} onValueChange={setSpecialite}>
+            <SelectTrigger aria-label="Filtrer par spécialité">
+              <SelectValue placeholder="Spécialité" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="toutes">Toutes les spécialités</SelectItem>
+              {specialites.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </CardContent>
       </Card>
 
       <Card data-tour="referents">
         <CardContent className="px-0 py-0">
           {error ? (
-            <p className="px-6 py-6 text-sm text-destructive">
-              Base des correspondants indisponible : {error.message}
+            <div className="px-6 py-8">
+              <EmptyState
+                icon={MapPin}
+                title="Répertoire indisponible"
+                description={`Le service Java n'a pas répondu : ${error}`}
+                action={
+                  <Button variant="outline" size="sm" onClick={() => setReloadKey((k) => k + 1)}>
+                    <RefreshCw className="mr-2 size-4" /> Réessayer
+                  </Button>
+                }
+              />
+            </div>
+          ) : isLoading ? (
+            <p className="flex items-center gap-2 px-6 py-8 text-sm text-muted-foreground">
+              <Loader2 className="size-4 animate-spin" /> Chargement du répertoire des médecins…
             </p>
-          ) : isLoading && rows.length === 0 ? (
-            <p className="px-6 py-6 text-sm text-muted-foreground">
-              Chargement de la base des correspondants…
-            </p>
-          ) : filtered.length === 0 ? (
-            <div className="px-6 py-6">
+          ) : rows.length === 0 ? (
+            <div className="px-6 py-8">
               <EmptyState
                 icon={Search}
-                title="Aucun correspondant trouvé"
-                description="Ajustez la recherche, la spécialité ou la ville."
+                title="Aucun médecin trouvé"
+                description="Ajustez la recherche par nom, la ville ou la spécialité."
               />
             </div>
           ) : (
@@ -178,59 +192,52 @@ function ReferentsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>
-                      <button
-                        type="button"
-                        onClick={() => toggleSort("nom")}
-                        className="flex items-center gap-1 font-medium"
-                      >
-                        Nom <ArrowUpDown className="size-3.5" />
-                      </button>
-                    </TableHead>
+                    <TableHead>Nom du médecin</TableHead>
                     <TableHead>Spécialité</TableHead>
+                    <TableHead>Téléphone</TableHead>
+                    <TableHead>Email</TableHead>
                     <TableHead>Ville</TableHead>
-                    <TableHead>Contact</TableHead>
-                    <TableHead>
-                      <button
-                        type="button"
-                        onClick={() => toggleSort("patientsAdresses")}
-                        className="flex items-center gap-1 font-medium"
-                      >
-                        Patients adressés <ArrowUpDown className="size-3.5" />
-                      </button>
-                    </TableHead>
+                    <TableHead>Quartier</TableHead>
+                    <TableHead>Adresse</TableHead>
                     <TableHead className="text-right">Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filtered.map((r) => (
-                    <TableRow key={r.id}>
-                      <TableCell>
-                        <span className="block text-sm font-semibold">{r.nom}</span>
-                        <span className="font-mono text-[11px] text-muted-foreground">{r.id}</span>
+                  {rows.map((m) => (
+                    <TableRow key={m.id}>
+                      <TableCell className="whitespace-nowrap text-sm font-semibold">
+                        {m.nom}
                       </TableCell>
                       <TableCell>
-                        <Pill tone="primary">{r.specialite}</Pill>
+                        <Pill tone="primary">{m.specialite}</Pill>
                       </TableCell>
-                      <TableCell className="text-sm">{r.ville}</TableCell>
-                      <TableCell>
-                        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                          <Phone className="size-3.5" /> {r.telephone}
-                        </span>
-                        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                          <Mail className="size-3.5" /> {r.email}
-                        </span>
+                      <TableCell className="whitespace-nowrap text-sm tabular-nums">
+                        {m.telephone}
                       </TableCell>
-                      <TableCell className="text-sm font-semibold">{r.patientsAdresses}</TableCell>
+                      <TableCell className="text-sm">
+                        <a href={`mailto:${m.email}`} className="hover:text-primary">
+                          {m.email}
+                        </a>
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-sm">{m.ville}</TableCell>
+                      <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
+                        {m.quartier}
+                      </TableCell>
+                      <TableCell className="min-w-56 text-sm text-muted-foreground">
+                        {m.adresse}
+                      </TableCell>
                       <TableCell className="text-right">
                         <ActionButton
                           variant="outline"
                           size="sm"
-                          action={() => sendReportToReferent(r.id)}
+                          className="size-8 p-0"
+                          aria-label={`Envoyer les comptes rendus à ${m.nom}`}
+                          action={() => sendReportToReferent(m.id)}
                           toastMessage="Comptes rendus transmis"
-                          toastDescription={`Destinataire : ${r.nom} · ${r.ville}`}
+                          toastDescription={`${m.nom} · ${m.ville} — ${m.email}`}
                         >
-                          <Send className="mr-2 size-4" /> Comptes rendus
+                          <Send className="size-4" />
+                          <span className="sr-only">Envoyer les comptes rendus</span>
                         </ActionButton>
                       </TableCell>
                     </TableRow>
@@ -242,8 +249,13 @@ function ReferentsPage() {
         </CardContent>
       </Card>
 
-      <Button variant="ghost" size="sm" onClick={() => void load()} disabled={isLoading}>
-        Rafraîchir depuis le SI du centre
+      <Button
+        variant="ghost"
+        size="sm"
+        disabled={isLoading}
+        onClick={() => setReloadKey((k) => k + 1)}
+      >
+        <RefreshCw className="mr-2 size-4" /> Recharger depuis l&apos;API du centre
       </Button>
     </div>
   );

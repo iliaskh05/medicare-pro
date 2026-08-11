@@ -12,6 +12,16 @@ export async function fetchReferents(): Promise<Referent[]> {
 }
 
 /**
+ * Répertoire des médecins correspondants pour le DataTable.
+ * Stub prêt pour l'API Java : GET {JAVA_API_BASE}/api/medecins
+ * (retour attendu : Referent[] avec ville, quartier et adresse).
+ */
+export async function fetchMedecins(): Promise<Referent[]> {
+  if (isJavaApiConfigured()) return javaApi<Referent[]>("/api/medecins");
+  return referents;
+}
+
+/**
  * Envoi du compte rendu au correspondant (mail sécurisé / dépôt PACS).
  * TODO backend Java : POST /api/correspondants/{id}/comptes-rendus
  */
