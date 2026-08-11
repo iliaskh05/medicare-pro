@@ -451,17 +451,8 @@ function Dashboard() {
               </CardContent>
             </Card>
           ))
-        ) : kpisError ? (
-          <Card className="sm:col-span-2 xl:col-span-4">
-            <CardContent className="flex flex-col items-center justify-center gap-3 p-6 text-center">
-              <AlertTriangle className="size-6 text-destructive" />
-              <p className="text-sm text-muted-foreground">{kpisError}</p>
-              <Button variant="outline" size="sm" onClick={reload}>
-                <RefreshCw className="mr-2 size-4" /> Réessayer
-              </Button>
-            </CardContent>
-          </Card>
         ) : (
+
           visibleKpis.map((kpi) => (
             <Card key={kpi.label}>
               <CardContent className="flex items-start gap-4 p-5">
