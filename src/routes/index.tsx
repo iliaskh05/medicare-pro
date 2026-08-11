@@ -3,7 +3,6 @@ import { useState } from "react";
 import {
   Activity,
   BrainCircuit,
-  Loader2,
   Lock,
   Mail,
   ScanLine,
