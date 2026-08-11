@@ -42,7 +42,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { PageHeader, Pill, EmptyState } from "@/components/ui-kit";
+import { PageHeader, Pill, EmptyState, ServiceNotice } from "@/components/ui-kit";
 import { createPatient, fetchPatients, type PatientRow } from "@/lib/api/patients";
 
 export const Route = createFileRoute("/patients")({
