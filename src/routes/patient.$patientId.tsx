@@ -236,7 +236,7 @@ function PatientRecordPage() {
         setFactures(f);
         setFinancier(fin);
         setAlertes(al.filter((a) => a.statut === "pending"));
-      } catch (err: any) {
+      } catch (err: unknown) {
         if (controller.signal.aborted) return;
         setError("Service injoignable");
         console.error(err);
