@@ -87,7 +87,7 @@ export function AssistantPanel({
             Assistant RadioCRM
           </h2>
           <p className="truncate text-[11px] text-primary-foreground/80">
-            Guide de démonstration — réponses simulées
+            Guide d'utilisation — Assistant local
           </p>
         </div>
         <Button
@@ -103,7 +103,7 @@ export function AssistantPanel({
           variant="ghost"
           size="icon"
           className="size-8 text-primary-foreground hover:bg-primary-foreground/15"
-          aria-label="Redémarrer la démonstration de l'assistant"
+          aria-label="Effacer la conversation"
           onClick={onRestart}
         >
           <RotateCcw className="size-4" />
@@ -130,7 +130,7 @@ export function AssistantPanel({
 
       <p className="flex items-start gap-2 border-b border-border bg-warning/10 px-3 py-2 text-[11px] leading-snug text-warning-foreground">
         <ShieldAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
-        Simulation IA — aucune donnée médicale réelle, aucun diagnostic.
+        Analyse IA — validation humaine obligatoire.
       </p>
 
       <ScrollArea className="flex-1">

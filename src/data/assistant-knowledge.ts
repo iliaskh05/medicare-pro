@@ -1,6 +1,6 @@
 /**
  * Base de connaissances locale de l'« Assistant RadioCRM ».
- * 100 % fictive et déterministe : aucun appel réseau, aucun LLM.
+ * 100 % déterministe : aucun appel réseau, aucun LLM.
  */
 
 export type AssistantRole = "directeur" | "accueil" | "technicien" | "medecin";
@@ -20,9 +20,9 @@ export const assistantPages: AssistantPage[] = [
     nom: "Tableau de bord",
     motsCles: ["dashboard", "tableau", "bord", "accueil", "kpi", "indicateur", "pilotage"],
     resume:
-      "Vue de pilotage du centre : indicateurs du jour, tension du planning, alertes de conformité et synthèse comptable.",
+      "Vue de pilotage du centre : indicateurs du centre, tension du planning, alertes de conformité et synthèse comptable.",
     aides: [
-      "Les cartes du haut résument les actes réalisés, le chiffre d'affaires simulé et le taux d'occupation.",
+      "Les cartes du haut résument les actes réalisés, le chiffre d'affaires du centre et le taux d'occupation.",
       "La heatmap « Tension du planning » repère les demi-journées surchargées.",
       "Le widget « Urgences Fraude & Anomalies » liste les 3 dernières alertes à traiter.",
     ],
@@ -32,23 +32,11 @@ export const assistantPages: AssistantPage[] = [
     nom: "Patients",
     motsCles: ["patient", "patients", "dossier", "dossiers", "fiche", "ajouter un patient"],
     resume:
-      "Répertoire des patients fictifs : recherche, filtres, statut de prise en charge et accès au dossier détaillé.",
+      "Répertoire des patients du centre : recherche, filtres, statut de prise en charge et accès au dossier détaillé.",
     aides: [
       "Pour ajouter un patient : bouton « Nouveau patient » en haut à droite, puis renseignez identité, téléphone et mutuelle.",
-      "La colonne « Dossier » permet de télécharger une pièce simulée au format PDF.",
-      "Le bouton « Voir dossier » ouvre le dossier patient de démonstration.",
-    ],
-  },
-  {
-    path: "/patient/demo",
-    nom: "Dossier patient",
-    motsCles: ["dossier patient", "historique", "ordonnance", "antécédent", "fiche patient"],
-    resume:
-      "Dossier patient complet : historique, imagerie, ordonnances, facturation et panneau d'analyse IA simulée.",
-    aides: [
-      "Les onglets de gauche regroupent l'historique médical, les examens, les ordonnances et la facturation.",
-      "Le panneau de droite affiche un score de risque simulé et le clustering des signaux faibles.",
-      "Toute conclusion affichée est une simulation : la validation humaine reste obligatoire.",
+      "La colonne « Dossier » permet de télécharger une pièce jointe au format PDF.",
+      "Le bouton « Voir dossier » ouvre le dossier patient.",
     ],
   },
   {
@@ -69,7 +57,7 @@ export const assistantPages: AssistantPage[] = [
     aides: [
       "Pour enregistrer une facture : bouton « Nouvelle facture », choisissez l'acte, la mutuelle puis le mode de règlement.",
       "Les lignes en rouge signalent un solde impayé alors que les clichés ont déjà été remis.",
-      "L'export comptable génère un fichier CSV fictif téléchargeable.",
+      "L'export comptable génère un fichier CSV téléchargeable.",
     ],
   },
   {
@@ -89,7 +77,7 @@ export const assistantPages: AssistantPage[] = [
       "Liste des examens acquis par modalité (IRM, scanner, radiologie, mammographie) avec leur statut de lecture.",
     aides: [
       "Filtrez par modalité pour retrouver un examen précis.",
-      "Le bouton « Visionneuse IA » ouvre les images avec le calque de segmentation simulé.",
+      "Le bouton « Visionneuse IA » ouvre les images avec le calque de segmentation IA.",
       "Le statut indique si le compte rendu reste à valider par le radiologue.",
     ],
   },
@@ -98,11 +86,11 @@ export const assistantPages: AssistantPage[] = [
     nom: "Visionneuse IA",
     motsCles: ["visionneuse", "viewer", "image", "calque", "segmentation", "compte rendu", "cr"],
     resume:
-      "Visionneuse d'images avec calque d'analyse IA simulé, outils de mesure et génération de compte rendu structuré factice.",
+      "Visionneuse d'images avec calque d'analyse IA, outils de mesure et génération de compte rendu structuré.",
     aides: [
-      "Le commutateur « Activer le calque IA » superpose les zones détectées (simulation).",
+      "Le commutateur « Activer le calque IA » superpose les zones détectées  .",
       "Les résultats affichés ne constituent jamais un diagnostic : validation humaine obligatoire.",
-      "L'export PDF produit un document de démonstration.",
+      "L'export PDF produit un document de conformité.",
     ],
   },
   {
@@ -110,10 +98,10 @@ export const assistantPages: AssistantPage[] = [
     nom: "Audit & Conformité",
     motsCles: ["audit", "conformité", "fraude", "anomalie", "clustering", "risque", "alerte"],
     resume:
-      "Détection simulée d'anomalies de facturation : score de risque, clustering des signaux faibles et validation humaine.",
+      "Détection d'anomalies de facturation : score de risque, clustering des signaux faibles et validation humaine.",
     aides: [
       "Pour traiter une alerte : ouvrez la ligne, lisez les motifs suspects, puis choisissez « Valider » ou « Faux positif ».",
-      "Le curseur de sensibilité fait varier le nombre d'alertes remontées par le modèle simulé.",
+      "Le curseur de sensibilité fait varier le nombre d'alertes remontées par le moteur de conformité.",
       "Chaque décision est tracée : aucune alerte n'est clôturée automatiquement.",
     ],
   },
@@ -121,8 +109,7 @@ export const assistantPages: AssistantPage[] = [
     path: "/medecins",
     nom: "Médecins prescripteurs",
     motsCles: ["médecin", "medecins", "prescripteur", "correspondant", "confrère"],
-    resume:
-      "Annuaire des médecins prescripteurs fictifs : spécialité, volume d'adressages et coordonnées.",
+    resume: "Annuaire des médecins prescripteurs : spécialité, volume d'adressages et coordonnées.",
     aides: [
       "Utilisez la recherche pour retrouver un prescripteur par nom ou spécialité.",
       "Les volumes d'adressage aident à identifier les correspondants les plus actifs.",
@@ -133,10 +120,10 @@ export const assistantPages: AssistantPage[] = [
     nom: "Messagerie interne",
     motsCles: ["messagerie", "chat", "interne", "équipe", "discussion", "confrere"],
     resume:
-      "Messagerie sécurisée simulée entre radiologues, techniciens et secrétariat : groupes, échanges privés, images, vocaux et PDF.",
+      "Messagerie sécurisée entre radiologues, techniciens et secrétariat : groupes, échanges privés, images, vocaux et PDF.",
     aides: [
       "La colonne de gauche sépare les groupes et les conversations privées.",
-      "La zone de saisie permet de joindre une photo, un vocal ou un document (simulation).",
+      "La zone de saisie permet de joindre une photo, un vocal ou un document  .",
     ],
   },
   {
@@ -144,11 +131,11 @@ export const assistantPages: AssistantPage[] = [
     nom: "Chatbot WhatsApp",
     motsCles: ["whatsapp", "chatbot", "bot", "rappel", "sms", "message patient", "relance"],
     resume:
-      "Console WhatsApp simulée : prise de rendez-vous, préparation d'examen, questions mutuelle, rappels J-1 et transfert au secrétariat.",
+      "Console WhatsApp : prise de rendez-vous, préparation d'examen, questions mutuelle, rappels J-1 et transfert au secrétariat.",
     aides: [
       "Pour envoyer un rappel : ouvrez la conversation puis « Rappel J-1 » dans la barre de scénarios.",
       "Le bouton « Prise en charge secrétariat » bascule la conversation du bot vers un agent humain.",
-      "« Réinitialiser la démo » restaure toutes les conversations d'origine.",
+      "« Effacer la conversation » restaure toutes les conversations d'origine.",
     ],
   },
 ];

@@ -7,7 +7,6 @@ import {
   type ChannelId,
   type ChatMessageDto,
 } from "@/lib/api/chat";
-import { seedMessagesByChannel } from "@/data/chat-channels";
 
 export type SocketStatus = "connecting" | "open" | "closed";
 
@@ -17,8 +16,11 @@ export type SocketStatus = "connecting" | "open" | "closed";
  * - ouvre un WebSocket si `VITE_WS_URL` est configuré,
  * - retombe sur POST HTTP lorsque la socket est fermée.
  */
-export function useChatChannel(channelId: ChannelId, author: { id: string; name: string; role: string }) {
-  const [messages, setMessages] = useState<ChatMessageDto[]>(seedMessagesByChannel[channelId]);
+export function useChatChannel(
+  channelId: ChannelId,
+  author: { id: string; name: string; role: string },
+) {
+  const [messages, setMessages] = useState<ChatMessageDto[]>([]);
   const [status, setStatus] = useState<SocketStatus>("closed");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -26,13 +28,13 @@ export function useChatChannel(channelId: ChannelId, author: { id: string; name:
 
   useEffect(() => {
     let cancelled = false;
-    setMessages(seedMessagesByChannel[channelId]);
+    setMessages([]);
     setIsLoading(true);
     setError(null);
 
     fetchChannelMessages(channelId)
       .then((remote) => {
-        if (!cancelled && remote?.length) setMessages(remote);
+        if (!cancelled && remote) setMessages(remote);
       })
       .catch((e: unknown) => {
         if (!cancelled) setError(e instanceof Error ? e : new Error("Historique indisponible"));

@@ -111,9 +111,7 @@ export const MessageList = memo(function MessageList({
               </p>
               <div
                 className={`mt-1 inline-block w-full rounded-xl border px-3 py-2 text-left text-sm ${
-                  mine
-                    ? "border-primary/30 bg-primary/10"
-                    : "border-border bg-card"
+                  mine ? "border-primary/30 bg-primary/10" : "border-border bg-card"
                 }`}
               >
                 {m.body ? <p className="whitespace-pre-wrap break-words">{m.body}</p> : null}

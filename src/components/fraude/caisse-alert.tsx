@@ -120,7 +120,8 @@ export function CaisseFraudAlert({ compact = false }: { compact?: boolean }) {
   } else {
     const v = data;
     const annulation = v.statutAnnulation.toLowerCase();
-    const annulationBreached = annulation !== "" && annulation !== "aucune" && annulation !== "none";
+    const annulationBreached =
+      annulation !== "" && annulation !== "aucune" && annulation !== "none";
     const delaiBreached = v.delaiEncaissementMin > v.seuilDelaiMin;
 
     body = (

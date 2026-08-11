@@ -1,61 +1,35 @@
-import {
-  ArrowLeft,
-  Bot,
-  CalendarCheck,
-  FileText,
-  Headset,
-  Info,
-  Phone,
-  Send,
-  Video,
-} from "lucide-react";
+import { ArrowLeft, Bot, Headset, Loader2, Send } from "lucide-react";
 import { useEffect, useRef } from "react";
 
-import { ActionButton } from "@/components/action-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Pill } from "@/components/ui-kit";
-import { WaMessageBubble, WaTypingIndicator } from "@/components/whatsapp/wa-message-bubble";
+import { WaMessageBubble } from "@/components/whatsapp/wa-message-bubble";
 import {
   waStatutLabel,
   waStatutTone,
   type WaConversation,
   type WaQuickReply,
-} from "@/data/mock-whatsapp";
-import type { WaScenario } from "@/lib/whatsapp-bot";
-
-const scenarios: Array<{ key: WaScenario; label: string; icon: typeof Bot }> = [
-  { key: "rdv", label: "Prise de RDV", icon: CalendarCheck },
-  { key: "preparation-irm", label: "Préparation IRM", icon: FileText },
-  { key: "preparation-scanner", label: "Préparation scanner", icon: FileText },
-  { key: "preparation-echographie", label: "Préparation échographie", icon: FileText },
-  { key: "preparation-mammographie", label: "Préparation mammographie", icon: FileText },
-  { key: "assurance", label: "Mutuelle & prise en charge", icon: Info },
-  { key: "rappel", label: "Rappel J-1", icon: CalendarCheck },
-  { key: "compte-rendu", label: "Compte rendu disponible", icon: FileText },
-  { key: "handoff", label: "Prise en charge secrétariat", icon: Headset },
-];
+} from "@/types/whatsapp";
 
 export function WaChatThread({
   conversation,
   draft,
-  typing,
+  envoiEnCours,
   modeAgent,
   onDraftChange,
   onEnvoyer,
   onQuickReply,
-  onScenario,
   onToggleMode,
   onRetour,
 }: {
   conversation: WaConversation;
   draft: string;
-  typing: boolean;
+  envoiEnCours: boolean;
   modeAgent: boolean;
   onDraftChange: (value: string) => void;
   onEnvoyer: () => void;
   onQuickReply: (reply: WaQuickReply) => void;
-  onScenario: (scenario: WaScenario) => void;
   onToggleMode: () => void;
   onRetour: () => void;
 }) {
@@ -63,7 +37,7 @@ export function WaChatThread({
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: "end" });
-  }, [conversation.id, conversation.messages.length, typing]);
+  }, [conversation.id, conversation.messages.length]);
 
   return (
     <section className="flex h-full min-h-0 min-w-0 flex-col">
@@ -90,48 +64,8 @@ export function WaChatThread({
           <Pill tone={waStatutTone[conversation.statut]} className="hidden sm:inline-flex">
             {waStatutLabel[conversation.statut]}
           </Pill>
-          <ActionButton
-            variant="ghost"
-            size="icon"
-            aria-label="Appeler le patient (simulation)"
-            toastKind="info"
-            toastMessage="Appel simulé — aucune communication réelle n'est établie."
-          >
-            <Phone className="size-4" />
-          </ActionButton>
-          <ActionButton
-            variant="ghost"
-            size="icon"
-            aria-label="Démarrer une visioconférence (simulation)"
-            toastKind="info"
-            toastMessage="Téléconsultation simulée — fonctionnalité de démonstration."
-          >
-            <Video className="size-4" />
-          </ActionButton>
         </div>
       </header>
-
-      {/* Barre de scénarios simulés */}
-      <div
-        data-tour="whatsapp-demo"
-        className="flex flex-wrap items-center gap-1.5 border-b border-border bg-muted/40 px-3 py-2.5 sm:px-4"
-      >
-        <span className="mr-1 text-xs font-semibold text-muted-foreground">
-          Scénarios simulés :
-        </span>
-        {scenarios.map((s) => (
-          <Button
-            key={s.key}
-            size="sm"
-            variant="outline"
-            className="h-8 gap-1.5 text-xs"
-            onClick={() => onScenario(s.key)}
-          >
-            <s.icon className="size-3.5" aria-hidden="true" />
-            {s.label}
-          </Button>
-        ))}
-      </div>
 
       <div
         className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-muted/30 p-3 sm:p-4 md:p-6"
@@ -147,7 +81,6 @@ export function WaChatThread({
             quickRepliesActives={conversation.statut !== "cloture"}
           />
         ))}
-        {typing ? <WaTypingIndicator /> : null}
         <div ref={bottomRef} />
       </div>
 
@@ -156,7 +89,7 @@ export function WaChatThread({
           <p className="text-[11px] text-muted-foreground">
             {modeAgent
               ? "Mode agent : vos messages sont envoyés au nom du secrétariat."
-              : "Mode bot : le patient écrit, l'assistant répond automatiquement."}
+              : "Mode bot : les réponses automatiques sont gérées par l'assistant."}
           </p>
           <Button
             size="sm"
@@ -173,10 +106,10 @@ export function WaChatThread({
             aria-label={
               modeAgent ? "Écrire un message en tant qu'agent" : "Écrire un message patient"
             }
-            placeholder={modeAgent ? "Message du secrétariat…" : "Message du patient…"}
+            placeholder={modeAgent ? "Message du secrétariat…" : "Écrire un message…"}
             className="rounded-full bg-muted/50"
             value={draft}
-            disabled={conversation.statut === "cloture"}
+            disabled={conversation.statut === "cloture" || envoiEnCours}
             onChange={(event) => onDraftChange(event.target.value)}
             onKeyDown={(event) => {
               if (event.key === "Enter") {
@@ -189,10 +122,14 @@ export function WaChatThread({
             size="icon"
             aria-label="Envoyer le message"
             onClick={onEnvoyer}
-            disabled={!draft.trim() || conversation.statut === "cloture"}
+            disabled={!draft.trim() || conversation.statut === "cloture" || envoiEnCours}
             className="shrink-0 rounded-full"
           >
-            <Send className="size-4" />
+            {envoiEnCours ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Send className="size-4" />
+            )}
           </Button>
         </div>
       </footer>

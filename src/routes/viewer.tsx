@@ -1,43 +1,38 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  Activity,
-  AlertCircle,
-  FileText,
-  FolderOpen,
-  Loader2,
-  ScanLine,
-  Sparkles,
-  FileDown,
-  Upload,
-} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { AlertCircle, FileDown, FileText, FolderOpen, Loader2, ScanLine } from "lucide-react";
 import { toast } from "sonner";
 
-import { PageHeader, Pill, IconTile, EmptyState, SimulationNotice } from "@/components/ui-kit";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Progress } from "@/components/ui/progress";
-import { Textarea } from "@/components/ui/textarea";
-import { apiFetch, getApiKey } from "@/lib/api-client";
-import { telechargerDossierPdf } from "@/lib/pdf-export";
-import type { ImageAnalysisResult, ImagingStudy, StructuredReport } from "@/server/store/types";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState, PageHeader, Pill } from "@/components/ui-kit";
+import { ScanViewer } from "@/components/scan-viewer";
+import { fetchScans } from "@/lib/api/imaging";
+import {
+  downloadReport,
+  fetchReports,
+  requestImageAnalysis,
+  saveBlob,
+  type ReportSummary,
+} from "@/lib/api/reports";
+import type { Scan } from "@/types/imaging";
 
 export const Route = createFileRoute("/viewer")({
   head: () => ({
     meta: [
-      { title: "Visionneuse & analyse IA — RadioCRM" },
+      { title: "Visionneuse & analyse IA — Centre d'Imagerie Médicale" },
       {
         name: "description",
         content:
-          "Visionneuse d'examens radiologiques connectée au pipeline d'analyse d'images et à la structuration automatique des comptes rendus.",
+          "Visionneuse d'examens radiologiques connectée au pipeline d'analyse d'images et aux comptes rendus du centre.",
       },
-      { property: "og:title", content: "Visionneuse & analyse IA — RadioCRM" },
+      { property: "og:title", content: "Visionneuse & analyse IA — Centre d'Imagerie Médicale" },
       {
         property: "og:description",
-        content: "Analysez les examens et générez des comptes rendus structurés en un clic.",
+        content:
+          "Consultez les examens, lancez l'analyse IA et exportez les comptes rendus en PDF.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -46,507 +41,263 @@ export const Route = createFileRoute("/viewer")({
   component: ViewerPage,
 });
 
-function LoadingSpinner({ label = "Chargement…" }: { label?: string }) {
+function ViewerSkeleton() {
   return (
-    <div className="flex min-h-64 flex-col items-center justify-center gap-3 text-muted-foreground">
-      <Loader2 className="size-6 animate-spin text-primary" />
-      <p className="text-sm">{label}</p>
+    <div className="grid gap-4 lg:grid-cols-[280px_1fr_320px]">
+      <Skeleton className="h-96 w-full rounded-lg" />
+      <Skeleton className="h-96 w-full rounded-lg" />
+      <Skeleton className="h-96 w-full rounded-lg" />
     </div>
   );
 }
 
-function formatReport(report: StructuredReport | null | undefined): string | null {
-  const s = report?.sections;
-  if (!s) return null;
-  return [
-    "1. Renseignements cliniques",
-    s.indication?.trim() || "Non précisé",
-    "",
-    "2. Technique",
-    s.technique?.trim() || "Non précisé",
-    "",
-    "3. Résultats",
-    s.resultats?.trim() || "Non précisé",
-    "",
-    "4. Conclusion",
-    s.conclusion?.trim() || "Non précisé",
-  ].join("\n");
-}
-
 function ViewerPage() {
-  const qc = useQueryClient();
+  const [scans, setScans] = useState<Scan[]>([]);
+  const [isLoadingScans, setIsLoadingScans] = useState(true);
+  const [scansError, setScansError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [clinicalContext, setClinicalContext] = useState(
-    "Douleurs / bilan demandé par le médecin traitant.",
-  );
-  const [dictationNotes, setDictationNotes] = useState("");
-  const [structuredReport, setStructuredReport] = useState<string | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [file, setFile] = useState<File | null>(null);
+  const [reloadToken, setReloadToken] = useState(0);
 
-  const studiesQuery = useQuery({
-    queryKey: ["imaging-studies"],
-    queryFn: () => apiFetch<{ studies: ImagingStudy[] }>("/api/imaging/studies"),
-    retry: 1,
-  });
+  const [reports, setReports] = useState<ReportSummary[]>([]);
+  const [isLoadingReports, setIsLoadingReports] = useState(false);
+  const [reportsError, setReportsError] = useState<string | null>(null);
 
-  const studies = useMemo(
-    () => (Array.isArray(studiesQuery.data?.studies) ? studiesQuery.data!.studies : []),
-    [studiesQuery.data],
-  );
+  const [analyseEnCours, setAnalyseEnCours] = useState(false);
+  const [exportEnCours, setExportEnCours] = useState<string | null>(null);
 
   useEffect(() => {
-    if (studies.length === 0) return;
-    const stillThere = studies.some((s) => s?.id === selectedId);
-    if (!stillThere) setSelectedId(studies[0]?.id ?? null);
-  }, [studies, selectedId]);
-
-  // Un object URL non révoqué garde le fichier importé en mémoire jusqu'au reload.
-  const replacePreviewUrl = useCallback((next: string | null) => {
-    setPreviewUrl((prev) => {
-      if (prev) URL.revokeObjectURL(prev);
-      return next;
-    });
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-    };
-  }, [previewUrl]);
-
-  const detailQuery = useQuery({
-    queryKey: ["imaging-study", selectedId],
-    enabled: Boolean(selectedId),
-    retry: 1,
-    queryFn: () =>
-      apiFetch<{ study: ImagingStudy | null; analysis: ImageAnalysisResult | null }>(
-        `/api/imaging/studies/${encodeURIComponent(selectedId ?? "")}`,
-      ),
-  });
-
-  const selectedStudy: ImagingStudy | null =
-    detailQuery.data?.study ?? studies.find((s) => s?.id === selectedId) ?? null;
-
-  const analyzeMut = useMutation({
-    mutationFn: async (): Promise<ImageAnalysisResult | null> => {
-      if (!selectedId) throw new Error("Sélectionnez une étude avant de lancer l'analyse.");
-      if (file) {
-        const form = new FormData();
-        form.append("studyId", selectedId);
-        form.append("file", file);
-        const res = await fetch("/api/imaging/analyze", {
-          method: "POST",
-          headers: { "x-api-key": getApiKey() },
-          body: form,
-        });
-        const json = await res.json().catch(() => null);
-        if (!res.ok || !json?.ok) {
-          throw new Error(json?.error?.message ?? "Analyse échouée");
-        }
-        return (json.data ?? null) as ImageAnalysisResult | null;
-      }
-      return apiFetch<ImageAnalysisResult>("/api/imaging/analyze", {
-        method: "POST",
-        body: JSON.stringify({ studyId: selectedId }),
-      });
-    },
-    onSuccess: () => {
-      toast.success("Analyse d'image terminée");
-      void qc.invalidateQueries({ queryKey: ["imaging-study", selectedId] });
-    },
-    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Analyse échouée"),
-  });
-
-  const reportMut = useMutation({
-    mutationFn: async (): Promise<string> => {
-      if (!selectedId) throw new Error("Sélectionnez une étude avant de générer le compte rendu.");
-      if (!dictationNotes.trim()) {
-        throw new Error(
-          "Les notes de dictée sont vides. Saisissez une dictée avant de générer le CR.",
+    const controller = new AbortController();
+    setIsLoadingScans(true);
+    setScansError(null);
+    fetchScans(controller.signal)
+      .then((rows) => {
+        setScans(rows);
+        setSelectedId((prev) =>
+          prev && rows.some((s) => s.id === prev) ? prev : (rows[0]?.id ?? null),
         );
-      }
-      const report = await apiFetch<StructuredReport>("/api/reports/structure", {
-        method: "POST",
-        body: JSON.stringify({
-          studyId: selectedId,
-          clinicalContext: clinicalContext.trim(),
-          rawNotes: dictationNotes.trim(),
-          draft: true,
-        }),
+      })
+      .catch((e: unknown) => {
+        if (controller.signal.aborted) return;
+        setScansError(
+          e instanceof Error ? e.message : "Impossible de charger les études d'imagerie.",
+        );
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsLoadingScans(false);
       });
-      const text = formatReport(report);
-      if (!text) throw new Error("Le service n'a retourné aucun compte rendu exploitable.");
-      return text;
-    },
-    onMutate: () => {
-      setErrorMessage(null);
-      setStructuredReport(null);
-    },
-    onSuccess: (text) => {
-      setStructuredReport(text);
-      toast.success("Compte rendu structuré généré");
-    },
-    onError: (e: unknown) => {
-      const message =
-        e instanceof Error
-          ? e.message
-          : "Le service de génération de compte rendu est temporairement indisponible.";
-      setErrorMessage(message);
-      toast.error(message);
-    },
-  });
+    return () => controller.abort();
+  }, [reloadToken]);
 
-  const analysis = detailQuery.data?.analysis ?? analyzeMut.data ?? null;
-  const metrics = analysis?.metrics;
-  const findings = Array.isArray(analysis?.findings) ? analysis!.findings : [];
-  const isGenerating = reportMut.isPending;
+  const selectedScan: Scan | null = useMemo(
+    () => scans.find((s) => s.id === selectedId) ?? null,
+    [scans, selectedId],
+  );
 
-  const exporterComptePdf = () => {
-    if (!structuredReport) {
-      toast.error("Générez d'abord le compte rendu avant de l'exporter en PDF.");
+  useEffect(() => {
+    if (!selectedScan) {
+      setReports([]);
       return;
     }
-    telechargerDossierPdf({
-      titre: "Compte rendu radiologique",
-      reference: selectedStudy?.id ?? "Étude inconnue",
-      lignes: [
-        { label: "Patient", valeur: selectedStudy?.patientName ?? "—" },
-        { label: "Identifiant patient", valeur: selectedStudy?.patientId ?? "—" },
-        { label: "Examen", valeur: selectedStudy?.examLabel ?? "—" },
-        { label: "Modalité", valeur: selectedStudy?.modality ?? "—" },
-        { label: "Région explorée", valeur: selectedStudy?.bodyPart ?? "—" },
-        {
-          label: "Date d'acquisition",
-          valeur: selectedStudy?.acquiredAt
-            ? new Date(selectedStudy.acquiredAt).toLocaleString("fr-MA")
-            : "—",
-        },
-        { label: "Score de qualité image", valeur: analysis ? `${analysis.qualityScore}%` : "—" },
-      ],
-      blocs: [
-        { titre: "Contexte clinique", contenu: clinicalContext.trim() || "Non renseigné" },
-        { titre: "Compte rendu structuré", contenu: structuredReport },
-        {
-          titre: "Signes détectés par l'IA",
-          contenu:
-            findings.length > 0
-              ? findings.map((f) => `${f.label} (${Math.round(f.confidence * 100)}%)`).join(" · ")
-              : "Aucun signe automatique retenu",
-        },
-      ],
-      mention:
-        "Compte rendu assisté par IA — relecture et validation par un radiologue senior obligatoires avant remise au patient.",
-    });
+    const controller = new AbortController();
+    setIsLoadingReports(true);
+    setReportsError(null);
+    fetchReports(undefined, controller.signal)
+      .then((rows) => {
+        setReports(rows.filter((r) => r.patientName === selectedScan.patient));
+      })
+      .catch((e: unknown) => {
+        if (controller.signal.aborted) return;
+        setReportsError(
+          e instanceof Error ? e.message : "Impossible de charger les comptes rendus.",
+        );
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsLoadingReports(false);
+      });
+    return () => controller.abort();
+  }, [selectedScan]);
+
+  const lancerAnalyse = async () => {
+    if (!selectedScan) return;
+    setAnalyseEnCours(true);
+    try {
+      await requestImageAnalysis(selectedScan.id);
+      toast.success("Analyse IA lancée sur cette étude.");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Échec du lancement de l'analyse.");
+    } finally {
+      setAnalyseEnCours(false);
+    }
   };
 
-  if (studiesQuery.isLoading) {
-    return (
-      <div className="space-y-6">
-        <PageHeader
-          title="Visionneuse radiologique"
-          subtitle="Pipeline d'analyse d'images + structuration des comptes rendus"
-        />
-        <SimulationNotice contexte="Analyses d'images et comptes rendus générés par un pipeline simulé — aucun diagnostic." />
-        <Card>
-          <CardContent>
-            <LoadingSpinner label="Chargement des études…" />
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  const exporterPdf = async (report: ReportSummary) => {
+    setExportEnCours(report.id);
+    try {
+      const blob = await downloadReport(report.id);
+      if (!blob) throw new Error("Le document n'est pas disponible.");
+      saveBlob(blob, `compte-rendu-${report.id}.pdf`);
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Échec de l'export PDF.");
+    } finally {
+      setExportEnCours(null);
+    }
+  };
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Visionneuse radiologique"
-        subtitle="Pipeline d'analyse d'images + structuration des comptes rendus"
+        subtitle="Pipeline d'analyse d'images et comptes rendus du centre"
         actions={
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant="outline"
-              disabled={!selectedId || analyzeMut.isPending}
-              onClick={() => analyzeMut.mutate()}
-            >
-              {analyzeMut.isPending ? (
-                <Loader2 className="mr-2 size-4 animate-spin" />
-              ) : (
-                <ScanLine className="mr-2 size-4" />
-              )}
-              Lancer l'analyse IA
-            </Button>
-            <Button
-              type="button"
-              disabled={!selectedId || isGenerating}
-              onClick={() => reportMut.mutate()}
-            >
-              {isGenerating ? (
-                <Loader2 className="mr-2 size-4 animate-spin" />
-              ) : (
-                <Sparkles className="mr-2 size-4" />
-              )}
-              {isGenerating ? "Génération…" : "Générer le CR"}
-            </Button>
-            <Button
-              type="button"
-              className="bg-primary shadow-sm transition-shadow hover:shadow-md"
-              disabled={!structuredReport}
-              onClick={exporterComptePdf}
-            >
-              <FileDown className="mr-2 size-4" />
-              Exporter le Compte Rendu (PDF)
-            </Button>
-          </div>
+          <Button
+            variant="outline"
+            disabled={!selectedScan || analyseEnCours}
+            onClick={() => void lancerAnalyse()}
+          >
+            {analyseEnCours ? (
+              <Loader2 className="mr-2 size-4 animate-spin" />
+            ) : (
+              <ScanLine className="mr-2 size-4" />
+            )}
+            Lancer l'analyse IA
+          </Button>
         }
       />
 
-      {studiesQuery.isError ? (
+      {scansError ? (
         <Alert variant="destructive">
           <AlertCircle className="size-4" />
           <AlertTitle>Études indisponibles</AlertTitle>
-          <AlertDescription>
-            {studiesQuery.error instanceof Error
-              ? studiesQuery.error.message
-              : "Impossible de charger la liste des examens."}
+          <AlertDescription className="flex flex-wrap items-center justify-between gap-2">
+            <span>{scansError}</span>
+            <Button size="sm" variant="outline" onClick={() => setReloadToken((t) => t + 1)}>
+              Réessayer
+            </Button>
           </AlertDescription>
         </Alert>
       ) : null}
 
-      <div className="grid gap-4 lg:grid-cols-[280px_1fr_340px]">
+      {isLoadingScans ? (
+        <ViewerSkeleton />
+      ) : scans.length === 0 && !scansError ? (
         <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Études</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {studies.length === 0 ? (
-              <EmptyState
-                compact
-                icon={FolderOpen}
-                title="Aucune étude"
-                description="Aucun examen n'est encore rattaché au centre. Importez une image pour démarrer une analyse."
-              />
-            ) : null}
-            {studies.map((s) => (
-              <button
-                key={s?.id ?? Math.random().toString(36)}
-                type="button"
-                onClick={() => {
-                  setSelectedId(s?.id ?? null);
-                  replacePreviewUrl(null);
-                  setFile(null);
-                  setStructuredReport(null);
-                  setErrorMessage(null);
-                  reportMut.reset();
-                  analyzeMut.reset();
-                }}
-                className={`w-full rounded-lg border px-3 py-2 text-left transition-colors ${
-                  selectedId === s?.id
-                    ? "border-primary bg-primary/5"
-                    : "border-border hover:bg-muted/50"
-                }`}
-              >
-                <p className="text-sm font-semibold">{s?.examLabel ?? "Examen"}</p>
-                <p className="text-xs text-muted-foreground">{s?.patientName ?? "—"}</p>
-                <div className="mt-1 flex gap-1">
-                  <Pill tone="neutral">{s?.modality ?? "—"}</Pill>
-                  <Pill tone="neutral">{s?.status ?? "—"}</Pill>
-                </div>
-              </button>
-            ))}
-          </CardContent>
-        </Card>
-
-        <Card className="overflow-hidden">
-          <CardHeader className="flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-base">
-              {selectedStudy
-                ? `${selectedStudy.examLabel ?? "Examen"} · ${selectedStudy.patientName ?? "—"}`
-                : "Sélectionnez une étude"}
-            </CardTitle>
-            <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-primary">
-              <Upload className="size-4" />
-              Importer image
-              <input
-                type="file"
-                accept="image/*,.dcm"
-                className="hidden"
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (!f) return;
-                  setFile(f);
-                  try {
-                    replacePreviewUrl(URL.createObjectURL(f));
-                  } catch {
-                    replacePreviewUrl(null);
-                  }
-                }}
-              />
-            </label>
-          </CardHeader>
           <CardContent>
-            <div className="relative flex aspect-[4/3] items-center justify-center overflow-hidden rounded-lg bg-[radial-gradient(circle_at_30%_20%,#1e293b,#020617)]">
-              {previewUrl ? (
-                <img
-                  src={previewUrl}
-                  alt="Aperçu de l'examen radiologique importé"
-                  className="max-h-full max-w-full object-contain"
-                />
-              ) : (
-                <div className="px-6 text-center text-slate-300">
-                  <IconTile tone="primary">
-                    <Activity className="size-5" />
-                  </IconTile>
-                  <p className="mt-3 text-sm font-medium">
-                    {selectedStudy?.modality ?? "—"} · {selectedStudy?.bodyPart ?? "—"}
-                  </p>
-                  <p className="mt-1 text-xs text-slate-400">
-                    Importez une image ou lancez l'analyse sur les métadonnées de l'étude
-                  </p>
-                  <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(transparent_95%,rgba(56,189,248,0.15)_96%)] bg-[length:100%_8px]" />
-                </div>
-              )}
-            </div>
-
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <div>
-                <Label htmlFor="clinical-context">Contexte clinique</Label>
-                <Textarea
-                  id="clinical-context"
-                  value={clinicalContext}
-                  onChange={(e) => setClinicalContext(e.target.value ?? "")}
-                  className="mt-1.5 min-h-20"
-                />
-              </div>
-              <div>
-                <Label htmlFor="dictation-notes">Notes / dictée</Label>
-                <Textarea
-                  id="dictation-notes"
-                  value={dictationNotes}
-                  onChange={(e) => {
-                    setDictationNotes(e.target.value ?? "");
-                    if (errorMessage) setErrorMessage(null);
-                  }}
-                  placeholder="Obligatoire — ex: Ventricules normaux, FLAIR sans anomalie…"
-                  className="mt-1.5 min-h-20"
-                  aria-invalid={Boolean(errorMessage && !dictationNotes.trim())}
-                />
-              </div>
-            </div>
+            <EmptyState
+              icon={FolderOpen}
+              title="Aucune donnée disponible"
+              description="Aucun examen n'est encore rattaché au centre."
+            />
           </CardContent>
         </Card>
+      ) : (
+        <div className="grid gap-4 lg:grid-cols-[280px_1fr_320px]">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Études</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {scans.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => setSelectedId(s.id)}
+                  className={`w-full rounded-lg border px-3 py-2 text-left transition-colors ${
+                    selectedId === s.id
+                      ? "border-primary bg-primary/5"
+                      : "border-border hover:bg-muted/50"
+                  }`}
+                >
+                  <p className="text-sm font-semibold">{s.examen}</p>
+                  <p className="text-xs text-muted-foreground">{s.patient}</p>
+                  <div className="mt-1 flex gap-1">
+                    <Pill tone="neutral">{s.date}</Pill>
+                    <Pill tone="neutral">{s.medecin}</Pill>
+                  </div>
+                </button>
+              ))}
+            </CardContent>
+          </Card>
 
-        <div className="space-y-4">
+          <Card className="overflow-hidden">
+            <CardHeader>
+              <CardTitle className="text-base">
+                {selectedScan
+                  ? `${selectedScan.examen} · ${selectedScan.patient}`
+                  : "Sélectionnez une étude"}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {selectedScan ? (
+                <ScanViewer scan={selectedScan} />
+              ) : (
+                <EmptyState
+                  icon={ScanLine}
+                  title="Aucune donnée disponible"
+                  description="Sélectionnez une étude dans la liste pour l'afficher."
+                />
+              )}
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
-                <ScanLine className="size-4" /> Analyse pipeline
+                <FileText className="size-4" /> Comptes rendus
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {detailQuery.isLoading ? (
-                <LoadingSpinner label="Chargement de l'analyse…" />
-              ) : analysis ? (
-                <>
-                  <div>
-                    <div className="mb-1 flex justify-between text-xs text-muted-foreground">
-                      <span>Qualité image</span>
-                      <span>{analysis.qualityScore ?? 0}/100</span>
-                    </div>
-                    <Progress value={Number(analysis.qualityScore ?? 0)} />
-                  </div>
-                  <dl className="grid grid-cols-2 gap-2 text-xs">
-                    <div>
-                      <dt className="text-muted-foreground">Contraste</dt>
-                      <dd className="font-medium">{metrics?.contrast ?? "—"}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-muted-foreground">Netteté</dt>
-                      <dd className="font-medium">{metrics?.sharpness ?? "—"}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-muted-foreground">Bords</dt>
-                      <dd className="font-medium">{metrics?.edgeDensity ?? "—"}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-muted-foreground">Bruit</dt>
-                      <dd className="font-medium">{metrics?.noiseEstimate ?? "—"}</dd>
-                    </div>
-                  </dl>
-                  <ul className="space-y-2">
-                    {findings.map((f, i) => (
-                      <li
-                        key={f?.code ?? `finding-${i}`}
-                        className="rounded-md border border-border px-3 py-2 text-sm"
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <span className="font-medium">{f?.label ?? "Observation"}</span>
-                          <Pill
-                            tone={
-                              f?.severity === "severe"
-                                ? "destructive"
-                                : f?.severity === "moderate"
-                                  ? "warning"
-                                  : "neutral"
-                            }
-                          >
-                            {(Number(f?.confidence ?? 0) * 100).toFixed(0)}%
-                          </Pill>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                  <p className="text-[11px] text-muted-foreground">
-                    Modèle {analysis.model ?? "—"} · {analysis.latencyMs ?? 0} ms
-                  </p>
-                </>
-              ) : (
-                <EmptyState
-                  compact
-                  icon={ScanLine}
-                  title="Pas encore d'analyse"
-                  description="Lancez le pipeline IA pour obtenir la qualité d'image, les métriques et les findings de cette étude."
-                />
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <FileText className="size-4" /> Compte rendu structuré
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              {errorMessage ? (
+              {reportsError ? (
                 <Alert variant="destructive">
                   <AlertCircle className="size-4" />
-                  <AlertTitle>Échec de la génération</AlertTitle>
-                  <AlertDescription className="whitespace-pre-wrap">
-                    {errorMessage}
-                  </AlertDescription>
+                  <AlertTitle>Comptes rendus indisponibles</AlertTitle>
+                  <AlertDescription>{reportsError}</AlertDescription>
                 </Alert>
-              ) : null}
-
-              {isGenerating ? (
-                <LoadingSpinner label="Génération du compte rendu…" />
-              ) : structuredReport ? (
-                <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-muted-foreground">
-                  {structuredReport}
-                </pre>
-              ) : !errorMessage ? (
+              ) : isLoadingReports ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-12 w-full rounded-md" />
+                  <Skeleton className="h-12 w-full rounded-md" />
+                </div>
+              ) : reports.length === 0 ? (
                 <EmptyState
                   compact
                   icon={FileText}
-                  title="Aucun compte rendu"
-                  description="Saisissez une dictée (obligatoire), puis cliquez sur « Générer le CR » pour obtenir un compte rendu structuré par le LLM."
+                  title="Aucune donnée disponible"
+                  description="Aucun compte rendu n'est encore disponible pour ce patient."
                 />
-              ) : null}
+              ) : (
+                <ul className="space-y-2">
+                  {reports.map((r) => (
+                    <li
+                      key={r.id}
+                      className="flex items-center justify-between gap-2 rounded-md border border-border px-3 py-2"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium">{r.examLabel}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {r.radiologist} · {new Date(r.createdAt).toLocaleDateString("fr-MA")}
+                        </p>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={exportEnCours === r.id}
+                        onClick={() => void exporterPdf(r)}
+                      >
+                        {exportEnCours === r.id ? (
+                          <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                        ) : (
+                          <FileDown className="mr-1.5 size-3.5" />
+                        )}
+                        PDF
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </CardContent>
           </Card>
         </div>
-      </div>
+      )}
     </div>
   );
 }

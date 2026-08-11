@@ -10,27 +10,15 @@
  */
 /** Backend Spring Boot du centre (par défaut le serveur local). */
 export const JAVA_API_BASE =
-  (import.meta.env?.['VITE_JAVA_API_URL'] as string | undefined)?.replace(/\/$/, "") ??
+  (import.meta.env?.["VITE_JAVA_API_URL"] as string | undefined)?.replace(/\/$/, "") ??
   "http://localhost:8080";
 
 /** Microservice Python de scoring / clustering (même hôte par défaut). */
 export const ML_API_BASE =
-  (import.meta.env?.['VITE_ML_API_URL'] as string | undefined)?.replace(/\/$/, "") ??
+  (import.meta.env?.["VITE_ML_API_URL"] as string | undefined)?.replace(/\/$/, "") ??
   "http://localhost:8080";
 
-export const API_TIMEOUT_MS = Number(import.meta.env?.['VITE_API_TIMEOUT_MS'] ?? 15000);
-
-/**
- * Les modules encore en cours de migration (patients, facturation, messagerie)
- * n'appellent le backend que lorsque son URL est explicitement fournie.
- * Les modules déjà en production (médecins correspondants, anomalies IA)
- * interrogent directement `JAVA_API_BASE` / `ML_API_BASE`.
- */
-export const isJavaApiConfigured = () =>
-  Boolean(import.meta.env?.['VITE_JAVA_API_URL'] as string | undefined);
-
-export const isMlApiConfigured = () =>
-  Boolean(import.meta.env?.['VITE_ML_API_URL'] as string | undefined);
+export const API_TIMEOUT_MS = Number(import.meta.env?.["VITE_API_TIMEOUT_MS"] ?? 15000);
 
 export class ApiError extends Error {
   status: number;

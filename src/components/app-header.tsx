@@ -1,14 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
-import {
-  Bell,
-  Search,
-  ChevronDown,
-  ShieldCheck,
-  Stethoscope,
-  Check,
-  PlayCircle,
-} from "lucide-react";
+import { Bell, Search, ChevronDown, ShieldCheck, Stethoscope, Check } from "lucide-react";
 
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Input } from "@/components/ui/input";
@@ -23,7 +15,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { ActionButton } from "@/components/action-button";
-import { useTour } from "@/components/guided-tour";
 import { roleProfiles, useRole, type AppRole } from "@/hooks/use-role";
 
 const roleIcons: Record<AppRole, typeof ShieldCheck> = {
@@ -36,7 +27,6 @@ const roleIcons: Record<AppRole, typeof ShieldCheck> = {
 export function AppHeader() {
   const { role, profile, setRole } = useRole();
   const navigate = useNavigate();
-  const { start } = useTour();
   const RoleIcon = roleIcons[role];
 
   return (
@@ -53,26 +43,14 @@ export function AppHeader() {
       </div>
 
       <div className="ml-auto flex items-center gap-2">
-        <Button
-          onClick={start}
-          className="h-9 gap-2 shadow-sm"
-          aria-label="Lancer la visite guidée Démo Directeur"
-        >
-          <PlayCircle className="size-4" />
-          <span className="hidden sm:inline">Lancer la Démo Directeur</span>
-          <span className="sm:hidden">Démo</span>
-        </Button>
-
         <ActionButton
           variant="ghost"
           size="icon"
           className="relative"
           toastKind="info"
-          toastMessage="3 notifications non lues"
-          toastDescription="2 alertes de facturation critiques · 1 compte rendu à valider."
+          toastMessage="Aucune nouvelle notification"
         >
           <Bell className="size-5" />
-          <span className="absolute right-1.5 top-1.5 size-2 rounded-full bg-destructive" />
           <span className="sr-only">Notifications</span>
         </ActionButton>
 
@@ -82,7 +60,7 @@ export function AppHeader() {
             <Button
               variant="outline"
               className="h-9 gap-2 border-border bg-background shadow-sm"
-              aria-label="Simulateur de rôle de démonstration : changer de profil"
+              aria-label="Changer de profil utilisateur"
             >
               <RoleIcon className="size-4 text-primary" />
               <span className="hidden text-sm font-semibold sm:inline">{profile.label}</span>
@@ -90,7 +68,7 @@ export function AppHeader() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-64">
-            <DropdownMenuLabel>Simulateur de rôle (démo)</DropdownMenuLabel>
+            <DropdownMenuLabel>Profil actif</DropdownMenuLabel>
             <DropdownMenuSeparator />
             {Object.values(roleProfiles).map((p) => {
               const Icon = roleIcons[p.id];

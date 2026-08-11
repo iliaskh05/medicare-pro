@@ -1,7 +1,7 @@
 import { Bot, Check, CheckCheck, FileText, Headset, Info } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import type { WaEtat, WaMessage, WaQuickReply } from "@/data/mock-whatsapp";
+import type { WaEtat, WaMessage, WaQuickReply } from "@/types/whatsapp";
 
 function EtatIcone({ etat }: { etat?: WaEtat | undefined }) {
   if (!etat) return null;
@@ -63,7 +63,7 @@ export function WaMessageBubble({
                 {message.piece.nom}
               </span>
               <span className="block text-[11px] text-muted-foreground">
-                {message.piece.type.toUpperCase()} · {message.piece.taille} · pièce simulée
+                {message.piece.type.toUpperCase()} · {message.piece.taille}
               </span>
             </span>
           </div>
@@ -90,22 +90,6 @@ export function WaMessageBubble({
           ))}
         </div>
       ) : null}
-    </div>
-  );
-}
-
-export function WaTypingIndicator() {
-  return (
-    <div className="flex justify-end" role="status" aria-live="polite">
-      <div className="flex items-center gap-2 rounded-2xl rounded-br-sm bg-success/10 px-3.5 py-2.5 text-xs text-muted-foreground shadow-sm">
-        <Bot className="size-3.5 text-success" aria-hidden="true" />
-        <span>En train d'écrire</span>
-        <span className="flex gap-1" aria-hidden="true">
-          <span className="size-1.5 animate-bounce rounded-full bg-success [animation-delay:0ms]" />
-          <span className="size-1.5 animate-bounce rounded-full bg-success [animation-delay:150ms]" />
-          <span className="size-1.5 animate-bounce rounded-full bg-success [animation-delay:300ms]" />
-        </span>
-      </div>
     </div>
   );
 }

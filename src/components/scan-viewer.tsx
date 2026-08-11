@@ -7,7 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Pill } from "@/components/ui-kit";
 import { cn } from "@/lib/utils";
-import type { AnnotationScan, Scan } from "@/data/mock-extra";
+import type { AnnotationScan, Scan } from "@/types/imaging";
 
 const severiteTone = {
   critique: "destructive",
