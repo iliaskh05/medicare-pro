@@ -258,9 +258,7 @@ function LoginPage() {
             onClick={() => {
               if (demoLoading) return;
               setDemoLoading(true);
-              window.setTimeout(() => {
-                navigate({ to: "/dashboard" });
-              }, 1500);
+              navigate({ to: "/dashboard" });
             }}
           >
             {demoLoading ? (

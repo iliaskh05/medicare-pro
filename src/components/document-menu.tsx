@@ -54,7 +54,7 @@ export function DocumentMenu({
   const generer = (modele: string) => {
     if (loading) return;
     setLoading(modele);
-    window.setTimeout(() => {
+    {
       const reste = context.total - context.acompte;
       const lignes = [
         { label: "Patient", valeur: context.patient },
@@ -81,7 +81,7 @@ export function DocumentMenu({
       toast.success(`${modele} générée`, {
         description: `${context.patient} · ${context.reference} — PDF prêt au téléchargement.`,
       });
-    }, 1500);
+    }
   };
 
   return (

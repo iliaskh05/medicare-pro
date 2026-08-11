@@ -56,6 +56,7 @@ export function telechargerDossierPdf(dossier: DossierPdf) {
 </body></html>`);
   win.document.close();
   win.focus();
-  setTimeout(() => win.print(), 350);
+  win.addEventListener("load", () => win.print(), { once: true });
+  if (win.document.readyState === "complete") win.print();
   return true;
 }
