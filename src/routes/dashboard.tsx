@@ -171,30 +171,33 @@ function PlanningHeatmap({ data }: { data: PlanningSlot[] }) {
 
 function Dashboard() {
   const [botOpen, setBotOpen] = useState(false);
-  const { run: exportComptable, isLoading: exporting } = useAsyncAction(async () => {
+  const { run: exportComptable, isLoading: exporting } = useAsyncAction(
+    async () => {
+      {
+        const lignes = [
+          "reference;date;patient;examen;montant_mad;statut",
+          ...salleAttente.map(
+            (r, idx) =>
+              `ACT-2026-${String(idx + 1).padStart(4, "0")};2026-08-10;${r.patient};${r.examen};900;valide`,
+          ),
+        ].join("\n");
+        const blob = new Blob([`\ufeff${lignes}\n`], { type: "text/csv;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "export_comptable_2026.csv";
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    },
     {
-      const lignes = [
-        "reference;date;patient;examen;montant_mad;statut",
-        ...salleAttente.map(
-          (r, idx) =>
-            `ACT-2026-${String(idx + 1).padStart(4, "0")};2026-08-10;${r.patient};${r.examen};900;valide`,
-        ),
-      ].join("\n");
-      const blob = new Blob([`\ufeff${lignes}\n`], { type: "text/csv;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "export_comptable_2026.csv";
-      a.click();
-      URL.revokeObjectURL(url);
-    }
-  }, {
-    onSuccess: () =>
-      toast.success("Export comptable généré", {
-        description: "export_comptable_2026.csv téléchargé.",
-      }),
-    onError: (error) => toast.error("Export impossible", { description: error.message }),
-  });
+      onSuccess: () =>
+        toast.success("Export comptable généré", {
+          description: "export_comptable_2026.csv téléchargé.",
+        }),
+      onError: (error) => toast.error("Export impossible", { description: error.message }),
+    },
+  );
 
   const { profile, role } = useRole();
   const visibleKpis = kpis.filter((k) => !("finance" in k && k.finance) || profile.canSeeFinance);

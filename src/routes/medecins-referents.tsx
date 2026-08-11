@@ -81,7 +81,8 @@ function MedecinsReferentsPage() {
   }, [reloadKey]);
 
   const villes = useMemo(
-    () => Array.from(new Set(medecins.map((m) => m.ville))).sort((a, b) => a.localeCompare(b, "fr")),
+    () =>
+      Array.from(new Set(medecins.map((m) => m.ville))).sort((a, b) => a.localeCompare(b, "fr")),
     [medecins],
   );
   const specialites = useMemo(
