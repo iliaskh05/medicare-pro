@@ -1,0 +1,8 @@
+com\crm\medicare\entity\MedecinReferent.class
+com\crm\medicare\MedicareApplication.class
+com\crm\medicare\repository\PatientRepository.class
+com\crm\medicare\controller\PatientController.class
+com\crm\medicare\controller\AuditController.class
+com\crm\medicare\repository\MedecinReferentRepository.class
+com\crm\medicare\entity\Patient.class
+com\crm\medicare\controller\MedecinReferentController.class
