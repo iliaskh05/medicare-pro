@@ -16,6 +16,7 @@ import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as FacturationRouteImport } from './routes/facturation'
 import { Route as ImagerieRouteImport } from './routes/imagerie'
 import { Route as MedecinsRouteImport } from './routes/medecins'
+import { Route as MedecinsReferentsRouteImport } from './routes/medecins-referents'
 import { Route as PatientsRouteImport } from './routes/patients'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ViewerRouteImport } from './routes/viewer'
@@ -69,6 +70,11 @@ const ImagerieRoute = ImagerieRouteImport.update({
 const MedecinsRoute = MedecinsRouteImport.update({
   id: '/medecins',
   path: '/medecins',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MedecinsReferentsRoute = MedecinsReferentsRouteImport.update({
+  id: '/medecins-referents',
+  path: '/medecins-referents',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PatientsRoute = PatientsRouteImport.update({
@@ -176,6 +182,7 @@ export interface FileRoutesByFullPath {
   '/facturation': typeof FacturationRoute
   '/imagerie': typeof ImagerieRoute
   '/medecins': typeof MedecinsRoute
+  '/medecins-referents': typeof MedecinsReferentsRoute
   '/patients': typeof PatientsRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/viewer': typeof ViewerRoute
@@ -204,6 +211,7 @@ export interface FileRoutesByTo {
   '/facturation': typeof FacturationRoute
   '/imagerie': typeof ImagerieRoute
   '/medecins': typeof MedecinsRoute
+  '/medecins-referents': typeof MedecinsReferentsRoute
   '/patients': typeof PatientsRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/viewer': typeof ViewerRoute
@@ -233,6 +241,7 @@ export interface FileRoutesById {
   '/facturation': typeof FacturationRoute
   '/imagerie': typeof ImagerieRoute
   '/medecins': typeof MedecinsRoute
+  '/medecins-referents': typeof MedecinsReferentsRoute
   '/patients': typeof PatientsRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/viewer': typeof ViewerRoute
@@ -263,6 +272,7 @@ export interface FileRouteTypes {
     | '/facturation'
     | '/imagerie'
     | '/medecins'
+    | '/medecins-referents'
     | '/patients'
     | '/sitemap.xml'
     | '/viewer'
@@ -291,6 +301,7 @@ export interface FileRouteTypes {
     | '/facturation'
     | '/imagerie'
     | '/medecins'
+    | '/medecins-referents'
     | '/patients'
     | '/sitemap.xml'
     | '/viewer'
@@ -319,6 +330,7 @@ export interface FileRouteTypes {
     | '/facturation'
     | '/imagerie'
     | '/medecins'
+    | '/medecins-referents'
     | '/patients'
     | '/sitemap.xml'
     | '/viewer'
@@ -348,6 +360,7 @@ export interface RootRouteChildren {
   FacturationRoute: typeof FacturationRoute
   ImagerieRoute: typeof ImagerieRoute
   MedecinsRoute: typeof MedecinsRoute
+  MedecinsReferentsRoute: typeof MedecinsReferentsRoute
   PatientsRoute: typeof PatientsRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   ViewerRoute: typeof ViewerRoute
@@ -417,6 +430,13 @@ declare module '@tanstack/react-router' {
       path: '/medecins'
       fullPath: '/medecins'
       preLoaderRoute: typeof MedecinsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/medecins-referents': {
+      id: '/medecins-referents'
+      path: '/medecins-referents'
+      fullPath: '/medecins-referents'
+      preLoaderRoute: typeof MedecinsReferentsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/patients': {
@@ -574,6 +594,7 @@ const rootRouteChildren: RootRouteChildren = {
   FacturationRoute: FacturationRoute,
   ImagerieRoute: ImagerieRoute,
   MedecinsRoute: MedecinsRoute,
+  MedecinsReferentsRoute: MedecinsReferentsRoute,
   PatientsRoute: PatientsRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   ViewerRoute: ViewerRoute,
