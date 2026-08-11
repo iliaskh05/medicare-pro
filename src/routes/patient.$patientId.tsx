@@ -310,7 +310,6 @@ function PatientRecordPage() {
     );
   }
 
-
   return (
     <div className="space-y-6">
       <PageHeader
