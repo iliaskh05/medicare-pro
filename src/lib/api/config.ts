@@ -8,11 +8,15 @@
  * Les URLs sont injectées au build via les variables d'environnement Vite,
  * ce qui permet de basculer sans toucher au code applicatif.
  */
+/** Backend Spring Boot du centre (par défaut le serveur local). */
 export const JAVA_API_BASE =
-  (import.meta.env?.['VITE_JAVA_API_URL'] as string | undefined)?.replace(/\/$/, "") ?? "";
+  (import.meta.env?.['VITE_JAVA_API_URL'] as string | undefined)?.replace(/\/$/, "") ??
+  "http://localhost:8080";
 
+/** Microservice Python de scoring / clustering (même hôte par défaut). */
 export const ML_API_BASE =
-  (import.meta.env?.['VITE_ML_API_URL'] as string | undefined)?.replace(/\/$/, "") ?? "";
+  (import.meta.env?.['VITE_ML_API_URL'] as string | undefined)?.replace(/\/$/, "") ??
+  "http://localhost:8080";
 
 export const API_TIMEOUT_MS = Number(import.meta.env?.['VITE_API_TIMEOUT_MS'] ?? 15000);
 
