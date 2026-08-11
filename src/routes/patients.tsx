@@ -291,19 +291,12 @@ function PatientsPage() {
       </Card>
 
       {error ? (
-        <Card className="border-destructive/30">
-          <CardContent className="flex flex-wrap items-center gap-3 p-4">
-            <AlertTriangle className="size-5 shrink-0 text-destructive" />
-            <p className="min-w-0 flex-1 text-sm">
-              Impossible de charger les dossiers patients.
-              <span className="block text-xs text-muted-foreground">{error}</span>
-            </p>
-            <Button variant="outline" size="sm" onClick={() => setReloadKey((k) => k + 1)}>
-              <RefreshCw className="mr-2 size-4" /> Réessayer
-            </Button>
-          </CardContent>
-        </Card>
+        <ServiceNotice
+          message="Dossiers patients en attente de connexion au serveur du centre."
+          onRetry={() => setReloadKey((k) => k + 1)}
+        />
       ) : null}
+
 
       <Card data-tour="patients-table">
         <CardContent className="px-0 py-0" aria-busy={isLoading}>
