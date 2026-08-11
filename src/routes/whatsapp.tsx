@@ -1,29 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Bot, RotateCcw } from "lucide-react";
+import { AlertCircle, MessageCircle, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { PageHeader, Pill } from "@/components/ui-kit";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState, PageHeader } from "@/components/ui-kit";
 import { WaChatThread } from "@/components/whatsapp/wa-chat-thread";
 import { WaContextPanel } from "@/components/whatsapp/wa-context-panel";
 import { WaConversationList } from "@/components/whatsapp/wa-conversation-list";
-import {
-  conversationsWhatsApp,
-  waStatutLabel,
-  type WaConversation,
-  type WaMessage,
-  type WaQuickReply,
-  type WaStatut,
-} from "@/types/whatsapp";
-import {
-  reponseBot,
-  scenarioMessages,
-  statutApresScenario,
-  type WaDraftMessage,
-  type WaScenario,
-} from "@/lib/whatsapp-bot";
+import { fetchWaConversations, sendWaMessage } from "@/lib/api/whatsapp";
+import { waStatutLabel, type WaConversation, type WaMessage, type WaQuickReply, type WaStatut } from "@/types/whatsapp";
 
 export const Route = createFileRoute("/whatsapp")({
   head: () => ({
@@ -32,13 +21,12 @@ export const Route = createFileRoute("/whatsapp")({
       {
         name: "description",
         content:
-          "Console WhatsApp simulée du centre d'imagerie : prise de rendez-vous, préparation d'examen, questions mutuelle, rappels et transfert au secrétariat.",
+          "Console WhatsApp du centre d'imagerie : prise de rendez-vous, préparation d'examen, questions mutuelle, rappels et transfert au secrétariat.",
       },
       { property: "og:title", content: "Chatbot WhatsApp patients — Centre d'Imagerie Médicale" },
       {
         property: "og:description",
-        content:
-          "Console de supervision des conversations WhatsApp automatisées avec les patients (démonstration).",
+        content: "Console de supervision des conversations WhatsApp avec les patients.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -47,34 +35,56 @@ export const Route = createFileRoute("/whatsapp")({
   component: WhatsAppPage,
 });
 
-function heureCourante() {
-  return new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
-}
-
-/** Clone profond du jeu de démonstration pour permettre une réinitialisation propre. */
-function conversationsInitiales(): WaConversation[] {
-  return conversationsWhatsApp.map((c) => ({ ...c, messages: c.messages.map((m) => ({ ...m })) }));
+function WhatsAppSkeleton() {
+  return (
+    <div className="grid h-[calc(100dvh-18rem)] min-h-[560px] grid-cols-1 gap-px overflow-hidden lg:grid-cols-[320px_1fr]">
+      <div className="space-y-3 p-4">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <Skeleton key={i} className="h-16 w-full rounded-lg" />
+        ))}
+      </div>
+      <div className="hidden space-y-3 p-4 lg:block">
+        <Skeleton className="h-12 w-2/3 rounded-lg" />
+        <Skeleton className="h-12 w-1/2 rounded-lg" />
+        <Skeleton className="h-12 w-3/5 rounded-lg" />
+      </div>
+    </div>
+  );
 }
 
 function WhatsAppPage() {
-  const [conversations, setConversations] = useState<WaConversation[]>(conversationsInitiales);
-  const [activeId, setActiveId] = useState(conversationsWhatsApp[0]?.id ?? "");
+  const [conversations, setConversations] = useState<WaConversation[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [activeId, setActiveId] = useState<string>("");
   const [query, setQuery] = useState("");
   const [filtre, setFiltre] = useState<"toutes" | WaStatut>("toutes");
   const [draft, setDraft] = useState("");
-  const [typing, setTyping] = useState(false);
   const [modeAgent, setModeAgent] = useState(false);
   const [vueMobile, setVueMobile] = useState<"liste" | "conversation">("liste");
+  const [envoiEnCours, setEnvoiEnCours] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
 
-  const seq = useRef(0);
-  const timers = useRef<Array<ReturnType<typeof setTimeout>>>([]);
-
-  useEffect(() => () => timers.current.forEach(clearTimeout), []);
-
-  const nextId = () => {
-    seq.current += 1;
-    return `wa-live-${seq.current}`;
-  };
+  useEffect(() => {
+    const controller = new AbortController();
+    setIsLoading(true);
+    setError(null);
+    fetchWaConversations(controller.signal)
+      .then((rows) => {
+        setConversations(rows);
+        setActiveId((prev) => prev || (rows[0]?.id ?? ""));
+      })
+      .catch((e: unknown) => {
+        if (controller.signal.aborted) return;
+        setError(
+          e instanceof Error ? e.message : "Impossible de charger les conversations WhatsApp.",
+        );
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsLoading(false);
+      });
+    return () => controller.abort();
+  }, [reloadToken]);
 
   const liste = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -91,96 +101,64 @@ function WhatsAppPage() {
 
   const active = conversations.find((c) => c.id === activeId) ?? liste[0] ?? conversations[0];
 
-  const appliquerMessages = (drafts: WaDraftMessage[], statut?: WaStatut) => {
-    if (!active) return;
-    const messages: WaMessage[] = drafts.map((d) => ({
-      ...d,
-      id: nextId(),
-      heure: heureCourante(),
-    }));
-    const dernier = messages[messages.length - 1];
-    setConversations((prev) =>
-      prev.map((c) =>
-        c.id === active.id
-          ? {
-              ...c,
-              statut: statut ?? c.statut,
-              messages: [...c.messages, ...messages],
-              apercu: dernier ? (dernier.texte.split("\n")[0] ?? c.apercu) : c.apercu,
-              derniereHeure: dernier?.heure ?? c.derniereHeure,
-            }
-          : c,
-      ),
-    );
-  };
-
-  /** Réponse du bot après un délai simulé (500–1000 ms). */
-  const repondre = (entree: string) => {
-    if (!active) return;
-    if (active.statut === "secretariat" || active.statut === "cloture") return;
-    setTyping(true);
-    const drafts = reponseBot(entree, active);
-    const transfert = drafts.some((d) => d.auteur === "agent");
-    const timer = setTimeout(
-      () => {
-        setTyping(false);
-        appliquerMessages(drafts, transfert ? "secretariat" : undefined);
-      },
-      600 + (seq.current % 5) * 80,
-    );
-    timers.current.push(timer);
-  };
-
-  const envoyer = () => {
+  const envoyer = async () => {
     const texte = draft.trim();
     if (!texte || !active) return;
     setDraft("");
-    if (modeAgent) {
-      appliquerMessages([{ auteur: "agent", texte, etat: "delivre" }], "secretariat");
-      return;
+    setEnvoiEnCours(true);
+    try {
+      const message: WaMessage = await sendWaMessage(active.id, texte);
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.id === active.id
+            ? {
+                ...c,
+                messages: [...c.messages, message],
+                apercu: message.texte.split("\n")[0] ?? c.apercu,
+                derniereHeure: message.heure ?? c.derniereHeure,
+              }
+            : c,
+        ),
+      );
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Échec de l'envoi du message.");
+      setDraft(texte);
+    } finally {
+      setEnvoiEnCours(false);
     }
-    appliquerMessages([{ auteur: "patient", texte, etat: "lu" }]);
-    repondre(texte);
   };
 
-  const handleQuickReply = (reply: WaQuickReply) => {
+  const handleQuickReply = async (reply: WaQuickReply) => {
     if (!active) return;
-    appliquerMessages([{ auteur: "patient", texte: reply.label, etat: "lu" }]);
-    repondre(reply.payload);
-  };
-
-  const handleScenario = (scenario: WaScenario) => {
-    if (!active) return;
-    setTyping(true);
-    const drafts = scenarioMessages(scenario, active);
-    const timer = setTimeout(() => {
-      setTyping(false);
-      appliquerMessages(drafts, statutApresScenario(scenario, active.statut));
-      if (scenario === "handoff") setModeAgent(true);
-    }, 700);
-    timers.current.push(timer);
+    setEnvoiEnCours(true);
+    try {
+      const message = await sendWaMessage(active.id, reply.payload);
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.id === active.id
+            ? {
+                ...c,
+                messages: [...c.messages, message],
+                apercu: message.texte.split("\n")[0] ?? c.apercu,
+                derniereHeure: message.heure ?? c.derniereHeure,
+              }
+            : c,
+        ),
+      );
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Échec de l'envoi de la réponse rapide.");
+    } finally {
+      setEnvoiEnCours(false);
+    }
   };
 
   const handleStatut = (statut: WaStatut) => {
     if (!active) return;
-    appliquerMessages(
-      [{ auteur: "systeme", texte: `Statut mis à jour : ${waStatutLabel[statut]}.` }],
-      statut,
+    setConversations((prev) =>
+      prev.map((c) => (c.id === active.id ? { ...c, statut } : c)),
     );
     setModeAgent(statut === "secretariat");
-  };
-
-  const reinitialiser = () => {
-    timers.current.forEach(clearTimeout);
-    seq.current = 0;
-    setTyping(false);
-    setModeAgent(false);
-    setConversations(conversationsInitiales());
-    setActiveId(conversationsWhatsApp[0]?.id ?? "");
-    setQuery("");
-    setFiltre("toutes");
-    setDraft("");
-    toast.success("Démonstration WhatsApp réinitialisée.");
+    toast.info(`Statut mis à jour : ${waStatutLabel[statut]}.`);
   };
 
   const selectionner = (id: string) => {
@@ -194,73 +172,86 @@ function WhatsAppPage() {
     <div className="space-y-6">
       <PageHeader
         title="Chatbot WhatsApp patients"
-        subtitle="Console de supervision simulée : prise de rendez-vous, préparation d'examen, mutuelle, rappels et transfert au secrétariat."
+        subtitle="Console de supervision des conversations WhatsApp : prise de rendez-vous, préparation d'examen, mutuelle, rappels et transfert au secrétariat."
         actions={
-          <>
-            <Pill tone="success">
-              <Bot className="size-3.5" aria-hidden="true" /> Simulation IA
-            </Pill>
-            <Button variant="outline" className="gap-2" onClick={reinitialiser}>
-              <RotateCcw className="size-4" aria-hidden="true" />
-              Réinitialiser la démo
-            </Button>
-          </>
+          <Button variant="outline" className="gap-2" onClick={() => setReloadToken((t) => t + 1)}>
+            <RotateCcw className="size-4" aria-hidden="true" />
+            Actualiser
+          </Button>
         }
       />
 
+      {error ? (
+        <Alert variant="destructive">
+          <AlertCircle className="size-4" />
+          <AlertTitle>Conversations indisponibles</AlertTitle>
+          <AlertDescription className="flex flex-wrap items-center justify-between gap-2">
+            <span>{error}</span>
+            <Button size="sm" variant="outline" onClick={() => setReloadToken((t) => t + 1)}>
+              Réessayer
+            </Button>
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
       <Card className="overflow-hidden p-0 shadow-sm">
-        <div className="grid h-[calc(100dvh-18rem)] min-h-[560px] grid-cols-1 grid-rows-[minmax(0,1fr)] overflow-hidden lg:grid-cols-[320px_1fr] xl:grid-cols-[320px_1fr_300px]">
-          <div
-            className={
-              vueMobile === "liste"
-                ? "min-h-0 min-w-0 overflow-hidden"
-                : "hidden min-h-0 min-w-0 overflow-hidden lg:block"
-            }
-          >
-            <WaConversationList
-              conversations={liste}
-              activeId={active?.id ?? ""}
-              query={query}
-              filtre={filtre}
-              onQueryChange={setQuery}
-              onFiltreChange={setFiltre}
-              onSelect={selectionner}
-            />
-          </div>
-
-          <div
-            className={
-              vueMobile === "conversation"
-                ? "min-h-0 min-w-0 overflow-hidden"
-                : "hidden min-h-0 min-w-0 overflow-hidden lg:block"
-            }
-          >
-            {active ? (
-              <WaChatThread
-                conversation={active}
-                draft={draft}
-                typing={typing}
-                modeAgent={modeAgent}
-                onDraftChange={setDraft}
-                onEnvoyer={envoyer}
-                onQuickReply={handleQuickReply}
-                onScenario={handleScenario}
-                onToggleMode={() => setModeAgent((v) => !v)}
-                onRetour={() => setVueMobile("liste")}
-              />
-            ) : null}
-          </div>
-
-          {active ? (
-            <div className="hidden min-h-0 min-w-0 overflow-hidden xl:block">
-              <WaContextPanel
-                conversation={active}
-                onStatutChange={handleStatut}
-                onEnvoyerPreparation={() => handleScenario("preparation-irm")}
+        {isLoading ? (
+          <WhatsAppSkeleton />
+        ) : conversations.length === 0 && !error ? (
+          <EmptyState
+            icon={MessageCircle}
+            title="Aucune donnée disponible"
+            description="Aucune conversation WhatsApp n'est encore enregistrée pour ce centre."
+          />
+        ) : (
+          <div className="grid h-[calc(100dvh-18rem)] min-h-[560px] grid-cols-1 grid-rows-[minmax(0,1fr)] overflow-hidden lg:grid-cols-[320px_1fr] xl:grid-cols-[320px_1fr_300px]">
+            <div
+              className={
+                vueMobile === "liste"
+                  ? "min-h-0 min-w-0 overflow-hidden"
+                  : "hidden min-h-0 min-w-0 overflow-hidden lg:block"
+              }
+            >
+              <WaConversationList
+                conversations={liste}
+                activeId={active?.id ?? ""}
+                query={query}
+                filtre={filtre}
+                onQueryChange={setQuery}
+                onFiltreChange={setFiltre}
+                onSelect={selectionner}
               />
             </div>
-          ) : null}
-        </div>
+
+            <div
+              className={
+                vueMobile === "conversation"
+                  ? "min-h-0 min-w-0 overflow-hidden"
+                  : "hidden min-h-0 min-w-0 overflow-hidden lg:block"
+              }
+            >
+              {active ? (
+                <WaChatThread
+                  conversation={active}
+                  draft={draft}
+                  envoiEnCours={envoiEnCours}
+                  modeAgent={modeAgent}
+                  onDraftChange={setDraft}
+                  onEnvoyer={() => void envoyer()}
+                  onQuickReply={(reply) => void handleQuickReply(reply)}
+                  onToggleMode={() => setModeAgent((v) => !v)}
+                  onRetour={() => setVueMobile("liste")}
+                />
+              ) : null}
+            </div>
+
+            {active ? (
+              <div className="hidden min-h-0 min-w-0 overflow-hidden xl:block">
+                <WaContextPanel conversation={active} onStatutChange={handleStatut} />
+              </div>
+            ) : null}
+          </div>
+        )}
       </Card>
     </div>
   );
