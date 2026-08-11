@@ -40,18 +40,6 @@ export const assistantPages: AssistantPage[] = [
     ],
   },
   {
-    path: "/patient/demo",
-    nom: "Dossier patient",
-    motsCles: ["dossier patient", "historique", "ordonnance", "antécédent", "fiche patient"],
-    resume:
-      "Dossier patient complet : historique, imagerie, ordonnances, facturation et panneau d'analyse IA du moteur de conformité.",
-    aides: [
-      "Les onglets de gauche regroupent l'historique médical, les examens, les ordonnances et la facturation.",
-      "Le panneau de droite affiche un score de risque et le clustering des signaux faibles.",
-      "Toute conclusion affichée fait l'objet d'une analyse IA : la validation humaine reste obligatoire.",
-    ],
-  },
-  {
     path: "/facturation",
     nom: "Facturation",
     motsCles: [

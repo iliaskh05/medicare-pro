@@ -344,7 +344,7 @@ function PatientsPage() {
                         </TableCell>
                         <TableCell className="pr-6 text-right">
                           <Button variant="outline" size="sm" asChild>
-                            <Link to="/patient/demo">
+                            <Link to="/patient/$patientId" params={{ patientId: p.id }}>
                               <FileText className="mr-1.5 size-4" /> Voir dossier
                             </Link>
                           </Button>

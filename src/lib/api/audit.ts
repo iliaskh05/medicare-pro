@@ -23,6 +23,12 @@ export async function fetchAnomalies(signal?: AbortSignal): Promise<Anomalie[]> 
   return rows ?? [];
 }
 
+/** GET {JAVA_API_BASE}/api/patients/{id}/anomalies */
+export async function fetchPatientAnomalies(patientId: string, signal?: AbortSignal): Promise<Anomalie[]> {
+  const rows = await javaApi<Anomalie[]>(`/api/patients/${encodeURIComponent(patientId)}/anomalies`, signal ? { signal } : {});
+  return rows ?? [];
+}
+
 /** GET {JAVA_API_BASE}/api/audit/kpis */
 export async function fetchAuditKpis(signal?: AbortSignal): Promise<AuditKpis> {
   const kpis = await javaApi<AuditKpis>("/api/audit/kpis", signal ? { signal } : {});
