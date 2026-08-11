@@ -38,7 +38,8 @@ const roleIcons: Record<AppRole, typeof ShieldCheck> = {
 
 export function AppHeader() {
   const { role, profile, setRole } = useRole();
-  const navigate = useNavigate();
+  const { theme, toggleTheme } = useTheme();
+
   const RoleIcon = roleIcons[role];
 
   return (
