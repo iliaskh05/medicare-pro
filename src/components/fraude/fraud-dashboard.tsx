@@ -156,6 +156,7 @@ export function FraudDashboard({ sensitivity = 70 }: { sensitivity?: number }) {
           ) : cases.length === 0 ? (
             <div className="px-6 pb-6">
               <EmptyState
+                icon={ShieldAlert}
                 title="Aucun dossier au-delà du seuil"
                 description="Abaissez la sensibilité de l'IA pour inspecter les signaux faibles."
               />
