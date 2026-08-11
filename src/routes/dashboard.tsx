@@ -574,13 +574,6 @@ function Dashboard() {
           </Card>
         ) : null}
 
-        {/* Analyse de Conformité IA (Fraude caisse) — rendu strictement Directeur */}
-        {role === "directeur" ? (
-          <div className="lg:col-span-3">
-            <CaisseFraudAlert />
-          </div>
-        ) : null}
-
         {/* Widget 3 — Synchronisation Comptable */}
         {profile.canSeeFinance ? (
           <Card className="lg:col-span-1">
@@ -603,14 +596,16 @@ function Dashboard() {
                   <Skeleton className="h-9 w-full rounded-lg" />
                 </div>
               ) : comptaError ? (
-                <div className="flex flex-col items-center justify-center gap-3 text-center">
-                  <AlertTriangle className="size-6 text-destructive" />
-                  <p className="text-sm text-muted-foreground">{comptaError}</p>
-                  <Button variant="outline" size="sm" onClick={reload}>
-                    <RefreshCw className="mr-2 size-4" /> Réessayer
+                <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-muted/30 px-4 py-6 text-center">
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Aucune donnée disponible
+                  </p>
+                  <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={reload}>
+                    <RefreshCw className="mr-2 size-3.5" /> Réessayer
                   </Button>
                 </div>
               ) : (
+
                 <>
                   <div>
                     <p className="text-3xl font-bold tracking-tight">{comptabilite.validated}</p>
