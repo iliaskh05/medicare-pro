@@ -780,7 +780,8 @@ function PatientRecordPage() {
                         <ShieldAlert className="mt-0.5 size-4 shrink-0 text-destructive" />
                         <div className="min-w-0">
                           <p className="text-sm font-bold leading-snug text-destructive">
-                            Score de risque : 92 % — Rupture de protocole financier
+                            Score de risque : {Math.round(scoreMax)} % — Rupture de protocole
+                            financier
                           </p>
                           <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
                             L&apos;IA détecte une anomalie de caisse : les clichés de l&apos;
@@ -812,7 +813,7 @@ function PatientRecordPage() {
                           toastDescription={`${mad(dossierFinancier.reste)} encaissés · reçu généré automatiquement.`}
                           onDone={() => {
                             setSolde(0);
-                            setAlertes((prev) => prev.filter((a) => a.id !== "ALR-901"));
+                            setAlertes([]);
                           }}
                         >
                           <Wallet className="mr-1.5 size-4" /> Régulariser le solde
