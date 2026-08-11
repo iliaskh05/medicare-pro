@@ -68,15 +68,43 @@ export const roleProfiles: Record<AppRole, RoleProfile> = {
 
 const STORAGE_KEY = "radiocrm:role";
 
+/** Utilisateur connecté (fourni par le backend d'authentification). */
+export type AppUser = {
+  nom: string;
+  role: AppRole;
+  /** Libellé métier du rôle : "Directeur", "Accueil", "Technicien", "Radiologue". */
+  roleLabel: string;
+  fonction: string;
+  initiales: string;
+};
+
+const roleLabels: Record<AppRole, string> = {
+  directeur: "Directeur",
+  accueil: "Accueil",
+  technicien: "Technicien",
+  medecin: "Radiologue",
+};
+
 type RoleContextValue = {
   role: AppRole;
   profile: RoleProfile;
+  user: AppUser;
   setRole: (role: AppRole) => void;
   /** Helper de rendu conditionnel : `hasPermission("canSeeFraudModule")`. */
   hasPermission: (
     permission: "canSeeFraudModule" | "canExportCompta" | "canValiderAnomalie" | "canSeeFinance",
   ) => boolean;
 };
+
+function toUser(profile: RoleProfile): AppUser {
+  return {
+    nom: profile.nom,
+    role: profile.id,
+    roleLabel: roleLabels[profile.id],
+    fonction: profile.fonction,
+    initiales: profile.initiales,
+  };
+}
 
 const RoleContext = createContext<RoleContextValue | null>(null);
 
