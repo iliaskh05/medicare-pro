@@ -1,6 +1,16 @@
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { Bell, Search, ChevronDown, ShieldCheck, Stethoscope, Check } from "lucide-react";
+import {
+  Bell,
+  Search,
+  ChevronDown,
+  ShieldCheck,
+  Stethoscope,
+  Check,
+  Moon,
+  Sun,
+} from "lucide-react";
+
 
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Input } from "@/components/ui/input";
