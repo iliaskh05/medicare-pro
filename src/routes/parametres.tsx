@@ -1,16 +1,7 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { toast } from "sonner";
-import {
-  BadgeCheck,
-  Bell,
-  History,
-  KeyRound,
-  Moon,
-  ShieldCheck,
-  Sun,
-  UserCog,
-} from "lucide-react";
+import { BadgeCheck, Bell, History, KeyRound, Moon, ShieldCheck, Sun, UserCog } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -119,7 +110,8 @@ function MonCompte() {
         <CardHeader>
           <CardTitle className="text-base">Mot de passe</CardTitle>
           <CardDescription>
-            Minimum 8 caractères. La modification est journalisée dans l&apos;historique de sécurité.
+            Minimum 8 caractères. La modification est journalisée dans l&apos;historique de
+            sécurité.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

@@ -25,7 +25,6 @@ export const API_CONFIGURED = Boolean(JAVA_API_BASE);
 
 export const API_TIMEOUT_MS = Number(import.meta.env?.["VITE_API_TIMEOUT_MS"] ?? 15000);
 
-
 export class ApiError extends Error {
   status: number;
   code: string;
@@ -72,7 +71,6 @@ export async function httpRequest<T>(
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
   signal?.addEventListener("abort", () => controller.abort());
-
 
   try {
     const res = await fetch(`${base}${path}`, {

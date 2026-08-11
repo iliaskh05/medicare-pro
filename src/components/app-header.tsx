@@ -11,7 +11,6 @@ import {
   Sun,
 } from "lucide-react";
 
-
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -28,7 +27,6 @@ import { ActionButton } from "@/components/action-button";
 import { roleProfiles, useRole, type AppRole } from "@/hooks/use-role";
 import { useTheme } from "@/hooks/use-theme";
 
-
 const roleIcons: Record<AppRole, typeof ShieldCheck> = {
   directeur: ShieldCheck,
   accueil: Stethoscope,
@@ -40,7 +38,6 @@ export function AppHeader() {
   const { role, profile, setRole } = useRole();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
-
 
   const RoleIcon = roleIcons[role];
 
@@ -66,7 +63,6 @@ export function AppHeader() {
         >
           {theme === "dark" ? <Sun className="size-5" /> : <Moon className="size-5" />}
         </Button>
-
 
         <ActionButton
           variant="ghost"
