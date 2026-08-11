@@ -376,7 +376,7 @@ function PatientRecordPage() {
   const [alertes, setAlertes] = useState<Alerte[]>(alertesInitiales);
   const [blocked, setBlocked] = useState(false);
   const [solde, setSolde] = useState(dossierFinancier.reste);
-  const { profile } = useRole();
+  const { profile, role } = useRole();
 
   const score = blocked ? 0.12 : alertes.length === 0 ? 0.18 : 0.92;
 
@@ -786,7 +786,7 @@ function PatientRecordPage() {
                 ))}
               </div>
 
-              {!blocked && profile.canSeeFinance ? (
+              {!blocked && role === "directeur" ? (
                 <div className="rounded-xl bg-destructive/8 p-3.5 ring-1 ring-inset ring-destructive/30">
                   <div className="flex items-start gap-2">
                     <ShieldAlert className="mt-0.5 size-4 shrink-0 text-destructive" />

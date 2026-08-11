@@ -40,6 +40,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useRole } from "@/hooks/use-role";
+import { CaisseFraudAlert } from "@/components/fraude/caisse-alert";
 import { useAsyncAction } from "@/hooks/use-async-action";
 import { DocumentMenu } from "@/components/document-menu";
 import { PageHeader, Pill, IconTile } from "@/components/ui-kit";
@@ -195,7 +196,7 @@ function Dashboard() {
     onError: (error) => toast.error("Export impossible", { description: error.message }),
   });
 
-  const { profile } = useRole();
+  const { profile, role } = useRole();
   const visibleKpis = kpis.filter((k) => !("finance" in k && k.finance) || profile.canSeeFinance);
   return (
     <div className="space-y-6">
@@ -349,8 +350,8 @@ function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Widget 2 — Urgences Fraude & Anomalies */}
-        {profile.canSeeFinance ? (
+        {/* Widget 2 — Urgences Fraude & Anomalies (Directeur uniquement) */}
+        {role === "directeur" ? (
           <Card className="lg:col-span-1">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
@@ -395,6 +396,13 @@ function Dashboard() {
               ))}
             </CardContent>
           </Card>
+        ) : null}
+
+        {/* Analyse de Conformité IA (Fraude caisse) — rendu strictement Directeur */}
+        {role === "directeur" ? (
+          <div className="lg:col-span-3">
+            <CaisseFraudAlert />
+          </div>
         ) : null}
 
         {/* Widget 3 — Synchronisation Comptable */}
