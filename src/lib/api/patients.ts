@@ -1,40 +1,50 @@
-import { patients, type Patient } from "@/data/mock";
+import { javaApi } from "./config";
 
-import { isJavaApiConfigured, javaApi } from "./config";
+/** Modèle exact renvoyé par le backend Spring Boot : GET /api/patients */
+export type PatientDto = {
+  id: number | string;
+  nomComplet: string;
+  cin: string;
+  age: number;
+  telephone: string;
+  mutuelle: string;
+};
 
-/**
- * Récupère la liste des patients.
- * TODO backend Java : GET /api/patients
- */
-export async function fetchPatients(params: { search?: string } = {}): Promise<Patient[]> {
-  if (isJavaApiConfigured()) {
-    const query = params.search ? `?search=${encodeURIComponent(params.search)}` : "";
-    return javaApi<Patient[]>(`/api/patients${query}`);
-  }
-  const q = params.search?.trim().toLowerCase();
-  return patients.filter(
-    (p) => !q || p.nom.toLowerCase().includes(q) || p.id.toLowerCase().includes(q),
-  );
+/** Ligne patient utilisée par l'interface (aucune donnée fictive). */
+export type PatientRow = {
+  id: string;
+  nomComplet: string;
+  cin: string;
+  age: number;
+  telephone: string;
+  mutuelle: string;
+};
+
+function mapPatient(dto: PatientDto): PatientRow {
+  return {
+    id: String(dto.id),
+    nomComplet: dto.nomComplet,
+    cin: dto.cin,
+    age: Number(dto.age ?? 0),
+    telephone: dto.telephone,
+    mutuelle: dto.mutuelle,
+  };
 }
 
-/**
- * Charge le dossier complet d'un patient (identité, examens, facturation).
- * TODO backend Java : GET /api/patients/{id}
- */
-export async function fetchPatientData(patientId: string): Promise<Patient | null> {
-  if (isJavaApiConfigured()) {
-    return javaApi<Patient>(`/api/patients/${encodeURIComponent(patientId)}`);
-  }
-  return patients.find((p) => p.id === patientId) ?? null;
+/** GET {JAVA_API_BASE}/api/patients */
+export async function fetchPatients(signal?: AbortSignal): Promise<PatientRow[]> {
+  const rows = await javaApi<PatientDto[]>("/api/patients", signal ? { signal } : {});
+  return (rows ?? []).map(mapPatient);
 }
 
-/**
- * Création d'un patient depuis l'accueil.
- * TODO backend Java : POST /api/patients
- */
-export async function createPatient(payload: Omit<Patient, "id">): Promise<Patient> {
-  if (isJavaApiConfigured()) {
-    return javaApi<Patient>("/api/patients", { method: "POST", body: payload });
-  }
-  return { ...(payload as Patient), id: `PAT-${Date.now().toString().slice(-4)}` };
+/** GET {JAVA_API_BASE}/api/patients/{id} */
+export async function fetchPatientData(patientId: string): Promise<PatientRow> {
+  const dto = await javaApi<PatientDto>(`/api/patients/${encodeURIComponent(patientId)}`);
+  return mapPatient(dto);
+}
+
+/** POST {JAVA_API_BASE}/api/patients */
+export async function createPatient(payload: Omit<PatientRow, "id">): Promise<PatientRow> {
+  const dto = await javaApi<PatientDto>("/api/patients", { method: "POST", body: payload });
+  return mapPatient(dto);
 }
