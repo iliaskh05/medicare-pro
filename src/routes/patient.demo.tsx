@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Activity,
   AlertTriangle,
@@ -17,6 +17,7 @@ import {
   Pill as PillIcon,
   ReceiptText,
   Printer,
+  RefreshCw,
   ScanLine,
   ShieldAlert,
   ShieldCheck,
@@ -45,8 +46,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { EmptyState, IconTile, PageHeader, Pill, SimulationNotice } from "@/components/ui-kit";
+import { EmptyState, IconTile, PageHeader, Pill } from "@/components/ui-kit";
 import { cn } from "@/lib/utils";
+import { fetchAnomalies, updateAnomalieStatut } from "@/lib/api/audit";
+import { anomalyRiskLabel, anomalyRiskLevel, anomalyRiskTone } from "@/utils/anomalyDetection";
+import type { Anomalie } from "@/types/audit";
 
 export const Route = createFileRoute("/patient/demo")({
   head: () => ({
@@ -70,7 +74,7 @@ export const Route = createFileRoute("/patient/demo")({
   component: PatientRecordPage,
 });
 
-/* ------------------------------- Données démo ------------------------------ */
+/* ------------------------------- Dossier patient ------------------------------ */
 
 const patient = {
   id: "PAT-1042",
@@ -219,50 +223,7 @@ const dossierFinancier = {
   },
 };
 
-type Severite = "critique" | "eleve" | "modere";
-
-type Alerte = {
-  id: string;
-  severite: Severite;
-  titre: string;
-  detail: string;
-  cluster: string;
-  confiance: number;
-  impact: string;
-};
-
-const alertesInitiales: Alerte[] = [
-  {
-    id: "ALR-901",
-    severite: "critique",
-    titre: "Incohérence de facturation",
-    detail:
-      "Acte « IRM Cérébrale » facturé deux fois pour la même session du 09/08/2026 (FAC-3412 et FAC-3413).",
-    cluster: "Cluster #4 · Doublons d'actes",
-    confiance: 0.94,
-    impact: "2 600 MAD",
-  },
-  {
-    id: "ALR-902",
-    severite: "eleve",
-    titre: "Anomalie de prescription",
-    detail:
-      "Le médecin prescripteur ne correspond pas à la spécialité de l'acte réalisé (généraliste → acte neuro-radiologique avec injection).",
-    cluster: "Cluster #2 · Discordance prescripteur/acte",
-    confiance: 0.81,
-    impact: "Conformité CNSS",
-  },
-  {
-    id: "ALR-903",
-    severite: "modere",
-    titre: "Signal faible — fréquence d'examens",
-    detail:
-      "3 examens d'imagerie lourde en 30 jours pour ce patient, soit 2,4× la médiane du groupe de pairs.",
-    cluster: "Cluster #7 · Sur-utilisation modérée",
-    confiance: 0.63,
-    impact: "À surveiller",
-  },
-];
+type Severite = "critique" | "eleve" | "faible";
 
 const severiteMeta: Record<
   Severite,
@@ -288,7 +249,7 @@ const severiteMeta: Record<
     bg: "bg-warning/10",
     text: "text-warning-foreground",
   },
-  modere: {
+  faible: {
     label: "Modéré",
     tone: "primary",
     ring: "ring-primary/25",
@@ -341,7 +302,6 @@ function RiskDonut({ value, blocked }: { value: number; blocked: boolean }) {
             stroke="var(--muted)"
             strokeWidth={stroke}
           />
-          <SimulationNotice contexte="Dossier, analyses et scores de fraude entièrement fictifs (démonstration)." />
           <circle
             cx={size / 2}
             cy={size / 2}
@@ -453,7 +413,7 @@ function PatientRecordPage() {
                     size="sm"
                     variant="outline"
                     toastKind="info"
-                    toastMessage="Appel sortant simulé"
+                    toastMessage="Appel sortant lancé"
                     toastDescription={`${patient.nom} · ${patient.telephone}`}
                   >
                     <Phone className="mr-1.5 size-4" /> Appeler
@@ -498,7 +458,7 @@ function PatientRecordPage() {
           </Card>
 
           {profile.canSeeFinance ? (
-            <Card data-tour="finance" className="shadow-sm">
+            <Card className="shadow-sm">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Wallet className="size-4 text-muted-foreground" />
@@ -753,7 +713,6 @@ function PatientRecordPage() {
           {role === "directeur" ? (
             <>
               <Card
-                data-tour="ia-panel"
                 className={cn(
                   "overflow-hidden ring-1 ring-inset",
                   blocked ? "ring-border" : "ring-destructive/25",

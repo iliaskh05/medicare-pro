@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  AlertTriangle,
   Ban,
   CalendarDays,
   ChevronLeft,
@@ -11,6 +12,7 @@ import {
   FileText,
   Gauge,
   Lock,
+  RefreshCw,
   ShieldAlert,
   ShieldCheck,
   Search,
@@ -33,6 +35,7 @@ import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -65,19 +68,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { PageHeader, Pill, IconTile, EmptyState, SimulationNotice } from "@/components/ui-kit";
+import { PageHeader, Pill, IconTile, EmptyState } from "@/components/ui-kit";
 import { useRole } from "@/hooks/use-role";
 import { FraudDashboard } from "@/components/fraude/fraud-dashboard";
 import { telechargerDossierPdf } from "@/lib/pdf-export";
 import { formatMAD } from "@/types/domain";
+import { typesExamen, type Anomalie, type AuditKpis, type StatutAnomalie, type TendanceAnomalie } from "@/types/audit";
 import {
-  auditKpis,
-  tendanceAnomalies,
-  typesExamen,
-  type Anomalie,
-  type StatutAnomalie,
-} from "@/types/audit";
-import { useAppStore } from "@/store/app-store";
+  EMPTY_AUDIT_KPIS,
+  fetchAnomalies,
+  fetchAuditKpis,
+  fetchAuditTrend,
+  updateAnomalieStatut,
+} from "@/lib/api/audit";
 import {
   anomalyRiskLabel,
   anomalyRiskLevel,
@@ -132,7 +135,6 @@ function ScoreMeter({ score }: { score: number }) {
           className={`h-full rounded-full transition-all duration-500 ${riskBarClass[tone]}`}
           style={{ width: `${score}%` }}
         />
-        <SimulationNotice contexte="Scores de risque et clusters produits par un modèle de démonstration sur des factures fictives." />
       </div>
       <Pill tone={tone}>
         {score}% · {riskLabel(score)}
@@ -199,13 +201,15 @@ function AccesRestreint() {
 
 function FraudAuditModule() {
   const { profile } = useRole();
-  const {
-    anomalies: rowsState,
-    setAnomalieStatut,
-    seuil,
-    setSeuil,
-    fraudesConfirmees: confirmees,
-  } = useAppStore();
+
+  const [anomalies, setAnomalies] = useState<Anomalie[]>([]);
+  const [kpis, setKpis] = useState<AuditKpis>(EMPTY_AUDIT_KPIS);
+  const [tendance, setTendance] = useState<TendanceAnomalie[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  const [seuil, setSeuil] = useState(RISK_THRESHOLDS.eleve);
   const [query, setQuery] = useState("");
   const [niveau, setNiveau] = useState("tous");
   const [examen, setExamen] = useState("tous");
@@ -213,12 +217,44 @@ function FraudAuditModule() {
   const [page, setPage] = useState(1);
   const [detail, setDetail] = useState<Anomalie | null>(null);
 
-  const now = new Date("2026-08-09T00:00:00Z").getTime();
+  const chargerDonnees = useCallback((signal?: AbortSignal) => {
+    setIsLoading(true);
+    setError(null);
+    return Promise.all([
+      fetchAnomalies(signal),
+      fetchAuditKpis(signal),
+      fetchAuditTrend(signal),
+    ])
+      .then(([anomaliesRows, kpisRows, tendanceRows]) => {
+        if (signal?.aborted) return;
+        setAnomalies(anomaliesRows);
+        setKpis(kpisRows);
+        setTendance(tendanceRows);
+      })
+      .catch((e: unknown) => {
+        if (signal?.aborted) return;
+        setAnomalies([]);
+        setKpis(EMPTY_AUDIT_KPIS);
+        setTendance([]);
+        setError(e instanceof Error ? e.message : "Service d'audit indisponible");
+      })
+      .finally(() => {
+        if (!signal?.aborted) setIsLoading(false);
+      });
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void chargerDonnees(controller.signal);
+    return () => controller.abort();
+  }, [chargerDonnees, reloadKey]);
+
+  const now = Date.now();
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     const maxAge = (periodDays[periode] ?? 30) * 86_400_000;
-    return rowsState.filter((a) => {
+    return anomalies.filter((a) => {
       if (a.score < seuil) return false;
       if (now - new Date(a.date).getTime() > maxAge) return false;
       if (examen !== "tous" && a.typeExamen !== examen) return false;
@@ -232,14 +268,15 @@ function FraudAuditModule() {
         return false;
       return true;
     });
-  }, [rowsState, seuil, niveau, examen, periode, query, now]);
+  }, [anomalies, seuil, niveau, examen, periode, query, now]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const current = Math.min(page, pageCount);
   const rows = filtered.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE);
 
-  const enAttente = rowsState.filter((a) => a.statut === "pending" && a.score >= seuil).length;
+  const enAttente = anomalies.filter((a) => a.statut === "pending" && a.score >= seuil).length;
   const montantEnJeu = filtered.reduce((s, a) => s + (a.montant - a.bareme), 0);
+  const confirmees = anomalies.filter((a) => a.statut === "confirmed");
 
   const hasActiveFilters =
     query.trim() !== "" || niveau !== "tous" || examen !== "tous" || periode !== "30";
@@ -253,16 +290,29 @@ function FraudAuditModule() {
   };
 
   const setStatut = (id: string, statut: StatutAnomalie) => {
-    setAnomalieStatut(id, statut);
-    if (statut === "confirmed") {
-      toast.success(`${id} confirmée comme fraude — envoyée au réentraînement supervisé`);
-    } else {
-      toast(`${id} marquée conforme (faux positif enregistré)`);
-    }
+    if (statut !== "confirmed" && statut !== "dismissed") return;
+    updateAnomalieStatut(id, statut)
+      .then(() => {
+        setAnomalies((prev) => prev.map((a) => (a.id === id ? { ...a, statut } : a)));
+        if (statut === "confirmed") {
+          toast.success(`${id} confirmée comme fraude — envoyée au réentraînement supervisé`);
+        } else {
+          toast(`${id} marquée conforme (faux positif enregistré)`);
+        }
+      })
+      .catch((e: unknown) => {
+        toast.error("Mise à jour impossible", {
+          description: e instanceof Error ? e.message : "Erreur réseau",
+        });
+      });
   };
 
   const exportCsv = () => {
     const source = confirmees.length > 0 ? confirmees : filtered;
+    if (source.length === 0) {
+      toast.error("Aucune donnée à exporter");
+      return;
+    }
     const header = [
       "id_dossier",
       "patient",
@@ -313,9 +363,12 @@ function FraudAuditModule() {
   };
 
   const exportPdf = () => {
-    toast.success(
-      `Dossier PDF préparé pour le cabinet comptable — ${confirmees.length || filtered.length} anomalie(s)`,
-    );
+    const source = confirmees.length > 0 ? confirmees : filtered;
+    if (source.length === 0) {
+      toast.error("Aucune donnée à exporter");
+      return;
+    }
+    toast.success(`Dossier PDF préparé pour le cabinet comptable — ${source.length} anomalie(s)`);
     window.print();
   };
 
@@ -350,9 +403,23 @@ function FraudAuditModule() {
         }
       />
 
+      {error ? (
+        <Card className="border-destructive/40">
+          <CardContent className="flex flex-wrap items-center gap-3 p-5 text-sm">
+            <AlertTriangle className="size-5 shrink-0 text-destructive" />
+            <span className="min-w-0 flex-1">
+              Le service d'audit est injoignable ({error}).
+            </span>
+            <Button variant="outline" size="sm" onClick={() => setReloadKey((k) => k + 1)}>
+              <RefreshCw className="mr-2 size-4" /> Réessayer
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
+
       <FraudDashboard sensitivity={seuil} />
 
-      <div data-tour="audit-kpis" className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-4 lg:grid-cols-3">
         <Card>
           <CardContent className="flex items-start gap-4 p-5">
             <IconTile tone="primary">
@@ -362,12 +429,19 @@ function FraudAuditModule() {
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Dossiers analysés (30 j)
               </p>
-              <p className="mt-1 text-2xl font-bold tracking-tight">
-                {auditKpis.dossiersAnalyses.toLocaleString("fr-MA")}
-              </p>
-              <p className="mt-1 text-xs text-success">
-                +{auditKpis.dossiersAnalysesDelta}% vs période précédente
-              </p>
+              {isLoading ? (
+                <Skeleton className="mt-2 h-7 w-16" />
+              ) : (
+                <>
+                  <p className="mt-1 text-2xl font-bold tracking-tight">
+                    {kpis.dossiersAnalyses.toLocaleString("fr-MA")}
+                  </p>
+                  <p className="mt-1 text-xs text-success">
+                    {kpis.dossiersAnalysesDelta >= 0 ? "+" : ""}
+                    {kpis.dossiersAnalysesDelta}% vs période précédente
+                  </p>
+                </>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -404,18 +478,25 @@ function FraudAuditModule() {
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Taux de conformité
               </p>
-              <p className="mt-1 text-2xl font-bold tracking-tight text-success">
-                {auditKpis.tauxConformite}%
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                +{auditKpis.tauxConformiteDelta} pt sur 30 jours
-              </p>
+              {isLoading ? (
+                <Skeleton className="mt-2 h-7 w-16" />
+              ) : (
+                <>
+                  <p className="mt-1 text-2xl font-bold tracking-tight text-success">
+                    {kpis.tauxConformite}%
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {kpis.tauxConformiteDelta >= 0 ? "+" : ""}
+                    {kpis.tauxConformiteDelta} pt sur 30 jours
+                  </p>
+                </>
+              )}
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <div data-tour="audit-cluster" className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader className="flex-row items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-base">
@@ -424,50 +505,53 @@ function FraudAuditModule() {
             <p className="text-xs text-muted-foreground">8 dernières semaines</p>
           </CardHeader>
           <CardContent className="h-[180px] pr-4">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart
-                data={tendanceAnomalies}
-                margin={{ top: 5, right: 8, bottom: 0, left: -20 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                <XAxis
-                  dataKey="semaine"
-                  tickLine={false}
-                  axisLine={false}
-                  tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
-                />
-                <YAxis
-                  tickLine={false}
-                  axisLine={false}
-                  tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
-                />
-                <ReTooltip
-                  contentStyle={{
-                    background: "var(--card)",
-                    border: "1px solid var(--border)",
-                    borderRadius: 12,
-                    fontSize: 12,
-                  }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="anomalies"
-                  name="Anomalies"
-                  stroke="var(--primary)"
-                  strokeWidth={2.5}
-                  dot={{ r: 3 }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="confirmees"
-                  name="Confirmées"
-                  stroke="var(--destructive)"
-                  strokeWidth={2}
-                  strokeDasharray="4 4"
-                  dot={false}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            {isLoading ? (
+              <Skeleton className="h-full w-full" />
+            ) : tendance.length === 0 ? (
+              <EmptyState icon={TrendingUp} title="Aucune donnée disponible" compact />
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={tendance} margin={{ top: 5, right: 8, bottom: 0, left: -20 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                  <XAxis
+                    dataKey="semaine"
+                    tickLine={false}
+                    axisLine={false}
+                    tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
+                  />
+                  <YAxis
+                    tickLine={false}
+                    axisLine={false}
+                    tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
+                  />
+                  <ReTooltip
+                    contentStyle={{
+                      background: "var(--card)",
+                      border: "1px solid var(--border)",
+                      borderRadius: 12,
+                      fontSize: 12,
+                    }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="anomalies"
+                    name="Anomalies"
+                    stroke="var(--primary)"
+                    strokeWidth={2.5}
+                    dot={{ r: 3 }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="confirmees"
+                    name="Confirmées"
+                    stroke="var(--destructive)"
+                    strokeWidth={2}
+                    strokeDasharray="4 4"
+                    dot={false}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
 
@@ -597,110 +681,128 @@ function FraudAuditModule() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {rows.map((a) => (
-                  <TableRow key={a.id} className={a.statut !== "pending" ? "opacity-60" : ""}>
-                    <TableCell className="pl-6">
-                      <p className="font-mono text-xs font-semibold">{a.id}</p>
-                      <p className="text-sm font-medium">{a.patient}</p>
-                      <p className="text-xs text-muted-foreground">CIN {a.cin}</p>
-                    </TableCell>
-                    <TableCell>
-                      <p className="text-sm">{a.acte}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {a.typeExamen} ·{" "}
-                        {new Date(a.date).toLocaleDateString("fr-MA", {
-                          day: "2-digit",
-                          month: "short",
-                          year: "numeric",
-                        })}
-                      </p>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <p className="text-sm font-semibold">{formatMAD(a.montant)}</p>
-                      <p className="text-xs text-muted-foreground">barème {formatMAD(a.bareme)}</p>
-                    </TableCell>
-                    <TableCell>
-                      <ScoreMeter score={a.score} />
-                    </TableCell>
-                    <TableCell className="max-w-[200px]">
-                      <div className="flex flex-wrap gap-1.5">
-                        {a.motifs.map((m) => (
-                          <Pill key={m} tone={riskTone(a.score)}>
-                            {m}
-                          </Pill>
-                        ))}
-                      </div>
-                      <p className="mt-1 text-[11px] text-muted-foreground">{a.cluster}</p>
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-1.5 border-primary/25 bg-primary/5 font-semibold text-primary shadow-sm transition-shadow hover:bg-primary/10 hover:shadow-md"
-                        onClick={() => telechargerDossierPdf(dossierAnomalie(a))}
-                      >
-                        <FileDown className="size-4" />
-                        Télécharger (PDF)
-                      </Button>
-                    </TableCell>
-                    <TableCell className="pr-6">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={a.statut === "confirmed"}
-                          onClick={() => setStatut(a.id, "confirmed")}
-                        >
-                          <ShieldAlert className="mr-1.5 size-4 text-destructive" />
-                          Valider l'anomalie
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          disabled={a.statut === "dismissed"}
-                          onClick={() => setStatut(a.id, "dismissed")}
-                        >
-                          <Ban className="mr-1.5 size-4" />
-                          Normal
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          aria-label={`Ouvrir le dossier complet ${a.id}`}
-                          onClick={() => setDetail(a)}
-                        >
-                          <ExternalLink className="size-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {rows.length === 0 ? (
-                  <TableRow className="hover:bg-transparent">
-                    <TableCell colSpan={7} className="p-0">
-                      <EmptyState
-                        icon={hasActiveFilters ? SearchX : ShieldCheck}
-                        title={
-                          hasActiveFilters
-                            ? "Aucun dossier ne correspond aux filtres"
-                            : "Aucune anomalie au-dessus du seuil"
-                        }
-                        description={
-                          hasActiveFilters
-                            ? `Aucun dossier au-dessus de ${seuil} % avec ces critères. Élargissez la période ou abaissez le seuil de sensibilité.`
-                            : `Le moteur de clustering ne signale aucun dossier au-delà de ${seuil} % de risque sur la période analysée.`
-                        }
-                        action={
-                          hasActiveFilters ? (
-                            <Button variant="outline" size="sm" onClick={resetFilters}>
-                              Réinitialiser les filtres
+                {isLoading ? (
+                  Array.from({ length: 3 }).map((_, i) => (
+                    <TableRow key={i}>
+                      <TableCell colSpan={7} className="p-4">
+                        <Skeleton className="h-10 w-full" />
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <>
+                    {rows.map((a) => (
+                      <TableRow key={a.id} className={a.statut !== "pending" ? "opacity-60" : ""}>
+                        <TableCell className="pl-6">
+                          <p className="font-mono text-xs font-semibold">{a.id}</p>
+                          <p className="text-sm font-medium">{a.patient}</p>
+                          <p className="text-xs text-muted-foreground">CIN {a.cin}</p>
+                        </TableCell>
+                        <TableCell>
+                          <p className="text-sm">{a.acte}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {a.typeExamen} ·{" "}
+                            {new Date(a.date).toLocaleDateString("fr-MA", {
+                              day: "2-digit",
+                              month: "short",
+                              year: "numeric",
+                            })}
+                          </p>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <p className="text-sm font-semibold">{formatMAD(a.montant)}</p>
+                          <p className="text-xs text-muted-foreground">
+                            barème {formatMAD(a.bareme)}
+                          </p>
+                        </TableCell>
+                        <TableCell>
+                          <ScoreMeter score={a.score} />
+                        </TableCell>
+                        <TableCell className="max-w-[200px]">
+                          <div className="flex flex-wrap gap-1.5">
+                            {a.motifs.map((m) => (
+                              <Pill key={m} tone={riskTone(a.score)}>
+                                {m}
+                              </Pill>
+                            ))}
+                          </div>
+                          <p className="mt-1 text-[11px] text-muted-foreground">{a.cluster}</p>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1.5 border-primary/25 bg-primary/5 font-semibold text-primary shadow-sm transition-shadow hover:bg-primary/10 hover:shadow-md"
+                            onClick={() => telechargerDossierPdf(dossierAnomalie(a))}
+                          >
+                            <FileDown className="size-4" />
+                            Télécharger (PDF)
+                          </Button>
+                        </TableCell>
+                        <TableCell className="pr-6">
+                          <div className="flex items-center justify-end gap-1.5">
+                            {profile.canValiderAnomalie ? (
+                              <>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  disabled={a.statut === "confirmed"}
+                                  onClick={() => setStatut(a.id, "confirmed")}
+                                >
+                                  <ShieldAlert className="mr-1.5 size-4 text-destructive" />
+                                  Valider l'anomalie
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  disabled={a.statut === "dismissed"}
+                                  onClick={() => setStatut(a.id, "dismissed")}
+                                >
+                                  <Ban className="mr-1.5 size-4" />
+                                  Normal
+                                </Button>
+                              </>
+                            ) : null}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              aria-label={`Ouvrir le dossier complet ${a.id}`}
+                              onClick={() => setDetail(a)}
+                            >
+                              <ExternalLink className="size-4" />
                             </Button>
-                          ) : null
-                        }
-                      />
-                    </TableCell>
-                  </TableRow>
-                ) : null}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {rows.length === 0 ? (
+                      <TableRow className="hover:bg-transparent">
+                        <TableCell colSpan={7} className="p-0">
+                          <EmptyState
+                            icon={hasActiveFilters ? SearchX : ShieldCheck}
+                            title={
+                              hasActiveFilters
+                                ? "Aucun dossier ne correspond aux filtres"
+                                : "Aucune donnée disponible"
+                            }
+                            description={
+                              hasActiveFilters
+                                ? `Aucun dossier au-dessus de ${seuil} % avec ces critères. Élargissez la période ou abaissez le seuil de sensibilité.`
+                                : `Le moteur de clustering ne signale aucun dossier au-delà de ${seuil} % de risque sur la période analysée.`
+                            }
+                            action={
+                              hasActiveFilters ? (
+                                <Button variant="outline" size="sm" onClick={resetFilters}>
+                                  Réinitialiser les filtres
+                                </Button>
+                              ) : null
+                            }
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ) : null}
+                  </>
+                )}
               </TableBody>
             </Table>
           </div>
