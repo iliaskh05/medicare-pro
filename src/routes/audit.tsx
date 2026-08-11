@@ -10,6 +10,7 @@ import {
   ExternalLink,
   FileText,
   Gauge,
+  Lock,
   ShieldAlert,
   ShieldCheck,
   Search,
@@ -66,6 +67,7 @@ import {
 } from "@/components/ui/table";
 import { PageHeader, Pill, IconTile, EmptyState, SimulationNotice } from "@/components/ui-kit";
 import { useRole } from "@/hooks/use-role";
+import { FraudDashboard } from "@/components/fraude/fraud-dashboard";
 import { telechargerDossierPdf } from "@/lib/pdf-export";
 import { formatMAD } from "@/data/mock";
 import {
@@ -168,7 +170,32 @@ function dossierAnomalie(a: Anomalie) {
   };
 }
 
+/**
+ * Rendu conditionnel strict : hors profil Directeur, le module de détection de
+ * fraude / analyse IA n'est pas monté dans le DOM (aucun masquage CSS).
+ */
 function AuditPage() {
+  const { profile } = useRole();
+  if (!profile.canSeeFraudModule) return <AccesRestreint />;
+  return <FraudAuditModule />;
+}
+
+function AccesRestreint() {
+  return (
+    <div className="mx-auto max-w-lg py-16 text-center">
+      <IconTile tone="destructive" className="mx-auto">
+        <Lock className="size-5" />
+      </IconTile>
+      <h1 className="mt-4 text-xl font-bold tracking-tight">Module réservé à la direction</h1>
+      <p className="mt-2 text-sm text-muted-foreground">
+        La détection de fraude et l'analyse IA des règlements sont accessibles uniquement au
+        Directeur (Mr Adnane). Contactez la direction pour toute demande d'accès.
+      </p>
+    </div>
+  );
+}
+
+function FraudAuditModule() {
   const { profile } = useRole();
   const {
     anomalies: rowsState,
@@ -287,7 +314,7 @@ function AuditPage() {
     toast.success(
       `Dossier PDF préparé pour le cabinet comptable — ${confirmees.length || filtered.length} anomalie(s)`,
     );
-    setTimeout(() => window.print(), 250);
+    window.print();
   };
 
   return (
@@ -320,6 +347,8 @@ function AuditPage() {
           )
         }
       />
+
+      <FraudDashboard sensitivity={seuil} />
 
       <div data-tour="audit-kpis" className="grid gap-4 lg:grid-cols-3">
         <Card>
