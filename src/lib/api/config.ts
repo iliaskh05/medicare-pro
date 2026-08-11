@@ -57,13 +57,22 @@ function authHeaders(): Record<string, string> {
  * à cet endroit.
  */
 export async function httpRequest<T>(
-  base: string,
+  base: string | undefined,
   path: string,
   { method = "GET", body, headers, signal }: RequestOptions = {},
 ): Promise<T> {
+  if (!base) {
+    throw new ApiError(
+      "Service de données non configuré sur ce poste.",
+      0,
+      "backend_not_configured",
+    );
+  }
+
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
   signal?.addEventListener("abort", () => controller.abort());
+
 
   try {
     const res = await fetch(`${base}${path}`, {
