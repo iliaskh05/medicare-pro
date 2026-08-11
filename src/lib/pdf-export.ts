@@ -1,5 +1,5 @@
 /**
- * Génère un dossier PDF imprimable (démo) : ouvre un aperçu propre
+ * Génère un dossier PDF imprimable   : ouvre un aperçu propre
  * dans une nouvelle fenêtre puis déclenche l'impression / export PDF.
  */
 export type DossierPdf = {

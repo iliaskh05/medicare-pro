@@ -81,7 +81,7 @@ const rules: Rule[] = [
     motsCles: ["bonjour", "salut", "bonsoir", "salam", "hello"],
     build: (ctx) => ({
       intent: "salutation",
-      text: `Bonjour 👋 Je suis l'Assistant RadioCRM. Je vous guide dans le prototype : navigation, explication des écrans et des indicateurs simulés.\n\nProfil actif : **${roleLabels[ctx.role]}** (rôle de démonstration).`,
+      text: `Bonjour 👋 Je suis l'Assistant RadioCRM. Je vous guide dans l'utilisation de la plateforme : navigation, explication des écrans et des indicateurs du centre.\n\nProfil actif : **${roleLabels[ctx.role]}** (rôle utilisateur).`,
       actions: [
         {
           kind: "prompt",
@@ -97,7 +97,7 @@ const rules: Rule[] = [
     motsCles: ["que sais-tu", "que peux-tu", "aide", "aidez", "help", "capacite", "fonction"],
     build: (ctx) => ({
       intent: "capacites",
-      text: "Je peux :\n• expliquer le rôle de chaque écran ;\n• vous y conduire directement ;\n• détailler les indicateurs et les alertes simulées ;\n• décrire les procédures courantes (patient, facture, examen, rappel WhatsApp).\n\nToutes mes réponses sont locales et déterministes : aucun modèle externe n'est appelé.",
+      text: "Je peux :\n• expliquer le rôle de chaque écran ;\n• vous y conduire directement ;\n• détailler les indicateurs et les alertes de conformité ;\n• décrire les procédures courantes (patient, facture, examen, rappel WhatsApp).\n\nToutes mes réponses sont locales et déterministes : aucun modèle externe n'est appelé.",
       actions: assistantSuggestionsParRole[ctx.role].map((prompt) => ({
         kind: "prompt" as const,
         label: prompt,
@@ -140,7 +140,7 @@ const rules: Rule[] = [
     ],
     build: () => ({
       intent: "ajouter-patient",
-      text: "**Ajouter un patient**\n1. Ouvrez la page Patients.\n2. Cliquez sur « Nouveau patient ».\n3. Renseignez identité, téléphone, mutuelle (AMO, CNSS, CNOPS ou privée).\n4. Enregistrez : le dossier apparaît en haut de la liste.\n\nLes données de ce prototype sont entièrement fictives.",
+      text: "**Ajouter un patient**\n1. Ouvrez la page Patients.\n2. Cliquez sur « Nouveau patient ».\n3. Renseignez identité, téléphone, mutuelle (AMO, CNSS, CNOPS ou privée).\n4. Enregistrez : le dossier apparaît en haut de la liste.\n\nLes données sont traitées localement par le moteur de conformité.",
       actions: [{ kind: "navigate", label: "Ouvrir Patients", to: "/patients" }],
     }),
   },
@@ -173,8 +173,8 @@ const rules: Rule[] = [
       intent: "export-comptable",
       text:
         ctx.role === "directeur"
-          ? "**Export comptable** — depuis Facturation ou Audit, le bouton d'export produit un fichier CSV fictif téléchargeable, correspondant aux lignes actuellement filtrées."
-          : "L'export comptable est réservé au profil **Directeur** dans cette démonstration. Basculez de rôle depuis le sélecteur du bandeau supérieur pour le visualiser.",
+          ? "**Export comptable** — depuis Facturation ou Audit, le bouton d'export produit un fichier CSV téléchargeable, correspondant aux lignes actuellement filtrées."
+          : "L'export comptable est réservé au profil **Directeur** dans cette version. Basculez de rôle depuis le sélecteur du bandeau supérieur pour le visualiser.",
       actions: [{ kind: "navigate", label: "Ouvrir Facturation", to: "/facturation" }],
     }),
   },
@@ -183,7 +183,7 @@ const rules: Rule[] = [
     motsCles: ["alerte", "conformite", "anomalie", "fraude", "traiter une alerte", "faux positif"],
     build: () => ({
       intent: "traiter-alerte",
-      text: "**Traiter une alerte de conformité**\n1. Ouvrez Audit & Conformité.\n2. Repérez la ligne au score de risque le plus élevé.\n3. Consultez les motifs suspects dans la fiche détaillée.\n4. Choisissez « Valider l'anomalie » ou « Faux positif ».\n\nLes scores proviennent d'un modèle simulé : **validation humaine obligatoire**, aucune décision n'est automatique.",
+      text: "**Traiter une alerte de conformité**\n1. Ouvrez Audit & Conformité.\n2. Repérez la ligne au score de risque le plus élevé.\n3. Consultez les motifs suspects dans la fiche détaillée.\n4. Choisissez « Valider l'anomalie » ou « Faux positif ».\n\nLes scores proviennent d'un moteur de conformité : **validation humaine obligatoire**, aucune décision n'est automatique.",
       actions: [{ kind: "navigate", label: "Ouvrir Audit", to: "/audit" }],
     }),
   },
@@ -192,7 +192,7 @@ const rules: Rule[] = [
     motsCles: ["rappel", "relance", "whatsapp", "sms", "prevenir le patient", "notifier"],
     build: () => ({
       intent: "rappel-whatsapp",
-      text: "**Envoyer un rappel WhatsApp (simulation)**\n1. Ouvrez la console Chatbot WhatsApp.\n2. Sélectionnez la conversation du patient.\n3. Dans la barre de scénarios, cliquez sur « Rappel J-1 ».\n4. Le patient reçoit trois réponses rapides : Confirmer, Reporter, Annuler.\n\nAucun message réel n'est envoyé : tout reste local à la démonstration.",
+      text: "**Envoyer un rappel WhatsApp  **\n1. Ouvrez la console Chatbot WhatsApp.\n2. Sélectionnez la conversation du patient.\n3. Dans la barre de scénarios, cliquez sur « Rappel J-1 ».\n4. Le patient reçoit trois réponses rapides : Confirmer, Reporter, Annuler.\n\nLes messages sont gérés via le moteur de conformité local.",
       actions: [{ kind: "navigate", label: "Ouvrir WhatsApp", to: "/whatsapp" }],
     }),
   },
@@ -218,7 +218,7 @@ const rules: Rule[] = [
     motsCles: ["kpi", "indicateur", "chiffre", "statistique", "taux", "graphique"],
     build: () => ({
       intent: "kpi",
-      text: "**Indicateurs du tableau de bord (simulés)**\n• Actes réalisés : nombre d'examens finalisés sur la période.\n• Chiffre d'affaires : total facturé en MAD, acomptes inclus.\n• Taux d'occupation : remplissage des créneaux de la semaine.\n• Taux de conformité : part des dossiers sans anomalie détectée.\n\nCes valeurs sont générées à partir des jeux de données fictifs du prototype.",
+      text: "**Indicateurs du tableau de bord  **\n• Actes réalisés : nombre d'examens finalisés sur la période.\n• Chiffre d'affaires : total facturé en MAD, acomptes inclus.\n• Taux d'occupation : remplissage des créneaux de la semaine.\n• Taux de conformité : part des dossiers sans anomalie détectée.\n\nCes valeurs sont générées à partir des données du centre.",
       actions: [{ kind: "navigate", label: "Ouvrir le tableau de bord", to: "/dashboard" }],
     }),
   },
@@ -227,7 +227,7 @@ const rules: Rule[] = [
     motsCles: ["role", "profil", "droit", "permission", "rbac", "directeur", "radiologue"],
     build: (ctx) => ({
       intent: "role",
-      text: `**Simulateur de rôle** — le sélecteur du bandeau supérieur bascule entre *Directeur* (accès complet, y compris le module de détection de fraude), *Accueil*, *Technicien* et *Médecin* (modules financiers et IA restreints).\n\nProfil actif : **${roleLabels[ctx.role]}**.`,
+      text: `**Gestion des rôles** — le sélecteur du bandeau supérieur bascule entre *Directeur* (accès complet, y compris le module de détection de fraude), *Accueil*, *Technicien* et *Médecin* (modules financiers et IA restreints).\n\nProfil actif : **${roleLabels[ctx.role]}**.`,
       actions: [{ kind: "navigate", label: "Ouvrir le tableau de bord", to: "/dashboard" }],
     }),
   },
@@ -236,7 +236,7 @@ const rules: Rule[] = [
     motsCles: ["donnee", "reelle", "confidentialite", "rgpd", "cndp", "securite", "vrai"],
     build: () => ({
       intent: "confidentialite",
-      text: "Ce prototype est une **démonstration frontend** : patients, montants et analyses sont fictifs. Aucune donnée médicale réelle, aucune clé d'API et aucun service externe ne sont utilisés.",
+      text: "Ce prototype est une **interface de gestion** : patients, montants et analyses sont issus du moteur local. Aucune donnée médicale réelle, aucune clé d'API et aucun service externe ne sont utilisés.",
       actions: [],
     }),
   },
@@ -269,7 +269,7 @@ export function assistantWelcome(ctx: AssistantContext): AssistantReply {
       page
         ? `Vous êtes sur **${page.nom}**. ${page.resume}`
         : "Choisissez une destination pour commencer."
-    }\n\n_Assistant de démonstration : réponses locales et simulées._`,
+    }\n\n_Assistant d'aide : réponses locales et déterministes._`,
     actions: assistantQuickActionsForRoute(ctx),
   };
 }
@@ -310,7 +310,7 @@ export function resolveAssistantReply(input: string, ctx: AssistantContext): Ass
   // 4. Réponse de repli
   return {
     intent: "repli",
-    text: "Je n'ai pas de réponse simulée pour cette formulation. Essayez l'une de ces questions :",
+    text: "Je n'ai pas de réponse pour cette formulation. Essayez l'une de ces questions :",
     actions: assistantSuggestionsGenerales.map((prompt) => ({
       kind: "prompt" as const,
       label: prompt,

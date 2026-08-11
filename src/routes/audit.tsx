@@ -209,7 +209,7 @@ function FraudAuditModule() {
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
 
-  const [seuil, setSeuil] = useState(RISK_THRESHOLDS.eleve);
+  const [seuil, setSeuil] = useState<number>(RISK_THRESHOLDS.eleve);
   const [query, setQuery] = useState("");
   const [niveau, setNiveau] = useState("tous");
   const [examen, setExamen] = useState("tous");

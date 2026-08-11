@@ -14,7 +14,7 @@ import {
   type AssistantContext,
 } from "@/lib/assistant-engine";
 
-const STORAGE_KEY = "radiocrm.assistant.demo";
+const STORAGE_KEY = "radiocrm.assistant.session";
 
 function heure() {
   return new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
@@ -46,7 +46,7 @@ export function PlatformAssistant() {
     setActions(welcome.actions);
   }, [ctx, nextId]);
 
-  // Restauration de la conversation de démonstration (sessionStorage uniquement).
+  // Restauration de la session de conversation (sessionStorage uniquement).
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
@@ -71,7 +71,7 @@ export function PlatformAssistant() {
     try {
       window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
     } catch {
-      /* quota indisponible : la démo fonctionne sans persistance */
+      /* quota indisponible : l'assistant fonctionne sans persistance */
     }
   }, [messages, hydrated]);
 
@@ -143,7 +143,7 @@ export function PlatformAssistant() {
     setTyping(false);
     seq.current = 0;
     bootstrap();
-    toast.success("Démonstration de l'assistant réinitialisée.");
+    toast.success("Conversation effacée.");
   }, [bootstrap]);
 
   if (!open) {

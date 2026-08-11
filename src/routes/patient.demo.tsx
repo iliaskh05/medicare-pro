@@ -334,19 +334,31 @@ function RiskDonut({ value, blocked }: { value: number; blocked: boolean }) {
 /* --------------------------------- La page -------------------------------- */
 
 function PatientRecordPage() {
-  const [alertes, setAlertes] = useState<Alerte[]>(alertesInitiales);
+  const [alertes, setAlertes] = useState<Anomalie[]>([]);
   const [blocked, setBlocked] = useState(false);
   const [solde, setSolde] = useState(dossierFinancier.reste);
   const { profile, role } = useRole();
 
-  const score = blocked ? 0.12 : alertes.length === 0 ? 0.18 : 0.92;
+  // Alertes de conformité du dossier : chargées depuis le backend, aucun jeu local.
+  useEffect(() => {
+    if (role !== "directeur") return;
+    const controller = new AbortController();
+    fetchAnomalies(controller.signal)
+      .then((rows) => setAlertes(rows.filter((a) => a.statut === "pending")))
+      .catch(() => setAlertes([]));
+    return () => controller.abort();
+  }, [role]);
 
-  const dismiss = (a: Alerte) => {
+  const scoreMax = alertes.reduce((max, a) => Math.max(max, a.score), 0);
+  const score = blocked ? 0 : scoreMax / 100;
+
+  const dismiss = useCallback((a: Anomalie) => {
     setAlertes((prev) => prev.filter((x) => x.id !== a.id));
-    toast.info("Alerte classée en faux positif", {
-      description: `${a.id} · ${a.titre} — le modèle a été mis à jour pour l'apprentissage.`,
+    void updateAnomalieStatut(a.id, "dismissed").catch(() => undefined);
+    toast.info("Anomalie classée en faux positif", {
+      description: `${a.id} · ${a.acte}`,
     });
-  };
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -740,8 +752,16 @@ function PatientRecordPage() {
                   <div className="grid grid-cols-3 gap-2 text-center">
                     {[
                       { label: "Alertes", value: String(alertes.length) },
-                      { label: "Clusters", value: "3" },
-                      { label: "Enjeu", value: "2,6 k" },
+                      {
+                        label: "Clusters",
+                        value: String(new Set(alertes.map((a) => a.cluster)).size),
+                      },
+                      {
+                        label: "Écart",
+                        value: mad(
+                          alertes.reduce((sum, a) => sum + Math.max(0, a.montant - a.bareme), 0),
+                        ),
+                      },
                     ].map((k) => (
                       <div key={k.label} className="rounded-xl bg-muted/60 px-2 py-2.5">
                         <p className="text-base font-bold tabular-nums leading-none">{k.value}</p>
@@ -841,7 +861,7 @@ function PatientRecordPage() {
                     />
                   ) : (
                     alertes.map((a) => {
-                      const m = severiteMeta[a.severite];
+                      const m = severiteMeta[anomalyRiskLevel(a.score) as Severite];
                       return (
                         <div
                           key={a.id}
@@ -854,23 +874,23 @@ function PatientRecordPage() {
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex min-w-0 items-center gap-2">
                               <AlertTriangle className={cn("size-4 shrink-0", m.text)} />
-                              <p className="text-sm font-bold leading-snug">{a.titre}</p>
+                              <p className="text-sm font-bold leading-snug">{a.acte}</p>
                             </div>
                             <Pill tone={m.tone} className="shrink-0">
                               {m.label}
                             </Pill>
                           </div>
                           <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                            {a.detail}
+                            {a.patient} · {a.motifs.join(" · ")}
                           </p>
                           <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
                             <span className="inline-flex items-center gap-1 font-medium">
                               <Brain className="size-3" /> {a.cluster}
                             </span>
                             <span className="font-semibold tabular-nums">
-                              Confiance {Math.round(a.confiance * 100)} %
+                              Score {Math.round(a.score)} %
                             </span>
-                            <span>Impact : {a.impact}</span>
+                            <span>Écart barème : {mad(Math.max(0, a.montant - a.bareme))}</span>
                           </div>
                           <div className="mt-3 flex flex-wrap gap-2">
                             <ActionButton
@@ -878,7 +898,7 @@ function PatientRecordPage() {
                               variant="outline"
                               toastKind="warning"
                               toastMessage="Anomalie transmise au contrôle facturation"
-                              toastDescription={`${a.id} · ${a.titre}`}
+                              toastDescription={`${a.id} · ${a.acte}`}
                             >
                               <ShieldAlert className="mr-1.5 size-4" /> Investiguer
                             </ActionButton>

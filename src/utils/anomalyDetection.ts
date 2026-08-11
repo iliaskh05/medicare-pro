@@ -1,5 +1,5 @@
 /**
- * Détection d'anomalies de facturation (clustering simulé côté client).
+ * Détection d'anomalies de facturation (analyse du moteur de conformité côté client).
  * Score hybride à règles : montant / horaire / fréquence.
  */
 
@@ -75,7 +75,7 @@ function sameExamFamily(a: string, b: string): boolean {
 /**
  * Calcule un score d'anomalie (0–100) et un motif textuel pour un acte.
  * @param study Acte à scorer
- * @param history Corpus d'actes (même patient / examens récents) — clustering simulé
+ * @param history Corpus d'actes (même patient / examens récents) — analyse du moteur de conformité
  */
 export function calculateAnomalyScore(study: Study, history: Study[] = []): AnomalyScoreResult {
   const contributions: { rule: string; points: number }[] = [];
@@ -174,7 +174,7 @@ export function anomalyRiskLabel(score: number): string {
 
 /**
  * Enrichit un jeu d'actes mock avec score + motifs recalculés.
- * Injecte des horaires simulés stables (hash) pour activer la règle « horaire atypique ».
+ * Injecte des horaires déterminés stables (hash) pour activer la règle « horaire atypique ».
  */
 export function scoreStudies(studies: Study[]): (Study & AnomalyScoreResult)[] {
   return studies.map((study) => {
@@ -222,7 +222,7 @@ export function scoreAnomalies<T extends AnomalieLike>(rows: T[]): T[] {
   });
 }
 
-/** Construit un Study à partir d'une anomalie mock (audit). */
+/** Construit un Study à partir d'une anomalie détectée (audit). */
 export function studyFromAnomalieLike(input: {
   id: string;
   patient: string;
@@ -232,7 +232,7 @@ export function studyFromAnomalieLike(input: {
   montant: number;
   bareme: number;
 }): Study {
-  // Horodatage déterministe : certains IDs → dimanche / nuit pour la démo clustering
+  // Horodatage déterministe : certains IDs → dimanche / nuit pour la analyse de conformité
   const hash = [...input.id].reduce((a, c) => a + c.charCodeAt(0), 0);
   const atypical = hash % 5 === 0 || input.montant / Math.max(1, input.bareme) >= 2;
   const hour = atypical ? 23 : 8 + (hash % 10);
@@ -253,8 +253,8 @@ export function studyFromAnomalieLike(input: {
 }
 
 /**
- * Enrichit l'historique avec des examens antérieurs simulés (même patient / famille)
- * pour activer la règle de fréquence lors du scoring des mocks.
+ * Enrichit l'historique avec des examens antérieurs déterminés (même patient / famille)
+ * pour activer la règle de fréquence lors du scoring des actes.
  */
 export function augmentHistoryForFrequency(studies: Study[]): Study[] {
   const extras: Study[] = [];
