@@ -29,7 +29,8 @@ export const channels: ChannelMeta[] = [
   },
 ];
 
-const iso = (minutesAgo: number) => new Date(Date.now() - minutesAgo * 60_000).toISOString();
+/** Horodatages fixes : évite tout écart d'hydratation entre serveur et client. */
+const iso = (heure: string) => `2026-08-11T${heure}:00+01:00`;
 
 /** Historique local affiché tant que l'API Java n'est pas branchée. */
 export const seedMessagesByChannel: Record<ChannelId, ChatMessageDto[]> = {
@@ -41,7 +42,7 @@ export const seedMessagesByChannel: Record<ChannelId, ChatMessageDto[]> = {
       authorName: "Souad Bahri",
       authorRole: "Accueil",
       body: "Bonjour Docteur, Mme Idrissi est arrivée pour son IRM lombaire de 11h.",
-      createdAt: iso(52),
+      createdAt: iso("09:12"),
     },
     {
       id: "am-2",
@@ -50,7 +51,7 @@ export const seedMessagesByChannel: Record<ChannelId, ChatMessageDto[]> = {
       authorName: "Dr. Naima Skalli",
       authorRole: "Médecin",
       body: "Merci, vérifiez la clairance rénale avant injection s'il vous plaît.",
-      createdAt: iso(48),
+      createdAt: iso("09:18"),
     },
     {
       id: "am-3",
@@ -59,7 +60,7 @@ export const seedMessagesByChannel: Record<ChannelId, ChatMessageDto[]> = {
       authorName: "Souad Bahri",
       authorRole: "Accueil",
       body: "Bilan biologique reçu du laboratoire.",
-      createdAt: iso(44),
+      createdAt: iso("09:26"),
       attachment: { kind: "file", name: "Bilan_biologique_Idrissi.pdf", size: "212 Ko" },
     },
   ],
@@ -71,7 +72,7 @@ export const seedMessagesByChannel: Record<ChannelId, ChatMessageDto[]> = {
       authorName: "Hassan El Fassi",
       authorRole: "Technicien",
       body: "Série T2 FLAIR reprise, artefacts de mouvement corrigés.",
-      createdAt: iso(35),
+      createdAt: iso("10:05"),
     },
     {
       id: "tm-2",
@@ -80,7 +81,7 @@ export const seedMessagesByChannel: Record<ChannelId, ChatMessageDto[]> = {
       authorName: "Dr. Anas Kettani",
       authorRole: "Médecin",
       body: "Parfait, je relis la série dans la console de lecture.",
-      createdAt: iso(31),
+      createdAt: iso("10:12"),
     },
     {
       id: "tm-3",
@@ -89,7 +90,7 @@ export const seedMessagesByChannel: Record<ChannelId, ChatMessageDto[]> = {
       authorName: "Hassan El Fassi",
       authorRole: "Technicien",
       body: "Note vocale sur le protocole d'injection.",
-      createdAt: iso(28),
+      createdAt: iso("10:20"),
       attachment: {
         kind: "audio",
         durationSec: 18,
@@ -105,7 +106,7 @@ export const seedMessagesByChannel: Record<ChannelId, ChatMessageDto[]> = {
       authorName: "Mr Adnane",
       authorRole: "Directeur",
       body: "Réunion qualité vendredi à 17h en salle de staff. Merci de confirmer votre présence.",
-      createdAt: iso(180),
+      createdAt: iso("08:00"),
     },
     {
       id: "gn-2",
@@ -114,7 +115,7 @@ export const seedMessagesByChannel: Record<ChannelId, ChatMessageDto[]> = {
       authorName: "Imane Rachidi",
       authorRole: "Accueil",
       body: "Maintenance de l'IRM programmée samedi matin, planning adapté.",
-      createdAt: iso(120),
+      createdAt: iso("08:45"),
     },
   ],
 };

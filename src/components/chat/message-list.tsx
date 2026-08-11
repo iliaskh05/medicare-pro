@@ -14,7 +14,11 @@ const initials = (nom: string) =>
     .join("");
 
 const heure = (iso: string) =>
-  new Date(iso).toLocaleTimeString("fr-MA", { hour: "2-digit", minute: "2-digit" });
+  new Date(iso).toLocaleTimeString("fr-MA", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Africa/Casablanca",
+  });
 
 function Attachment({ attachment }: { attachment: NonNullable<ChatMessageDto["attachment"]> }) {
   if (attachment.kind === "image") {
