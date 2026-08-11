@@ -73,7 +73,13 @@ import { useRole } from "@/hooks/use-role";
 import { FraudDashboard } from "@/components/fraude/fraud-dashboard";
 import { telechargerDossierPdf } from "@/lib/pdf-export";
 import { formatMAD } from "@/types/domain";
-import { typesExamen, type Anomalie, type AuditKpis, type StatutAnomalie, type TendanceAnomalie } from "@/types/audit";
+import {
+  typesExamen,
+  type Anomalie,
+  type AuditKpis,
+  type StatutAnomalie,
+  type TendanceAnomalie,
+} from "@/types/audit";
 import {
   EMPTY_AUDIT_KPIS,
   fetchAnomalies,
@@ -220,11 +226,7 @@ function FraudAuditModule() {
   const chargerDonnees = useCallback((signal?: AbortSignal) => {
     setIsLoading(true);
     setError(null);
-    return Promise.all([
-      fetchAnomalies(signal),
-      fetchAuditKpis(signal),
-      fetchAuditTrend(signal),
-    ])
+    return Promise.all([fetchAnomalies(signal), fetchAuditKpis(signal), fetchAuditTrend(signal)])
       .then(([anomaliesRows, kpisRows, tendanceRows]) => {
         if (signal?.aborted) return;
         setAnomalies(anomaliesRows);
@@ -407,9 +409,7 @@ function FraudAuditModule() {
         <Card className="border-destructive/40">
           <CardContent className="flex flex-wrap items-center gap-3 p-5 text-sm">
             <AlertTriangle className="size-5 shrink-0 text-destructive" />
-            <span className="min-w-0 flex-1">
-              Le service d'audit est injoignable ({error}).
-            </span>
+            <span className="min-w-0 flex-1">Le service d'audit est injoignable ({error}).</span>
             <Button variant="outline" size="sm" onClick={() => setReloadKey((k) => k + 1)}>
               <RefreshCw className="mr-2 size-4" /> Réessayer
             </Button>
