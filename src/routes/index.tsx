@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { Activity, BrainCircuit, Lock, Mail, ScanLine, ShieldCheck, Sparkles } from "lucide-react";
 
@@ -13,16 +13,19 @@ import centreRadiologie from "@/assets/centre-radiologie.jpg";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Connexion — RadioCRM Centre d'Imagerie Al Amal" },
+      { title: "Connexion — RadioCRM Centre d'Imagerie Médicale" },
       {
         name: "description",
         content:
-          "Accédez à RadioCRM, la plateforme du Centre d'Imagerie Al Amal : patients, facturation MAD, imagerie et détection de fraude par IA.",
+          "Accédez à RadioCRM, la plateforme du Centre d'Imagerie Médicale : patients, facturation MAD, imagerie et détection de fraude par IA.",
       },
-      { property: "og:title", content: "Connexion — RadioCRM Centre d'Imagerie Al Amal" },
+      {
+        property: "og:title",
+        content: "Connexion — RadioCRM Centre d'Imagerie Médicale",
+      },
       {
         property: "og:description",
-        content: "Plateforme sécurisée de gestion du centre de radiologie Al Amal, Casablanca.",
+        content: "Plateforme sécurisée de gestion du centre d'imagerie médicale, Casablanca.",
       },
     ],
   }),
@@ -43,14 +46,14 @@ const atouts = [
   {
     icon: Activity,
     titre: "Automatisation du parcours",
-    detail: "Chatbot WhatsApp, planning intelligent et export comptable EFIBEC.",
+    detail: "Chatbot WhatsApp, planning intelligent et export comptable.",
   },
 ];
 
 function LoginPage() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("direction@alamal.ma");
-  const [password, setPassword] = useState("demo1234");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
@@ -69,7 +72,7 @@ function LoginPage() {
           <div className="flex size-11 items-center justify-center rounded-xl bg-primary-foreground/10 ring-1 ring-inset ring-primary-foreground/20 backdrop-blur">
             <img
               src={logoRadioCrm}
-              alt="Logo RadioCRM — Centre d'Imagerie Al Amal"
+              alt="Logo RadioCRM — Centre d'Imagerie Médicale"
               width={512}
               height={512}
               className="size-7"
@@ -87,18 +90,19 @@ function LoginPage() {
           </p>
           <h1 className="page-title mt-6 text-5xl text-primary-foreground xl:text-6xl">RadioCRM</h1>
           <p className="mt-3 text-lg font-semibold text-primary-foreground/85">
-            Centre d'Imagerie Al Amal
+            Centre d'Imagerie Médicale
           </p>
 
           {/* Photo du centre + slogan */}
           <figure className="relative mt-6 overflow-hidden rounded-2xl ring-1 ring-inset ring-primary-foreground/15">
             <img
               src={centreRadiologie}
-              alt="Salle d'IRM du Centre d'Imagerie Al Amal à Casablanca"
+              alt="Salle d'IRM du Centre d'Imagerie Médicale à Casablanca"
               width={1280}
               height={960}
               className="h-52 w-full object-cover xl:h-60"
             />
+            <div aria-hidden className="absolute inset-0 bg-black/40" />
             <div
               aria-hidden
               className="absolute inset-0 bg-gradient-to-t from-[oklch(0.18_0.05_264)]/95 via-[oklch(0.18_0.05_264)]/25 to-transparent"
@@ -148,17 +152,18 @@ function LoginPage() {
               />
               <div>
                 <p className="text-sm font-bold tracking-tight">RadioCRM</p>
-                <p className="text-xs text-muted-foreground">Centre d'Imagerie Al Amal</p>
+                <p className="text-xs text-muted-foreground">Centre d'Imagerie Médicale</p>
               </div>
             </div>
             <figure className="relative mt-5 overflow-hidden rounded-2xl">
               <img
                 src={centreRadiologie}
-                alt="Salle d'IRM du Centre d'Imagerie Al Amal"
+                alt="Salle d'IRM du Centre d'Imagerie Médicale"
                 width={1280}
                 height={960}
                 className="h-36 w-full object-cover"
               />
+              <div aria-hidden className="absolute inset-0 bg-black/40" />
               <div
                 aria-hidden
                 className="absolute inset-0 bg-gradient-to-t from-[oklch(0.18_0.05_264)]/95 to-transparent"
@@ -191,7 +196,7 @@ function LoginPage() {
                   autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="prenom.nom@alamal.ma"
+                  placeholder="prenom.nom@centre-imagerie.ma"
                   className="h-11 bg-background pl-9"
                 />
               </div>
@@ -200,10 +205,7 @@ function LoginPage() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">Mot de passe</Label>
-                <button
-                  type="button"
-                  className="text-xs font-medium text-primary hover:underline"
-                >
+                <button type="button" className="text-xs font-medium text-primary hover:underline">
                   Mot de passe oublié ?
                 </button>
               </div>
@@ -228,7 +230,12 @@ function LoginPage() {
               </Label>
             </div>
 
-            <Button type="submit" size="lg" className="h-12 w-full text-base shadow-sm">
+            <Button
+              type="submit"
+              size="lg"
+              className="h-12 w-full text-base shadow-sm"
+              disabled={!email.trim() || !password}
+            >
               Se connecter
             </Button>
           </form>
@@ -236,10 +243,7 @@ function LoginPage() {
           <Separator className="my-8" />
 
           <p className="text-center text-xs text-muted-foreground">
-            Accès réservé au personnel autorisé du centre.{" "}
-            <Link to="/dashboard" className="font-medium text-primary hover:underline">
-              Continuer en mode démonstration
-            </Link>
+            Accès réservé au personnel autorisé du centre.
           </p>
         </div>
       </div>

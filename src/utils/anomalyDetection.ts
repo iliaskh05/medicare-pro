@@ -1,5 +1,5 @@
 /**
- * Détection d'anomalies de facturation (clustering simulé côté client).
+ * Détection d'anomalies de facturation (analyse du moteur de conformité côté client).
  * Score hybride à règles : montant / horaire / fréquence.
  */
 
@@ -75,12 +75,9 @@ function sameExamFamily(a: string, b: string): boolean {
 /**
  * Calcule un score d'anomalie (0–100) et un motif textuel pour un acte.
  * @param study Acte à scorer
- * @param history Corpus d'actes (même patient / examens récents) — clustering simulé
+ * @param history Corpus d'actes (même patient / examens récents) — analyse du moteur de conformité
  */
-export function calculateAnomalyScore(
-  study: Study,
-  history: Study[] = [],
-): AnomalyScoreResult {
+export function calculateAnomalyScore(study: Study, history: Study[] = []): AnomalyScoreResult {
   const contributions: { rule: string; points: number }[] = [];
   const motifs: string[] = [];
   const bareme = resolveBareme(study);
@@ -173,105 +170,4 @@ export function anomalyRiskLabel(score: number): string {
   if (level === "critique") return "Critique";
   if (level === "eleve") return "Élevé";
   return "Faible";
-}
-
-/**
- * Enrichit un jeu d'actes mock avec score + motifs recalculés.
- * Injecte des horaires simulés stables (hash) pour activer la règle « horaire atypique ».
- */
-export function scoreStudies(studies: Study[]): (Study & AnomalyScoreResult)[] {
-  return studies.map((study) => {
-    const result = calculateAnomalyScore(study, studies);
-    return { ...study, ...result };
-  });
-}
-
-/** Forme minimale d'un dossier de facturation scorable par le moteur. */
-export type AnomalieLike = {
-  id: string;
-  patient: string;
-  acte: string;
-  typeExamen: string;
-  date: string;
-  montant: number;
-  bareme: number;
-  score: number;
-  motifs: string[];
-  cluster: string;
-};
-
-function clusterLabel(result: AnomalyScoreResult): string {
-  const level = anomalyRiskLevel(result.score);
-  if (level === "critique") return `Cluster critique — ${result.motif}`;
-  if (level === "eleve") return `Cluster à risque — ${result.motif}`;
-  return `Cluster nominal — ${result.motif}`;
-}
-
-/**
- * Point d'entrée unique de la détection : passe un jeu de dossiers dans le moteur
- * et renvoie les mêmes dossiers avec score, motifs et cluster recalculés.
- */
-export function scoreAnomalies<T extends AnomalieLike>(rows: T[]): T[] {
-  const studies = rows.map((row) => studyFromAnomalieLike(row));
-  const history = augmentHistoryForFrequency(studies);
-  return rows.map((row, index) => {
-    const result = calculateAnomalyScore(studies[index]!, history);
-    return {
-      ...row,
-      score: result.score,
-      motifs: (result.motifs.length > 0 ? result.motifs : row.motifs) as T["motifs"],
-      cluster: clusterLabel(result),
-    };
-  });
-}
-
-/** Construit un Study à partir d'une anomalie mock (audit). */
-export function studyFromAnomalieLike(input: {
-  id: string;
-  patient: string;
-  acte: string;
-  typeExamen: string;
-  date: string;
-  montant: number;
-  bareme: number;
-}): Study {
-  // Horodatage déterministe : certains IDs → dimanche / nuit pour la démo clustering
-  const hash = [...input.id].reduce((a, c) => a + c.charCodeAt(0), 0);
-  const atypical = hash % 5 === 0 || input.montant / Math.max(1, input.bareme) >= 2;
-  const hour = atypical ? 23 : 8 + (hash % 10);
-  const base = new Date(`${input.date}T${String(hour).padStart(2, "0")}:15:00`);
-  if (atypical) {
-    const dow = base.getDay();
-    base.setDate(base.getDate() - dow); // ramener au dimanche
-  }
-
-  return {
-    id: input.id,
-    patientName: input.patient,
-    examType: input.acte || input.typeExamen,
-    amount: input.montant,
-    bareme: input.bareme,
-    recordedAt: base.toISOString(),
-  };
-}
-
-/**
- * Enrichit l'historique avec des examens antérieurs simulés (même patient / famille)
- * pour activer la règle de fréquence lors du scoring des mocks.
- */
-export function augmentHistoryForFrequency(studies: Study[]): Study[] {
-  const extras: Study[] = [];
-  for (const s of studies) {
-    const hash = [...s.id].reduce((a, c) => a + c.charCodeAt(0), 0);
-    if (hash % 3 !== 0 && (s.amount / Math.max(1, s.bareme ?? s.amount)) < 1.6) continue;
-    const prior = new Date(s.recordedAt);
-    prior.setDate(prior.getDate() - (1 + (hash % 3)));
-    extras.push({
-      ...s,
-      id: `${s.id}-PRIOR`,
-      amount: s.bareme ?? s.amount,
-      recordedAt: prior.toISOString(),
-    });
-  }
-  return [...studies, ...extras];
 }

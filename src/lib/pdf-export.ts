@@ -1,5 +1,5 @@
 /**
- * Génère un dossier PDF imprimable (démo) : ouvre un aperçu propre
+ * Génère un dossier PDF imprimable   : ouvre un aperçu propre
  * dans une nouvelle fenêtre puis déclenche l'impression / export PDF.
  */
 export type DossierPdf = {
@@ -10,25 +10,18 @@ export type DossierPdf = {
   mention?: string;
 };
 
-const escape = (v: string) =>
-  v.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const escape = (v: string) => v.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 export function telechargerDossierPdf(dossier: DossierPdf) {
   const win = window.open("", "_blank", "width=900,height=1200");
   if (!win) return false;
 
   const rows = dossier.lignes
-    .map(
-      (l) =>
-        `<tr><th>${escape(l.label)}</th><td>${escape(l.valeur)}</td></tr>`,
-    )
+    .map((l) => `<tr><th>${escape(l.label)}</th><td>${escape(l.valeur)}</td></tr>`)
     .join("");
 
   const blocs = (dossier.blocs ?? [])
-    .map(
-      (b) =>
-        `<section><h2>${escape(b.titre)}</h2><p>${escape(b.contenu)}</p></section>`,
-    )
+    .map((b) => `<section><h2>${escape(b.titre)}</h2><p>${escape(b.contenu)}</p></section>`)
     .join("");
 
   win.document.write(`<!doctype html>
@@ -52,7 +45,7 @@ export function telechargerDossierPdf(dossier: DossierPdf) {
 </style></head>
 <body>
   <header>
-    <div class="brand">Centre d'Imagerie Al Amal<small>Casablanca · Maroc</small></div>
+    <div class="brand">Centre d'Imagerie Médicale<small>Casablanca · Maroc</small></div>
     <div class="ref">Édité le ${new Date().toLocaleString("fr-MA")}</div>
   </header>
   <h1>${escape(dossier.titre)}</h1>
@@ -63,6 +56,7 @@ export function telechargerDossierPdf(dossier: DossierPdf) {
 </body></html>`);
   win.document.close();
   win.focus();
-  setTimeout(() => win.print(), 350);
+  win.addEventListener("load", () => win.print(), { once: true });
+  if (win.document.readyState === "complete") win.print();
   return true;
 }

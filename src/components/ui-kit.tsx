@@ -114,3 +114,66 @@ export function IconTile({ children, tone = "primary" }: { children: ReactNode; 
     </div>
   );
 }
+
+/**
+ * Mention obligatoire à afficher au-dessus de tout résultat produit par un modèle
+ * d'aide à la décision (clinique, fraude ou financier).
+ */
+export function AiNotice({
+  contexte = "Résultats produits par le moteur d'analyse automatique du centre.",
+  className,
+}: {
+  contexte?: string;
+  className?: string;
+}) {
+  return (
+    <div
+      role="note"
+      className={cn(
+        "flex flex-wrap items-center gap-2 rounded-xl border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning-foreground",
+        className,
+      )}
+    >
+      <Pill tone="warning" className="text-[10px]">
+        Analyse IA
+      </Pill>
+      <span className="font-medium">{contexte}</span>
+      <span className="font-semibold">Validation humaine obligatoire.</span>
+    </div>
+  );
+}
+
+/**
+ * Notice discrète affichée lorsqu'un service backend n'est pas encore joignable.
+ * L'interface reste complète : seules les données sont en attente.
+ */
+export function ServiceNotice({
+  message = "Service de données en attente de connexion.",
+  onRetry,
+  className,
+}: {
+  message?: string;
+  onRetry?: () => void;
+  className?: string;
+}) {
+  return (
+    <div
+      role="status"
+      className={cn(
+        "flex flex-wrap items-center justify-between gap-3 rounded-xl border border-dashed border-border bg-muted/30 px-4 py-3",
+        className,
+      )}
+    >
+      <p className="min-w-0 flex-1 text-xs text-muted-foreground sm:text-sm">{message}</p>
+      {onRetry ? (
+        <button
+          type="button"
+          onClick={onRetry}
+          className="rounded-md px-2 py-1 text-xs font-semibold text-primary hover:bg-primary/10"
+        >
+          Réessayer
+        </button>
+      ) : null}
+    </div>
+  );
+}

@@ -1,12 +1,23 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import { Search, SearchX, UserPlus, FileText, ChevronLeft, ChevronRight } from "lucide-react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  Search,
+  SearchX,
+  UserPlus,
+  FileText,
+  ChevronLeft,
+  ChevronRight,
+  AlertTriangle,
+  RefreshCw,
+  Loader2,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -31,9 +42,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { PageHeader, Pill, EmptyState } from "@/components/ui-kit";
-import { typesExamen, type Mutuelle } from "@/data/mock";
-import { useAppStore } from "@/store/app-store";
+import { PageHeader, Pill, EmptyState, ServiceNotice } from "@/components/ui-kit";
+import { createPatient, fetchPatients, type PatientRow } from "@/lib/api/patients";
 
 export const Route = createFileRoute("/patients")({
   head: () => ({
@@ -47,29 +57,30 @@ export const Route = createFileRoute("/patients")({
       { property: "og:title", content: "Gestion des patients — RadioCRM" },
       {
         property: "og:description",
-        content: "Base patients du centre de radiologie avec CIN, mutuelle et historique d'examens.",
+        content:
+          "Base patients du centre de radiologie avec CIN, mutuelle et historique d'examens.",
       },
     ],
   }),
   component: PatientsPage,
 });
 
-const mutuelleTone: Record<Mutuelle, "primary" | "success" | "warning" | "neutral"> = {
+const mutuelleTones: Record<string, "primary" | "success" | "warning" | "neutral"> = {
   AMO: "primary",
   CNSS: "success",
   CNOPS: "warning",
   Privée: "neutral",
 };
 
+const MUTUELLES = ["AMO", "CNSS", "CNOPS", "Privée"];
 const PAGE_SIZE = 8;
 
 const emptyDraft = {
-  nom: "",
+  nomComplet: "",
   cin: "",
   telephone: "",
   naissance: "",
-  mutuelle: "AMO" as Mutuelle,
-  dernierExamen: "",
+  mutuelle: "AMO",
 };
 
 function ageFromBirthDate(value: string): number {
@@ -80,37 +91,67 @@ function ageFromBirthDate(value: string): number {
 }
 
 function PatientsPage() {
-  const { patients, addPatient } = useAppStore();
+  const [patients, setPatients] = useState<PatientRow[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+
   const [query, setQuery] = useState("");
   const [mutuelle, setMutuelle] = useState<string>("toutes");
   const [page, setPage] = useState(1);
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(emptyDraft);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const canSubmit = draft.nom.trim() !== "" && draft.cin.trim() !== "";
+  useEffect(() => {
+    const controller = new AbortController();
+    setIsLoading(true);
+    setError(null);
 
-  const submitDraft = () => {
-    const created = addPatient({
-      nom: draft.nom.trim(),
-      cin: draft.cin.trim().toUpperCase(),
-      age: ageFromBirthDate(draft.naissance),
-      telephone: draft.telephone.trim() || "—",
-      mutuelle: draft.mutuelle,
-      ville: "Casablanca",
-      dernierExamen: draft.dernierExamen || "À planifier",
-    });
-    setDraft(emptyDraft);
-    setOpen(false);
-    setPage(1);
-    toast.success(`Dossier ${created.id} créé pour ${created.nom}`);
-  };
+    fetchPatients(controller.signal)
+      .then((rows) => setPatients(rows))
+      .catch((e: unknown) => {
+        if (controller.signal.aborted) return;
+        setPatients([]);
+        setError(e instanceof Error ? e.message : "Service patients indisponible");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [reloadKey]);
+
+  const canSubmit = draft.nomComplet.trim() !== "" && draft.cin.trim() !== "";
+
+  const submitDraft = useCallback(async () => {
+    setIsSaving(true);
+    try {
+      const created = await createPatient({
+        nomComplet: draft.nomComplet.trim(),
+        cin: draft.cin.trim().toUpperCase(),
+        age: ageFromBirthDate(draft.naissance),
+        telephone: draft.telephone.trim(),
+        mutuelle: draft.mutuelle,
+      });
+      setPatients((prev) => [created, ...prev]);
+      setDraft(emptyDraft);
+      setOpen(false);
+      setPage(1);
+      toast.success(`Dossier ${created.id} créé pour ${created.nomComplet}`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Création du dossier impossible");
+    } finally {
+      setIsSaving(false);
+    }
+  }, [draft]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return patients.filter((p) => {
       const matchQ =
         !q ||
-        p.nom.toLowerCase().includes(q) ||
+        p.nomComplet.toLowerCase().includes(q) ||
         p.cin.toLowerCase().includes(q) ||
         p.telephone.includes(q);
       const matchM = mutuelle === "toutes" || p.mutuelle === mutuelle;
@@ -126,7 +167,11 @@ function PatientsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Gestion des patients"
-        subtitle={`${patients.length} dossiers actifs · mise à jour aujourd'hui`}
+        subtitle={
+          isLoading
+            ? "Chargement des dossiers…"
+            : `${patients.length} dossier(s) — Centre d'Imagerie Médicale`
+        }
         actions={
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
@@ -138,7 +183,7 @@ function PatientsPage() {
               <DialogHeader>
                 <DialogTitle>Nouveau dossier patient</DialogTitle>
                 <DialogDescription>
-                  Renseignez les informations d'identité et de couverture médicale.
+                  Renseignez les informations d&apos;identité et de couverture médicale.
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 sm:grid-cols-2">
@@ -146,16 +191,14 @@ function PatientsPage() {
                   <Label htmlFor="nom">Nom complet</Label>
                   <Input
                     id="nom"
-                    placeholder="Ex. Youssef El Amrani"
-                    value={draft.nom}
-                    onChange={(e) => setDraft((d) => ({ ...d, nom: e.target.value }))}
+                    value={draft.nomComplet}
+                    onChange={(e) => setDraft((d) => ({ ...d, nomComplet: e.target.value }))}
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="cin">CIN</Label>
                   <Input
                     id="cin"
-                    placeholder="Ex. BE884512"
                     value={draft.cin}
                     onChange={(e) => setDraft((d) => ({ ...d, cin: e.target.value }))}
                   />
@@ -164,7 +207,6 @@ function PatientsPage() {
                   <Label htmlFor="tel">Téléphone</Label>
                   <Input
                     id="tel"
-                    placeholder="06 61 23 45 78"
                     value={draft.telephone}
                     onChange={(e) => setDraft((d) => ({ ...d, telephone: e.target.value }))}
                   />
@@ -182,32 +224,15 @@ function PatientsPage() {
                   <Label>Mutuelle</Label>
                   <Select
                     value={draft.mutuelle}
-                    onValueChange={(v) => setDraft((d) => ({ ...d, mutuelle: v as Mutuelle }))}
+                    onValueChange={(v) => setDraft((d) => ({ ...d, mutuelle: v }))}
                   >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="AMO">AMO</SelectItem>
-                      <SelectItem value="CNSS">CNSS</SelectItem>
-                      <SelectItem value="CNOPS">CNOPS</SelectItem>
-                      <SelectItem value="Privée">Privée</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2 sm:col-span-2">
-                  <Label>Examen prévu</Label>
-                  <Select
-                    value={draft.dernierExamen}
-                    onValueChange={(v) => setDraft((d) => ({ ...d, dernierExamen: v }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Sélectionner un examen" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {typesExamen.map((t) => (
-                        <SelectItem key={t} value={t}>
-                          {t}
+                      {MUTUELLES.map((m) => (
+                        <SelectItem key={m} value={m}>
+                          {m}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -218,7 +243,8 @@ function PatientsPage() {
                 <Button variant="outline" onClick={() => setOpen(false)}>
                   Annuler
                 </Button>
-                <Button disabled={!canSubmit} onClick={submitDraft}>
+                <Button disabled={!canSubmit || isSaving} onClick={submitDraft}>
+                  {isSaving ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
                   Enregistrer le dossier
                 </Button>
               </DialogFooter>
@@ -254,17 +280,25 @@ function PatientsPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="toutes">Toutes les mutuelles</SelectItem>
-              <SelectItem value="AMO">AMO</SelectItem>
-              <SelectItem value="CNSS">CNSS</SelectItem>
-              <SelectItem value="CNOPS">CNOPS</SelectItem>
-              <SelectItem value="Privée">Privée</SelectItem>
+              {MUTUELLES.map((m) => (
+                <SelectItem key={m} value={m}>
+                  {m}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardContent className="px-0 py-0">
+      {error ? (
+        <ServiceNotice
+          message="Dossiers patients en attente de connexion au serveur du centre."
+          onRetry={() => setReloadKey((k) => k + 1)}
+        />
+      ) : null}
+
+      <Card data-tour="patients-table">
+        <CardContent className="px-0 py-0" aria-busy={isLoading}>
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -274,42 +308,48 @@ function PatientsPage() {
                   <TableHead>Âge</TableHead>
                   <TableHead className="hidden md:table-cell">Téléphone</TableHead>
                   <TableHead>Mutuelle</TableHead>
-                  <TableHead className="hidden lg:table-cell">Dernier examen</TableHead>
                   <TableHead className="pr-6 text-right">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {rows.map((p) => (
-                  <TableRow key={p.id}>
-                    <TableCell className="pl-6">
-                      <p className="font-medium">{p.nom}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {p.id} · {p.ville}
-                      </p>
-                    </TableCell>
-                    <TableCell className="font-mono text-xs">{p.cin}</TableCell>
-                    <TableCell className="text-sm">{p.age} ans</TableCell>
-                    <TableCell className="hidden text-sm md:table-cell">{p.telephone}</TableCell>
-                    <TableCell>
-                      <Pill tone={mutuelleTone[p.mutuelle]}>{p.mutuelle}</Pill>
-                    </TableCell>
-                    <TableCell className="hidden text-sm text-muted-foreground lg:table-cell">
-                      {p.dernierExamen}
-                    </TableCell>
-                    <TableCell className="pr-6 text-right">
-                      <Button variant="outline" size="sm">
-                        <FileText className="mr-1.5 size-4" /> Voir dossier
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {rows.length === 0 ? (
+                {isLoading
+                  ? Array.from({ length: 5 }).map((_, i) => (
+                      <TableRow key={`sk-${i}`}>
+                        <TableCell colSpan={6} className="px-6">
+                          <Skeleton className="h-8 w-full" />
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  : rows.map((p) => (
+                      <TableRow key={p.id}>
+                        <TableCell className="pl-6">
+                          <p className="font-medium">{p.nomComplet}</p>
+                          <p className="text-xs text-muted-foreground">{p.id}</p>
+                        </TableCell>
+                        <TableCell className="font-mono text-xs">{p.cin}</TableCell>
+                        <TableCell className="text-sm">{p.age} ans</TableCell>
+                        <TableCell className="hidden text-sm md:table-cell">
+                          {p.telephone}
+                        </TableCell>
+                        <TableCell>
+                          <Pill tone={mutuelleTones[p.mutuelle] ?? "neutral"}>{p.mutuelle}</Pill>
+                        </TableCell>
+                        <TableCell className="pr-6 text-right">
+                          <Button variant="outline" size="sm" asChild>
+                            <Link to="/patient/$patientId" params={{ patientId: p.id }}>
+                              <FileText className="mr-1.5 size-4" /> Voir dossier
+                            </Link>
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                {!isLoading && rows.length === 0 ? (
                   <TableRow className="hover:bg-transparent">
-                    <TableCell colSpan={7} className="p-0">
+                    <TableCell colSpan={6} className="p-0">
                       <EmptyState
                         icon={SearchX}
-                        title="Aucun patient trouvé"
-                        description="Aucun dossier ne correspond à cette recherche. Vérifiez l'orthographe ou élargissez le filtre mutuelle."
+                        title="Aucune donnée"
+                        description="Aucun dossier patient n'est disponible pour ces critères."
                       />
                     </TableCell>
                   </TableRow>

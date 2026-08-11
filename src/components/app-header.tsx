@@ -1,4 +1,15 @@
-import { Bell, Search, ChevronDown, ShieldCheck, Stethoscope, UserCog, Check } from "lucide-react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { toast } from "sonner";
+import {
+  Bell,
+  Search,
+  ChevronDown,
+  ShieldCheck,
+  Stethoscope,
+  Check,
+  Moon,
+  Sun,
+} from "lucide-react";
 
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Input } from "@/components/ui/input";
@@ -12,17 +23,22 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { ActionButton } from "@/components/action-button";
 import { roleProfiles, useRole, type AppRole } from "@/hooks/use-role";
+import { useTheme } from "@/hooks/use-theme";
 
 const roleIcons: Record<AppRole, typeof ShieldCheck> = {
   directeur: ShieldCheck,
-  radiologue: Stethoscope,
-  secretaire: UserCog,
+  accueil: Stethoscope,
+  technicien: Stethoscope,
+  medecin: Stethoscope,
 };
-
 
 export function AppHeader() {
   const { role, profile, setRole } = useRole();
+  const { theme, toggleTheme } = useTheme();
+  const navigate = useNavigate();
+
   const RoleIcon = roleIcons[role];
 
   return (
@@ -39,11 +55,25 @@ export function AppHeader() {
       </div>
 
       <div className="ml-auto flex items-center gap-2">
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="size-5" />
-          <span className="absolute right-1.5 top-1.5 size-2 rounded-full bg-destructive" />
-          <span className="sr-only">Notifications</span>
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={theme === "dark" ? "Passer en mode clair" : "Passer en mode sombre"}
+          onClick={toggleTheme}
+        >
+          {theme === "dark" ? <Sun className="size-5" /> : <Moon className="size-5" />}
         </Button>
+
+        <ActionButton
+          variant="ghost"
+          size="icon"
+          className="relative"
+          toastKind="info"
+          toastMessage="Aucune nouvelle notification"
+        >
+          <Bell className="size-5" />
+          <span className="sr-only">Notifications</span>
+        </ActionButton>
 
         {/* Sélecteur de profil (RBAC visuel) */}
         <DropdownMenu>
@@ -59,16 +89,12 @@ export function AppHeader() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-64">
-            <DropdownMenuLabel>Profil actif (démonstration RBAC)</DropdownMenuLabel>
+            <DropdownMenuLabel>Profil actif</DropdownMenuLabel>
             <DropdownMenuSeparator />
             {Object.values(roleProfiles).map((p) => {
               const Icon = roleIcons[p.id];
               return (
-                <DropdownMenuItem
-                  key={p.id}
-                  onClick={() => setRole(p.id)}
-                  className="gap-2 py-2"
-                >
+                <DropdownMenuItem key={p.id} onClick={() => setRole(p.id)} className="gap-2 py-2">
                   <Icon className="size-4 text-primary" />
                   <span className="flex-1">
                     <span className="block text-sm font-semibold">{p.label}</span>
@@ -99,15 +125,29 @@ export function AppHeader() {
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel>Mon compte</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Profil</DropdownMenuItem>
-            <DropdownMenuItem>Paramètres du centre</DropdownMenuItem>
-            <DropdownMenuItem>Journal d'activité</DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to="/parametres">Mon profil</Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to="/parametres">Préférences & paramètres</Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to="/parametres">Sécurité & connexions</Link>
+            </DropdownMenuItem>
+
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive">Se déconnecter</DropdownMenuItem>
+            <DropdownMenuItem
+              className="text-destructive"
+              onClick={() => {
+                toast.success("Session fermée en toute sécurité.");
+                void navigate({ to: "/" });
+              }}
+            >
+              Se déconnecter
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
     </header>
   );
 }
-

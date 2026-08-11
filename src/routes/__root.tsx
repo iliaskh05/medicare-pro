@@ -9,6 +9,7 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
+import { ShieldCheck } from "lucide-react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -17,8 +18,9 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { AppHeader } from "@/components/app-header";
 import { Toaster } from "@/components/ui/sonner";
 import { MessagerieDock } from "@/components/messagerie-dock";
+import { PlatformAssistant } from "@/components/assistant/platform-assistant";
 import { RoleProvider } from "@/hooks/use-role";
-import { AppStoreProvider } from "@/store/app-store-provider";
+import { ThemeProvider } from "@/hooks/use-theme";
 
 function NotFoundComponent() {
   return (
@@ -42,10 +44,22 @@ function NotFoundComponent() {
   );
 }
 
+const STALE_CHUNK_RE =
+  /dynamically imported module|Importing a module script failed|ChunkLoadError/i;
+
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
   const router = useRouter();
   useEffect(() => {
+    // A new deployment removes the old JS chunks: reload once to fetch the fresh build.
+    if (typeof window !== "undefined" && STALE_CHUNK_RE.test(error?.message ?? "")) {
+      const key = "radiocrm:stale-chunk-reload";
+      if (!sessionStorage.getItem(key)) {
+        sessionStorage.setItem(key, "1");
+        window.location.reload();
+        return;
+      }
+    }
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
   }, [error]);
 
@@ -153,8 +167,8 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <RoleProvider>
-        <AppStoreProvider>
+      <ThemeProvider>
+        <RoleProvider>
           <SidebarProvider>
             <div className="flex min-h-screen w-full bg-background">
               <AppSidebar />
@@ -164,12 +178,20 @@ function RootComponent() {
                   {/* Required: nested routes render here. */}
                   <Outlet />
                 </main>
+                <footer className="border-t border-border px-3 py-4 sm:px-6">
+                  <p className="flex items-start gap-2 text-xs text-muted-foreground">
+                    <ShieldCheck className="mt-0.5 size-4 shrink-0 text-success" />
+                    Hébergement sécurisé HDS - Conforme aux directives de la CNDP (Loi 09-08) sur la
+                    protection des données.
+                  </p>
+                </footer>
               </div>
             </div>
           </SidebarProvider>
           <MessagerieDock />
-        </AppStoreProvider>
-      </RoleProvider>
+          <PlatformAssistant />
+        </RoleProvider>
+      </ThemeProvider>
       <Toaster />
     </QueryClientProvider>
   );

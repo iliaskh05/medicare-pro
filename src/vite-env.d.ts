@@ -2,7 +2,6 @@
 
 declare global {
   interface ImportMetaEnv {
-    readonly VITE_OPENAI_API_KEY?: string;
     readonly VITE_RADIOCRM_API_KEY?: string;
     readonly VITE_WS_URL?: string;
   }
