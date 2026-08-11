@@ -109,8 +109,7 @@ export const assistantPages: AssistantPage[] = [
     path: "/medecins",
     nom: "Médecins prescripteurs",
     motsCles: ["médecin", "medecins", "prescripteur", "correspondant", "confrère"],
-    resume:
-      "Annuaire des médecins prescripteurs : spécialité, volume d'adressages et coordonnées.",
+    resume: "Annuaire des médecins prescripteurs : spécialité, volume d'adressages et coordonnées.",
     aides: [
       "Utilisez la recherche pour retrouver un prescripteur par nom ou spécialité.",
       "Les volumes d'adressage aident à identifier les correspondants les plus actifs.",

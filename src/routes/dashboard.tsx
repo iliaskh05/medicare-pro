@@ -79,8 +79,7 @@ export const Route = createFileRoute("/dashboard")({
       { property: "og:title", content: "Tableau de bord — RadioCRM" },
       {
         property: "og:description",
-        content:
-          "Suivi temps réel des actes, recettes et alertes du Centre d'Imagerie Médicale.",
+        content: "Suivi temps réel des actes, recettes et alertes du Centre d'Imagerie Médicale.",
       },
     ],
   }),
@@ -274,7 +273,9 @@ function Dashboard() {
       .then(setUrgencesFraude)
       .catch((e: unknown) => {
         if (controller.signal.aborted) return;
-        setUrgencesError(e instanceof Error ? e.message : "Impossible de charger les urgences fraude");
+        setUrgencesError(
+          e instanceof Error ? e.message : "Impossible de charger les urgences fraude",
+        );
       })
       .finally(() => {
         if (!controller.signal.aborted) setUrgencesLoading(false);
@@ -308,7 +309,9 @@ function Dashboard() {
       .then(setComptabilite)
       .catch((e: unknown) => {
         if (controller.signal.aborted) return;
-        setComptaError(e instanceof Error ? e.message : "Impossible de charger la synthèse comptable");
+        setComptaError(
+          e instanceof Error ? e.message : "Impossible de charger la synthèse comptable",
+        );
       })
       .finally(() => {
         if (!controller.signal.aborted) setComptaLoading(false);
@@ -370,9 +373,7 @@ function Dashboard() {
                   <DialogTitle className="flex items-center gap-2">
                     <Bot className="size-4 text-primary" /> Configuration du Bot Patient
                   </DialogTitle>
-                  <DialogDescription>
-                    Paramètres du chatbot WhatsApp du centre.
-                  </DialogDescription>
+                  <DialogDescription>Paramètres du chatbot WhatsApp du centre.</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div className="space-y-2">
@@ -437,46 +438,46 @@ function Dashboard() {
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {kpisLoading
-          ? Array.from({ length: 4 }).map((_, i) => (
-              <Card key={i}>
-                <CardContent className="flex items-start gap-4 p-5">
-                  <Skeleton className="size-10 rounded-xl" />
-                  <div className="min-w-0 flex-1 space-y-2">
-                    <Skeleton className="h-3 w-24" />
-                    <Skeleton className="h-6 w-16" />
-                    <Skeleton className="h-3 w-20" />
-                  </div>
-                </CardContent>
-              </Card>
-            ))
-          : kpisError
-            ? (
-              <Card className="sm:col-span-2 xl:col-span-4">
-                <CardContent className="flex flex-col items-center justify-center gap-3 p-6 text-center">
-                  <AlertTriangle className="size-6 text-destructive" />
-                  <p className="text-sm text-muted-foreground">{kpisError}</p>
-                  <Button variant="outline" size="sm" onClick={reload}>
-                    <RefreshCw className="mr-2 size-4" /> Réessayer
-                  </Button>
-                </CardContent>
-              </Card>
-            )
-            : visibleKpis.map((kpi) => (
-                <Card key={kpi.label}>
-                  <CardContent className="flex items-start gap-4 p-5">
-                    <IconTile tone={kpi.tone}>
-                      <kpi.icon className="size-5" />
-                    </IconTile>
-                    <div className="min-w-0">
-                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        {kpi.label}
-                      </p>
-                      <p className="mt-1 text-xl font-bold tracking-tight sm:text-2xl">{kpi.value}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+        {kpisLoading ? (
+          Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i}>
+              <CardContent className="flex items-start gap-4 p-5">
+                <Skeleton className="size-10 rounded-xl" />
+                <div className="min-w-0 flex-1 space-y-2">
+                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="h-6 w-16" />
+                  <Skeleton className="h-3 w-20" />
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        ) : kpisError ? (
+          <Card className="sm:col-span-2 xl:col-span-4">
+            <CardContent className="flex flex-col items-center justify-center gap-3 p-6 text-center">
+              <AlertTriangle className="size-6 text-destructive" />
+              <p className="text-sm text-muted-foreground">{kpisError}</p>
+              <Button variant="outline" size="sm" onClick={reload}>
+                <RefreshCw className="mr-2 size-4" /> Réessayer
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          visibleKpis.map((kpi) => (
+            <Card key={kpi.label}>
+              <CardContent className="flex items-start gap-4 p-5">
+                <IconTile tone={kpi.tone}>
+                  <kpi.icon className="size-5" />
+                </IconTile>
+                <div className="min-w-0">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    {kpi.label}
+                  </p>
+                  <p className="mt-1 text-xl font-bold tracking-tight sm:text-2xl">{kpi.value}</p>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
@@ -623,7 +624,9 @@ function Dashboard() {
                 <>
                   <div>
                     <p className="text-3xl font-bold tracking-tight">{comptabilite.validated}</p>
-                    <p className="text-sm text-muted-foreground">actes validés prêts pour l'export</p>
+                    <p className="text-sm text-muted-foreground">
+                      actes validés prêts pour l'export
+                    </p>
                   </div>
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs text-muted-foreground">

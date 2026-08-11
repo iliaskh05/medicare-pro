@@ -2,12 +2,7 @@ import { Bot, CalendarClock, Headset, IdCard, Lock, Sparkles } from "lucide-reac
 
 import { Button } from "@/components/ui/button";
 import { Pill } from "@/components/ui-kit";
-import {
-  waStatutLabel,
-  waStatutTone,
-  type WaConversation,
-  type WaStatut,
-} from "@/types/whatsapp";
+import { waStatutLabel, waStatutTone, type WaConversation, type WaStatut } from "@/types/whatsapp";
 
 const statuts: WaStatut[] = ["bot", "attente", "secretariat", "cloture"];
 

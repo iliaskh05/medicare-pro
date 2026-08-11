@@ -8,7 +8,6 @@ import {
   type ChatMessageDto,
 } from "@/lib/api/chat";
 
-
 export type SocketStatus = "connecting" | "open" | "closed";
 
 /**
@@ -17,7 +16,10 @@ export type SocketStatus = "connecting" | "open" | "closed";
  * - ouvre un WebSocket si `VITE_WS_URL` est configuré,
  * - retombe sur POST HTTP lorsque la socket est fermée.
  */
-export function useChatChannel(channelId: ChannelId, author: { id: string; name: string; role: string }) {
+export function useChatChannel(
+  channelId: ChannelId,
+  author: { id: string; name: string; role: string },
+) {
   const [messages, setMessages] = useState<ChatMessageDto[]>([]);
   const [status, setStatus] = useState<SocketStatus>("closed");
   const [isLoading, setIsLoading] = useState(false);

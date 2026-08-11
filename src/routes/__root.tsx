@@ -43,7 +43,8 @@ function NotFoundComponent() {
   );
 }
 
-const STALE_CHUNK_RE = /dynamically imported module|Importing a module script failed|ChunkLoadError/i;
+const STALE_CHUNK_RE =
+  /dynamically imported module|Importing a module script failed|ChunkLoadError/i;
 
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
@@ -60,7 +61,6 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
     }
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
   }, [error]);
-
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -168,23 +168,23 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <RoleProvider>
         <SidebarProvider>
-              <div className="flex min-h-screen w-full bg-background">
-                <AppSidebar />
-                <div className="flex min-w-0 flex-1 flex-col">
-                  <AppHeader />
-                  <main className="flex-1 px-3 py-5 sm:px-6 sm:py-7">
-                    {/* Required: nested routes render here. */}
-                    <Outlet />
-                  </main>
-                  <footer className="border-t border-border px-3 py-4 sm:px-6">
-                    <p className="flex items-start gap-2 text-xs text-muted-foreground">
-                      <ShieldCheck className="mt-0.5 size-4 shrink-0 text-success" />
-                      Hébergement sécurisé HDS - Conforme aux directives de la CNDP (Loi 09-08) sur
-                      la protection des données.
-                    </p>
-                  </footer>
-                </div>
-              </div>
+          <div className="flex min-h-screen w-full bg-background">
+            <AppSidebar />
+            <div className="flex min-w-0 flex-1 flex-col">
+              <AppHeader />
+              <main className="flex-1 px-3 py-5 sm:px-6 sm:py-7">
+                {/* Required: nested routes render here. */}
+                <Outlet />
+              </main>
+              <footer className="border-t border-border px-3 py-4 sm:px-6">
+                <p className="flex items-start gap-2 text-xs text-muted-foreground">
+                  <ShieldCheck className="mt-0.5 size-4 shrink-0 text-success" />
+                  Hébergement sécurisé HDS - Conforme aux directives de la CNDP (Loi 09-08) sur la
+                  protection des données.
+                </p>
+              </footer>
+            </div>
+          </div>
         </SidebarProvider>
         <MessagerieDock />
         <PlatformAssistant />

@@ -1,14 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import {
-  Activity,
-  BrainCircuit,
-  Lock,
-  Mail,
-  ScanLine,
-  ShieldCheck,
-  Sparkles,
-} from "lucide-react";
+import { Activity, BrainCircuit, Lock, Mail, ScanLine, ShieldCheck, Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

@@ -12,7 +12,13 @@ import { WaChatThread } from "@/components/whatsapp/wa-chat-thread";
 import { WaContextPanel } from "@/components/whatsapp/wa-context-panel";
 import { WaConversationList } from "@/components/whatsapp/wa-conversation-list";
 import { fetchWaConversations, sendWaMessage } from "@/lib/api/whatsapp";
-import { waStatutLabel, type WaConversation, type WaMessage, type WaQuickReply, type WaStatut } from "@/types/whatsapp";
+import {
+  waStatutLabel,
+  type WaConversation,
+  type WaMessage,
+  type WaQuickReply,
+  type WaStatut,
+} from "@/types/whatsapp";
 
 export const Route = createFileRoute("/whatsapp")({
   head: () => ({
@@ -154,9 +160,7 @@ function WhatsAppPage() {
 
   const handleStatut = (statut: WaStatut) => {
     if (!active) return;
-    setConversations((prev) =>
-      prev.map((c) => (c.id === active.id ? { ...c, statut } : c)),
-    );
+    setConversations((prev) => prev.map((c) => (c.id === active.id ? { ...c, statut } : c)));
     setModeAgent(statut === "secretariat");
     toast.info(`Statut mis à jour : ${waStatutLabel[statut]}.`);
   };

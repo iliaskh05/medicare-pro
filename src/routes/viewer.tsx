@@ -10,7 +10,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState, PageHeader, Pill } from "@/components/ui-kit";
 import { ScanViewer } from "@/components/scan-viewer";
 import { fetchScans } from "@/lib/api/imaging";
-import { downloadReport, fetchReports, requestImageAnalysis, saveBlob, type ReportSummary } from "@/lib/api/reports";
+import {
+  downloadReport,
+  fetchReports,
+  requestImageAnalysis,
+  saveBlob,
+  type ReportSummary,
+} from "@/lib/api/reports";
 import type { Scan } from "@/types/imaging";
 
 export const Route = createFileRoute("/viewer")({
@@ -25,7 +31,8 @@ export const Route = createFileRoute("/viewer")({
       { property: "og:title", content: "Visionneuse & analyse IA — Centre d'Imagerie Médicale" },
       {
         property: "og:description",
-        content: "Consultez les examens, lancez l'analyse IA et exportez les comptes rendus en PDF.",
+        content:
+          "Consultez les examens, lancez l'analyse IA et exportez les comptes rendus en PDF.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -65,11 +72,15 @@ function ViewerPage() {
     fetchScans(controller.signal)
       .then((rows) => {
         setScans(rows);
-        setSelectedId((prev) => (prev && rows.some((s) => s.id === prev) ? prev : rows[0]?.id ?? null));
+        setSelectedId((prev) =>
+          prev && rows.some((s) => s.id === prev) ? prev : (rows[0]?.id ?? null),
+        );
       })
       .catch((e: unknown) => {
         if (controller.signal.aborted) return;
-        setScansError(e instanceof Error ? e.message : "Impossible de charger les études d'imagerie.");
+        setScansError(
+          e instanceof Error ? e.message : "Impossible de charger les études d'imagerie.",
+        );
       })
       .finally(() => {
         if (!controller.signal.aborted) setIsLoadingScans(false);
@@ -96,7 +107,9 @@ function ViewerPage() {
       })
       .catch((e: unknown) => {
         if (controller.signal.aborted) return;
-        setReportsError(e instanceof Error ? e.message : "Impossible de charger les comptes rendus.");
+        setReportsError(
+          e instanceof Error ? e.message : "Impossible de charger les comptes rendus.",
+        );
       })
       .finally(() => {
         if (!controller.signal.aborted) setIsLoadingReports(false);
@@ -208,7 +221,9 @@ function ViewerPage() {
           <Card className="overflow-hidden">
             <CardHeader>
               <CardTitle className="text-base">
-                {selectedScan ? `${selectedScan.examen} · ${selectedScan.patient}` : "Sélectionnez une étude"}
+                {selectedScan
+                  ? `${selectedScan.examen} · ${selectedScan.patient}`
+                  : "Sélectionnez une étude"}
               </CardTitle>
             </CardHeader>
             <CardContent>

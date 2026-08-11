@@ -35,7 +35,13 @@ function ScoreGauge({ score }: { score: number }) {
   );
 }
 
-function SignalSummary({ cases, signalKey }: { cases: FraudCaseRecord[]; signalKey: FraudSignalKey }) {
+function SignalSummary({
+  cases,
+  signalKey,
+}: {
+  cases: FraudCaseRecord[];
+  signalKey: FraudSignalKey;
+}) {
   const meta = fraudSignalMeta[signalKey];
   const Icon = signalIcons[signalKey];
   const signals = cases.map((c) => c.signals.find((s) => s.key === signalKey)).filter(Boolean);
@@ -144,9 +150,7 @@ export function FraudDashboard({ sensitivity = 70 }: { sensitivity?: number }) {
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">
-            Dossiers caisse atypiques ({cases.length})
-          </CardTitle>
+          <CardTitle className="text-base">Dossiers caisse atypiques ({cases.length})</CardTitle>
         </CardHeader>
         <CardContent className="px-0 pb-0">
           {isLoading && cases.length === 0 ? (
@@ -202,7 +206,8 @@ export function FraudDashboard({ sensitivity = 70 }: { sensitivity?: number }) {
                         <div className="flex flex-wrap gap-1.5">
                           {c.signals.map((s) => (
                             <Pill key={s.key} tone={s.breached ? "destructive" : "neutral"}>
-                              {fraudSignalMeta[s.key].label} · {fraudSignalMeta[s.key].format(s.value)}
+                              {fraudSignalMeta[s.key].label} ·{" "}
+                              {fraudSignalMeta[s.key].format(s.value)}
                             </Pill>
                           ))}
                         </div>

@@ -14,7 +14,8 @@ import {
   Layers,
   Mail,
   Phone,
-  Pill as PillIcon, Printer,
+  Pill as PillIcon,
+  Printer,
   ReceiptText,
   RefreshCw,
   ScanLine,
@@ -204,7 +205,7 @@ function PatientRecordPage() {
   const [factures, setFactures] = useState<PatientBilling[]>([]);
   const [financier, setFinancier] = useState<FinancialStatus | null>(null);
   const [alertes, setAlertes] = useState<Anomalie[]>([]);
-  
+
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [blocked, setBlocked] = useState(false);
@@ -224,7 +225,9 @@ function PatientRecordPage() {
           fetchPatientPrescriptions(patientId, controller.signal),
           fetchPatientBilling(patientId, controller.signal),
           fetchPatientFinancialStatus(patientId, controller.signal),
-          role === "directeur" ? fetchPatientAnomalies(patientId, controller.signal) : Promise.resolve([]),
+          role === "directeur"
+            ? fetchPatientAnomalies(patientId, controller.signal)
+            : Promise.resolve([]),
         ]);
         setPatient(p);
         setHistorique(h);
@@ -232,7 +235,7 @@ function PatientRecordPage() {
         setOrdonnances(o);
         setFactures(f);
         setFinancier(fin);
-        setAlertes(al.filter(a => a.statut === "pending"));
+        setAlertes(al.filter((a) => a.statut === "pending"));
       } catch (err: any) {
         if (controller.signal.aborted) return;
         setError("Service injoignable");
@@ -342,7 +345,8 @@ function PatientRecordPage() {
                       ) : null}
                     </div>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      {patient.age} ans · {patient.sexe ?? "Non précisé"} · ID {patient.id} · CIN {patient.cin}
+                      {patient.age} ans · {patient.sexe ?? "Non précisé"} · ID {patient.id} · CIN{" "}
+                      {patient.cin}
                     </p>
                   </div>
                 </div>
@@ -374,8 +378,16 @@ function PatientRecordPage() {
 
               <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 {[
-                  { label: "N° affiliation", value: patient.numAffiliation ?? "N/A", icon: BadgeCheck },
-                  { label: "Médecin traitant", value: patient.medecinTraitant ?? "Non renseigné", icon: Stethoscope },
+                  {
+                    label: "N° affiliation",
+                    value: patient.numAffiliation ?? "N/A",
+                    icon: BadgeCheck,
+                  },
+                  {
+                    label: "Médecin traitant",
+                    value: patient.medecinTraitant ?? "Non renseigné",
+                    icon: Stethoscope,
+                  },
                   { label: "Téléphone", value: patient.telephone, icon: Phone },
                   {
                     label: "Prochain rendez-vous",
@@ -614,7 +626,9 @@ function PatientRecordPage() {
                             <TableRow key={f.id}>
                               <TableCell className="pl-6 font-mono text-xs">{f.id}</TableCell>
                               <TableCell className="text-sm font-medium">{f.acte}</TableCell>
-                              <TableCell className="hidden text-sm md:table-cell">{f.date}</TableCell>
+                              <TableCell className="hidden text-sm md:table-cell">
+                                {f.date}
+                              </TableCell>
                               <TableCell className="text-right text-sm tabular-nums">
                                 {mad(f.total)}
                               </TableCell>
@@ -717,8 +731,8 @@ function PatientRecordPage() {
                             Score de risque : {Math.round(score * 100)} %
                           </p>
                           <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
-                            Anomalie de caisse détectée pour l&apos;{financier.examen}.
-                            Les clichés sont prêts mais {mad(solde)} restent dus.
+                            Anomalie de caisse détectée pour l&apos;{financier.examen}. Les clichés
+                            sont prêts mais {mad(solde)} restent dus.
                           </p>
                         </div>
                       </div>
@@ -802,7 +816,9 @@ function PatientRecordPage() {
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div>
-                              <p className={cn("text-xs font-bold uppercase tracking-wider", m.text)}>
+                              <p
+                                className={cn("text-xs font-bold uppercase tracking-wider", m.text)}
+                              >
                                 {m.label} · {a.score} %
                               </p>
                               <p className="mt-1 text-sm font-bold leading-tight">{a.acte}</p>

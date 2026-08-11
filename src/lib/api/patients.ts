@@ -7,12 +7,12 @@ export type PatientDto = {
   age: number;
   telephone: string;
   mutuelle: string;
-  email?: string;
-  sexe?: string;
-  numAffiliation?: string;
-  medecinTraitant?: string;
-  ville?: string;
-  prochainRdv?: string;
+  email?: string | undefined;
+  sexe?: string | undefined;
+  numAffiliation?: string | undefined;
+  medecinTraitant?: string | undefined;
+  ville?: string | undefined;
+  prochainRdv?: string | undefined;
 };
 
 export type PatientRow = {
@@ -22,12 +22,12 @@ export type PatientRow = {
   age: number;
   telephone: string;
   mutuelle: string;
-  email?: string;
-  sexe?: string;
-  numAffiliation?: string;
-  medecinTraitant?: string;
-  ville?: string;
-  prochainRdv?: string;
+  email?: string | undefined;
+  sexe?: string | undefined;
+  numAffiliation?: string | undefined;
+  medecinTraitant?: string | undefined;
+  ville?: string | undefined;
+  prochainRdv?: string | undefined;
 };
 
 export type HistoryItem = {
@@ -97,33 +97,69 @@ export async function fetchPatients(signal?: AbortSignal): Promise<PatientRow[]>
   return (rows ?? []).map(mapPatient);
 }
 
-export async function fetchPatientData(patientId: string, signal?: AbortSignal): Promise<PatientRow> {
-  const dto = await javaApi<PatientDto>(`/api/patients/${encodeURIComponent(patientId)}`, signal ? { signal } : {});
+export async function fetchPatientData(
+  patientId: string,
+  signal?: AbortSignal,
+): Promise<PatientRow> {
+  const dto = await javaApi<PatientDto>(
+    `/api/patients/${encodeURIComponent(patientId)}`,
+    signal ? { signal } : {},
+  );
   return mapPatient(dto);
 }
 
-export async function fetchPatientHistory(patientId: string, signal?: AbortSignal): Promise<HistoryItem[]> {
-  const rows = await javaApi<HistoryItem[]>(`/api/patients/${encodeURIComponent(patientId)}/historique`, signal ? { signal } : {});
+export async function fetchPatientHistory(
+  patientId: string,
+  signal?: AbortSignal,
+): Promise<HistoryItem[]> {
+  const rows = await javaApi<HistoryItem[]>(
+    `/api/patients/${encodeURIComponent(patientId)}/historique`,
+    signal ? { signal } : {},
+  );
   return rows ?? [];
 }
 
-export async function fetchPatientImaging(patientId: string, signal?: AbortSignal): Promise<PatientImaging[]> {
-  const rows = await javaApi<PatientImaging[]>(`/api/patients/${encodeURIComponent(patientId)}/imagerie`, signal ? { signal } : {});
+export async function fetchPatientImaging(
+  patientId: string,
+  signal?: AbortSignal,
+): Promise<PatientImaging[]> {
+  const rows = await javaApi<PatientImaging[]>(
+    `/api/patients/${encodeURIComponent(patientId)}/imagerie`,
+    signal ? { signal } : {},
+  );
   return rows ?? [];
 }
 
-export async function fetchPatientPrescriptions(patientId: string, signal?: AbortSignal): Promise<PatientPrescription[]> {
-  const rows = await javaApi<PatientPrescription[]>(`/api/patients/${encodeURIComponent(patientId)}/ordonnances`, signal ? { signal } : {});
+export async function fetchPatientPrescriptions(
+  patientId: string,
+  signal?: AbortSignal,
+): Promise<PatientPrescription[]> {
+  const rows = await javaApi<PatientPrescription[]>(
+    `/api/patients/${encodeURIComponent(patientId)}/ordonnances`,
+    signal ? { signal } : {},
+  );
   return rows ?? [];
 }
 
-export async function fetchPatientBilling(patientId: string, signal?: AbortSignal): Promise<PatientBilling[]> {
-  const rows = await javaApi<PatientBilling[]>(`/api/patients/${encodeURIComponent(patientId)}/factures`, signal ? { signal } : {});
+export async function fetchPatientBilling(
+  patientId: string,
+  signal?: AbortSignal,
+): Promise<PatientBilling[]> {
+  const rows = await javaApi<PatientBilling[]>(
+    `/api/patients/${encodeURIComponent(patientId)}/factures`,
+    signal ? { signal } : {},
+  );
   return rows ?? [];
 }
 
-export async function fetchPatientFinancialStatus(patientId: string, signal?: AbortSignal): Promise<FinancialStatus> {
-  return javaApi<FinancialStatus>(`/api/patients/${encodeURIComponent(patientId)}/dossier-financier`, signal ? { signal } : {});
+export async function fetchPatientFinancialStatus(
+  patientId: string,
+  signal?: AbortSignal,
+): Promise<FinancialStatus> {
+  return javaApi<FinancialStatus>(
+    `/api/patients/${encodeURIComponent(patientId)}/dossier-financier`,
+    signal ? { signal } : {},
+  );
 }
 
 export async function createPatient(payload: Omit<PatientRow, "id">): Promise<PatientRow> {

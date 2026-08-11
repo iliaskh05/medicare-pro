@@ -42,12 +42,7 @@ export type PredictionFraude = {
 };
 
 export type EtapeChatbot =
-  | "Accueil"
-  | "Qualification"
-  | "Rendez-vous"
-  | "Rappel"
-  | "Conclu"
-  | "Abandon";
+  "Accueil" | "Qualification" | "Rendez-vous" | "Rappel" | "Conclu" | "Abandon";
 
 export type InteractionWhatsApp = {
   id: string;

@@ -265,9 +265,7 @@ function FacturationPage() {
                   id="total"
                   type="number"
                   value={form.total}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, total: Number(e.target.value) || 0 }))
-                  }
+                  onChange={(e) => setForm((f) => ({ ...f, total: Number(e.target.value) || 0 }))}
                 />
               </div>
               <div className="space-y-2">
