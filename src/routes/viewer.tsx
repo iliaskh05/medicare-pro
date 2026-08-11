@@ -7,7 +7,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { EmptyState, PageHeader, Pill } from "@/components/ui-kit";
+import { EmptyState, PageHeader, Pill, ServiceNotice } from "@/components/ui-kit";
 import { ScanViewer } from "@/components/scan-viewer";
 import { fetchScans } from "@/lib/api/imaging";
 import {
