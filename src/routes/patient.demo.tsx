@@ -982,6 +982,17 @@ function PatientRecordPage() {
               </ActionButton>
             </CardContent>
           </Card>
+          ) : (
+            <Card>
+              <CardContent className="space-y-2 p-5">
+                <p className="text-sm font-semibold">Analyse de conformité IA</p>
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  Les scores de fraude et le clustering des signaux faibles sont réservés au
+                  Directeur (Mr Adnane). Ce module n&apos;est pas chargé pour votre profil.
+                </p>
+              </CardContent>
+            </Card>
+          )}
         </aside>
       </div>
     </div>
