@@ -7,7 +7,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { EmptyState, PageHeader } from "@/components/ui-kit";
+import { EmptyState, PageHeader, ServiceNotice } from "@/components/ui-kit";
 import { WaChatThread } from "@/components/whatsapp/wa-chat-thread";
 import { WaContextPanel } from "@/components/whatsapp/wa-context-panel";
 import { WaConversationList } from "@/components/whatsapp/wa-conversation-list";
@@ -186,22 +186,16 @@ function WhatsAppPage() {
       />
 
       {error ? (
-        <Alert variant="destructive">
-          <AlertCircle className="size-4" />
-          <AlertTitle>Conversations indisponibles</AlertTitle>
-          <AlertDescription className="flex flex-wrap items-center justify-between gap-2">
-            <span>{error}</span>
-            <Button size="sm" variant="outline" onClick={() => setReloadToken((t) => t + 1)}>
-              Réessayer
-            </Button>
-          </AlertDescription>
-        </Alert>
+        <ServiceNotice
+          message="Conversations WhatsApp en attente de connexion au serveur du centre."
+          onRetry={() => setReloadToken((t) => t + 1)}
+        />
       ) : null}
 
       <Card className="overflow-hidden p-0 shadow-sm">
         {isLoading ? (
           <WhatsAppSkeleton />
-        ) : conversations.length === 0 && !error ? (
+        ) : conversations.length === 0 ? (
           <EmptyState
             icon={MessageCircle}
             title="Aucune donnée disponible"

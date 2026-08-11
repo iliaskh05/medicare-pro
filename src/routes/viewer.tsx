@@ -165,21 +165,15 @@ function ViewerPage() {
       />
 
       {scansError ? (
-        <Alert variant="destructive">
-          <AlertCircle className="size-4" />
-          <AlertTitle>Études indisponibles</AlertTitle>
-          <AlertDescription className="flex flex-wrap items-center justify-between gap-2">
-            <span>{scansError}</span>
-            <Button size="sm" variant="outline" onClick={() => setReloadToken((t) => t + 1)}>
-              Réessayer
-            </Button>
-          </AlertDescription>
-        </Alert>
+        <ServiceNotice
+          message="Études d'imagerie en attente de connexion au serveur du centre."
+          onRetry={() => setReloadToken((t) => t + 1)}
+        />
       ) : null}
 
       {isLoadingScans ? (
         <ViewerSkeleton />
-      ) : scans.length === 0 && !scansError ? (
+      ) : scans.length === 0 ? (
         <Card>
           <CardContent>
             <EmptyState
@@ -247,11 +241,7 @@ function ViewerPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               {reportsError ? (
-                <Alert variant="destructive">
-                  <AlertCircle className="size-4" />
-                  <AlertTitle>Comptes rendus indisponibles</AlertTitle>
-                  <AlertDescription>{reportsError}</AlertDescription>
-                </Alert>
+                <ServiceNotice message="Comptes rendus en attente de connexion au serveur." />
               ) : isLoadingReports ? (
                 <div className="space-y-2">
                   <Skeleton className="h-12 w-full rounded-md" />
