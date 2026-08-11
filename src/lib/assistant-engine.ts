@@ -7,7 +7,7 @@ import {
 } from "@/data/assistant-knowledge";
 
 const roleLabels: Record<AssistantRole, string> = {
-  directeur: "Directeur",
+  directeur: "Directeur (Mr Adnane)",
   accueil: "Accueil",
   technicien: "Technicien",
   medecin: "Médecin",
@@ -81,7 +81,7 @@ const rules: Rule[] = [
     motsCles: ["bonjour", "salut", "bonsoir", "salam", "hello"],
     build: (ctx) => ({
       intent: "salutation",
-      text: `Bonjour 👋 Je suis l'Assistant RadioCRM. Je vous guide dans l'utilisation de la plateforme : navigation, explication des écrans et des indicateurs du centre.\n\nProfil actif : **${roleLabels[ctx.role]}** (rôle utilisateur).`,
+      text: `Bonjour 👋 Je suis l'Assistant RadioCRM. Je vous guide dans l'utilisation de la plateforme : navigation, explication des écrans et des indicateurs du centre.\n\nProfil actif : **${roleLabels[ctx.role]}** (rôle utilisateur (Mr Adnane)).`,
       actions: [
         {
           kind: "prompt",
@@ -174,7 +174,7 @@ const rules: Rule[] = [
       text:
         ctx.role === "directeur"
           ? "**Export comptable** — depuis Facturation ou Audit, le bouton d'export produit un fichier CSV téléchargeable, correspondant aux lignes actuellement filtrées."
-          : "L'export comptable est réservé au profil **Directeur** dans cette version. Basculez de rôle depuis le sélecteur du bandeau supérieur pour le visualiser.",
+          : "L'export comptable est réservé au profil **Directeur (Mr Adnane)** dans cette version. Basculez de rôle depuis le sélecteur du bandeau supérieur pour le visualiser.",
       actions: [{ kind: "navigate", label: "Ouvrir Facturation", to: "/facturation" }],
     }),
   },
@@ -227,7 +227,7 @@ const rules: Rule[] = [
     motsCles: ["role", "profil", "droit", "permission", "rbac", "directeur", "radiologue"],
     build: (ctx) => ({
       intent: "role",
-      text: `**Gestion des rôles** — le sélecteur du bandeau supérieur bascule entre *Directeur* (accès complet, y compris le module de détection de fraude), *Accueil*, *Technicien* et *Médecin* (modules financiers et IA restreints).\n\nProfil actif : **${roleLabels[ctx.role]}**.`,
+      text: `**Gestion des rôles** — le sélecteur du bandeau supérieur bascule entre *Directeur (Mr Adnane)* (accès complet, y compris le module de détection de fraude), *Accueil*, *Technicien* et *Médecin* (modules financiers et IA restreints).\n\nProfil actif : **${roleLabels[ctx.role]}**.`,
       actions: [{ kind: "navigate", label: "Ouvrir le tableau de bord", to: "/dashboard" }],
     }),
   },
@@ -236,7 +236,7 @@ const rules: Rule[] = [
     motsCles: ["donnee", "reelle", "confidentialite", "rgpd", "cndp", "securite", "vrai"],
     build: () => ({
       intent: "confidentialite",
-      text: "Ce prototype est une **interface de gestion** : patients, montants et analyses sont issus du moteur local. Aucune donnée médicale réelle, aucune clé d'API et aucun service externe ne sont utilisés.",
+      text: "Cette plateforme est une **interface de gestion** : patients, montants et analyses sont issus du moteur local. Aucune donnée médicale réelle, aucune clé d'API et aucun service externe ne sont utilisés.",
       actions: [],
     }),
   },
