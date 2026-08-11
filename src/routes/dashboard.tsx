@@ -166,11 +166,10 @@ function AsyncSection<T>({
   if (isLoading) return <>{skeleton}</>;
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-destructive/30 bg-destructive/5 px-6 py-8 text-center">
-        <AlertTriangle className="size-6 text-destructive" />
-        <p className="text-sm text-muted-foreground">{error}</p>
-        <Button variant="outline" size="sm" onClick={onRetry}>
-          <RefreshCw className="mr-2 size-4" /> Réessayer
+      <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-muted/30 px-6 py-8 text-center">
+        <p className="text-sm font-medium text-muted-foreground">Aucune donnée disponible</p>
+        <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={onRetry}>
+          <RefreshCw className="mr-2 size-3.5" /> Réessayer
         </Button>
       </div>
     );
@@ -319,36 +318,39 @@ function Dashboard() {
     return () => controller.abort();
   }, [profile.canSeeFinance, reloadKey]);
 
+  /* En cas d'indisponibilité du backend, la carte reste affichée avec une valeur neutre. */
+  const kpiValue = (value: string) => (kpisError ? "—" : value);
   const kpiCards = [
     {
       label: "Patients du jour",
-      value: String(kpis.patientsDuJour),
+      value: kpiValue(String(kpis.patientsDuJour)),
       icon: Users,
       tone: "primary" as const,
       finance: false,
     },
     {
       label: "Chiffre d'affaires mensuel",
-      value: formatMAD(kpis.chiffreAffaires),
+      value: kpiValue(formatMAD(kpis.chiffreAffaires)),
       icon: Wallet,
       tone: "success" as const,
       finance: true,
     },
     {
       label: "Taux d'occupation",
-      value: `${kpis.tauxOccupation}%`,
+      value: kpiValue(`${kpis.tauxOccupation}%`),
       icon: Clock,
       tone: "warning" as const,
       finance: false,
     },
     {
       label: "Actes réalisés",
-      value: String(kpis.actesRealises),
+      value: kpiValue(String(kpis.actesRealises)),
       icon: AlertTriangle,
       tone: "destructive" as const,
       finance: true,
     },
   ];
+
   const visibleKpis = kpiCards.filter((k) => !k.finance || profile.canSeeFinance);
 
   const comptaTotal = comptabilite.validated + comptabilite.pending;
@@ -438,46 +440,34 @@ function Dashboard() {
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {kpisLoading ? (
-          Array.from({ length: 4 }).map((_, i) => (
-            <Card key={i}>
-              <CardContent className="flex items-start gap-4 p-5">
-                <Skeleton className="size-10 rounded-xl" />
-                <div className="min-w-0 flex-1 space-y-2">
-                  <Skeleton className="h-3 w-24" />
-                  <Skeleton className="h-6 w-16" />
-                  <Skeleton className="h-3 w-20" />
-                </div>
-              </CardContent>
-            </Card>
-          ))
-        ) : kpisError ? (
-          <Card className="sm:col-span-2 xl:col-span-4">
-            <CardContent className="flex flex-col items-center justify-center gap-3 p-6 text-center">
-              <AlertTriangle className="size-6 text-destructive" />
-              <p className="text-sm text-muted-foreground">{kpisError}</p>
-              <Button variant="outline" size="sm" onClick={reload}>
-                <RefreshCw className="mr-2 size-4" /> Réessayer
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          visibleKpis.map((kpi) => (
-            <Card key={kpi.label}>
-              <CardContent className="flex items-start gap-4 p-5">
-                <IconTile tone={kpi.tone}>
-                  <kpi.icon className="size-5" />
-                </IconTile>
-                <div className="min-w-0">
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    {kpi.label}
-                  </p>
-                  <p className="mt-1 text-xl font-bold tracking-tight sm:text-2xl">{kpi.value}</p>
-                </div>
-              </CardContent>
-            </Card>
-          ))
-        )}
+        {kpisLoading
+          ? Array.from({ length: 4 }).map((_, i) => (
+              <Card key={i}>
+                <CardContent className="flex items-start gap-4 p-5">
+                  <Skeleton className="size-10 rounded-xl" />
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <Skeleton className="h-3 w-24" />
+                    <Skeleton className="h-6 w-16" />
+                    <Skeleton className="h-3 w-20" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          : visibleKpis.map((kpi) => (
+              <Card key={kpi.label}>
+                <CardContent className="flex items-start gap-4 p-5">
+                  <IconTile tone={kpi.tone}>
+                    <kpi.icon className="size-5" />
+                  </IconTile>
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      {kpi.label}
+                    </p>
+                    <p className="mt-1 text-xl font-bold tracking-tight sm:text-2xl">{kpi.value}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
@@ -584,13 +574,6 @@ function Dashboard() {
           </Card>
         ) : null}
 
-        {/* Analyse de Conformité IA (Fraude caisse) — rendu strictement Directeur */}
-        {role === "directeur" ? (
-          <div className="lg:col-span-3">
-            <CaisseFraudAlert />
-          </div>
-        ) : null}
-
         {/* Widget 3 — Synchronisation Comptable */}
         {profile.canSeeFinance ? (
           <Card className="lg:col-span-1">
@@ -613,11 +596,12 @@ function Dashboard() {
                   <Skeleton className="h-9 w-full rounded-lg" />
                 </div>
               ) : comptaError ? (
-                <div className="flex flex-col items-center justify-center gap-3 text-center">
-                  <AlertTriangle className="size-6 text-destructive" />
-                  <p className="text-sm text-muted-foreground">{comptaError}</p>
-                  <Button variant="outline" size="sm" onClick={reload}>
-                    <RefreshCw className="mr-2 size-4" /> Réessayer
+                <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-muted/30 px-4 py-6 text-center">
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Aucune donnée disponible
+                  </p>
+                  <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={reload}>
+                    <RefreshCw className="mr-2 size-3.5" /> Réessayer
                   </Button>
                 </div>
               ) : (
@@ -665,6 +649,9 @@ function Dashboard() {
           </Card>
         ) : null}
       </div>
+
+      {/* Analyse de Conformité IA (Fraude caisse) — rendu strictement Directeur */}
+      {role === "directeur" ? <CaisseFraudAlert /> : null}
 
       <div className="grid gap-4 lg:grid-cols-5">
         <Card className="lg:col-span-3">

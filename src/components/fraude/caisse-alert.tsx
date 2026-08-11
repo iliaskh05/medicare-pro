@@ -106,13 +106,14 @@ export function CaisseFraudAlert({ compact = false }: { compact?: boolean }) {
     );
   } else if (error || !data) {
     body = (
-      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4">
-        <AlertTriangle className="size-5 shrink-0 text-destructive" />
-        <p className="min-w-0 flex-1 text-sm">
-          Analyse des anomalies financières indisponible.
-          <span className="block text-xs text-muted-foreground">{error}</span>
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-dashed border-border bg-muted/30 p-4">
+        <p className="min-w-0 flex-1 text-sm text-muted-foreground">
+          Aucune donnée disponible
+          <span className="block text-xs text-muted-foreground/70">
+            Analyse des règlements en attente de connexion au serveur du centre.
+          </span>
         </p>
-        <Button variant="outline" size="sm" onClick={() => setReloadKey((k) => k + 1)}>
+        <Button variant="ghost" size="sm" onClick={() => setReloadKey((k) => k + 1)}>
           <RefreshCw className="mr-2 size-4" /> Réessayer
         </Button>
       </div>
