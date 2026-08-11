@@ -22,5 +22,5 @@ export type AnomalieCaisseDto = {
 
 /** Récupère l'analyse d'anomalies financières du modèle Python. */
 export async function fetchAnomaliesCaisse(signal?: AbortSignal): Promise<AnomalieCaisseDto> {
-  return mlApi<AnomalieCaisseDto>("/api/ia/anomalies", { signal });
+  return mlApi<AnomalieCaisseDto>("/api/ia/anomalies", signal ? { signal } : {});
 }
