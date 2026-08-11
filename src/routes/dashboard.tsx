@@ -176,7 +176,6 @@ function AsyncSection<T>({
   }
   if (isEmpty) return <EmptyState icon={AlertTriangle} title={emptyMessage} compact />;
   return <>{children}</>;
-
 }
 
 function Dashboard() {
@@ -441,37 +440,34 @@ function Dashboard() {
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {kpisLoading ? (
-          Array.from({ length: 4 }).map((_, i) => (
-            <Card key={i}>
-              <CardContent className="flex items-start gap-4 p-5">
-                <Skeleton className="size-10 rounded-xl" />
-                <div className="min-w-0 flex-1 space-y-2">
-                  <Skeleton className="h-3 w-24" />
-                  <Skeleton className="h-6 w-16" />
-                  <Skeleton className="h-3 w-20" />
-                </div>
-              </CardContent>
-            </Card>
-          ))
-        ) : (
-
-          visibleKpis.map((kpi) => (
-            <Card key={kpi.label}>
-              <CardContent className="flex items-start gap-4 p-5">
-                <IconTile tone={kpi.tone}>
-                  <kpi.icon className="size-5" />
-                </IconTile>
-                <div className="min-w-0">
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    {kpi.label}
-                  </p>
-                  <p className="mt-1 text-xl font-bold tracking-tight sm:text-2xl">{kpi.value}</p>
-                </div>
-              </CardContent>
-            </Card>
-          ))
-        )}
+        {kpisLoading
+          ? Array.from({ length: 4 }).map((_, i) => (
+              <Card key={i}>
+                <CardContent className="flex items-start gap-4 p-5">
+                  <Skeleton className="size-10 rounded-xl" />
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <Skeleton className="h-3 w-24" />
+                    <Skeleton className="h-6 w-16" />
+                    <Skeleton className="h-3 w-20" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          : visibleKpis.map((kpi) => (
+              <Card key={kpi.label}>
+                <CardContent className="flex items-start gap-4 p-5">
+                  <IconTile tone={kpi.tone}>
+                    <kpi.icon className="size-5" />
+                  </IconTile>
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      {kpi.label}
+                    </p>
+                    <p className="mt-1 text-xl font-bold tracking-tight sm:text-2xl">{kpi.value}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">

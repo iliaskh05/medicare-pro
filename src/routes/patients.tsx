@@ -297,7 +297,6 @@ function PatientsPage() {
         />
       ) : null}
 
-
       <Card data-tour="patients-table">
         <CardContent className="px-0 py-0" aria-busy={isLoading}>
           <div className="overflow-x-auto">
