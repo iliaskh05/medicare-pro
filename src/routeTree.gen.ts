@@ -17,6 +17,7 @@ import { Route as FacturationRouteImport } from './routes/facturation'
 import { Route as ImagerieRouteImport } from './routes/imagerie'
 import { Route as MedecinsRouteImport } from './routes/medecins'
 import { Route as MedecinsReferentsRouteImport } from './routes/medecins-referents'
+import { Route as ParametresRouteImport } from './routes/parametres'
 import { Route as PatientsRouteImport } from './routes/patients'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ViewerRouteImport } from './routes/viewer'
@@ -63,6 +64,11 @@ const MedecinsReferentsRoute = MedecinsReferentsRouteImport.update({
   path: '/medecins-referents',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ParametresRoute = ParametresRouteImport.update({
+  id: '/parametres',
+  path: '/parametres',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PatientsRoute = PatientsRouteImport.update({
   id: '/patients',
   path: '/patients',
@@ -98,6 +104,7 @@ export interface FileRoutesByFullPath {
   '/imagerie': typeof ImagerieRoute
   '/medecins': typeof MedecinsRoute
   '/medecins-referents': typeof MedecinsReferentsRoute
+  '/parametres': typeof ParametresRoute
   '/patients': typeof PatientsRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/viewer': typeof ViewerRoute
@@ -113,6 +120,7 @@ export interface FileRoutesByTo {
   '/imagerie': typeof ImagerieRoute
   '/medecins': typeof MedecinsRoute
   '/medecins-referents': typeof MedecinsReferentsRoute
+  '/parametres': typeof ParametresRoute
   '/patients': typeof PatientsRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/viewer': typeof ViewerRoute
@@ -129,6 +137,7 @@ export interface FileRoutesById {
   '/imagerie': typeof ImagerieRoute
   '/medecins': typeof MedecinsRoute
   '/medecins-referents': typeof MedecinsReferentsRoute
+  '/parametres': typeof ParametresRoute
   '/patients': typeof PatientsRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/viewer': typeof ViewerRoute
@@ -146,6 +155,7 @@ export interface FileRouteTypes {
     | '/imagerie'
     | '/medecins'
     | '/medecins-referents'
+    | '/parametres'
     | '/patients'
     | '/sitemap.xml'
     | '/viewer'
@@ -161,6 +171,7 @@ export interface FileRouteTypes {
     | '/imagerie'
     | '/medecins'
     | '/medecins-referents'
+    | '/parametres'
     | '/patients'
     | '/sitemap.xml'
     | '/viewer'
@@ -176,6 +187,7 @@ export interface FileRouteTypes {
     | '/imagerie'
     | '/medecins'
     | '/medecins-referents'
+    | '/parametres'
     | '/patients'
     | '/sitemap.xml'
     | '/viewer'
@@ -192,6 +204,7 @@ export interface RootRouteChildren {
   ImagerieRoute: typeof ImagerieRoute
   MedecinsRoute: typeof MedecinsRoute
   MedecinsReferentsRoute: typeof MedecinsReferentsRoute
+  ParametresRoute: typeof ParametresRoute
   PatientsRoute: typeof PatientsRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   ViewerRoute: typeof ViewerRoute
@@ -257,6 +270,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MedecinsReferentsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/parametres': {
+      id: '/parametres'
+      path: '/parametres'
+      fullPath: '/parametres'
+      preLoaderRoute: typeof ParametresRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/patients': {
       id: '/patients'
       path: '/patients'
@@ -304,6 +324,7 @@ const rootRouteChildren: RootRouteChildren = {
   ImagerieRoute: ImagerieRoute,
   MedecinsRoute: MedecinsRoute,
   MedecinsReferentsRoute: MedecinsReferentsRoute,
+  ParametresRoute: ParametresRoute,
   PatientsRoute: PatientsRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   ViewerRoute: ViewerRoute,
@@ -313,13 +334,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
