@@ -183,9 +183,11 @@ function AuditPage() {
 function AccesRestreint() {
   return (
     <div className="mx-auto max-w-lg py-16 text-center">
-      <IconTile tone="destructive" className="mx-auto">
-        <Lock className="size-5" />
-      </IconTile>
+      <div className="mx-auto w-fit">
+        <IconTile tone="destructive">
+          <Lock className="size-5" />
+        </IconTile>
+      </div>
       <h1 className="mt-4 text-xl font-bold tracking-tight">Module réservé à la direction</h1>
       <p className="mt-2 text-sm text-muted-foreground">
         La détection de fraude et l'analyse IA des règlements sont accessibles uniquement au
