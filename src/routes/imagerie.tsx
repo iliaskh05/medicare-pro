@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/empty-state";
-import { PageHeader, Pill } from "@/components/ui-kit";
+import { PageHeader, Pill, ServiceNotice } from "@/components/ui-kit";
 import { ScanViewer } from "@/components/scan-viewer";
 import { fetchScans } from "@/lib/api/imaging";
 import type { Scan } from "@/types/imaging";
@@ -73,6 +73,13 @@ function ImageriePage() {
         subtitle="Imagerie du jour avec surbrillance des zones analysées automatiquement"
       />
 
+      {error ? (
+        <ServiceNotice
+          message="Examens d'imagerie en attente de connexion au serveur du centre."
+          onRetry={retry}
+        />
+      ) : null}
+
       {isLoading ? (
         <div className="grid gap-4 xl:grid-cols-[16rem_minmax(0,1fr)]">
           <Card>
@@ -88,17 +95,6 @@ function ImageriePage() {
             </CardContent>
           </Card>
         </div>
-      ) : error ? (
-        <Card>
-          <CardContent className="flex flex-col items-center gap-3 py-14 text-center">
-            <p className="text-sm font-medium text-muted-foreground">
-              Impossible de charger les examens d'imagerie.
-            </p>
-            <Button variant="outline" onClick={retry}>
-              <RotateCcw className="mr-2 size-4" /> Réessayer
-            </Button>
-          </CardContent>
-        </Card>
       ) : scans.length === 0 || !active ? (
         <Card>
           <CardContent className="p-0">

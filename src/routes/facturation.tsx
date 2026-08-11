@@ -349,15 +349,6 @@ function FacturationPage() {
               <Skeleton className="h-10 w-full" />
               <Skeleton className="h-10 w-full" />
             </div>
-          ) : error ? (
-            <div className="flex flex-col items-center gap-3 py-12 text-center">
-              <p className="text-sm font-medium text-muted-foreground">
-                Impossible de charger les factures.
-              </p>
-              <Button variant="outline" onClick={retry}>
-                <RotateCcw className="mr-2 size-4" /> Réessayer
-              </Button>
-            </div>
           ) : factures.length === 0 ? (
             <EmptyState />
           ) : (

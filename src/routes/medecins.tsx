@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/empty-state";
-import { PageHeader, Pill } from "@/components/ui-kit";
+import { PageHeader, Pill, ServiceNotice } from "@/components/ui-kit";
 import { fetchPrescripteurs } from "@/lib/api/dashboard";
 import { sendReportToReferent } from "@/lib/api/referents";
 import type { Medecin } from "@/types/domain";
@@ -117,6 +117,13 @@ function MedecinsPage() {
         </CardContent>
       </Card>
 
+      {error ? (
+        <ServiceNotice
+          message="Réseau des prescripteurs en attente de connexion au serveur du centre."
+          onRetry={retry}
+        />
+      ) : null}
+
       {isLoading ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {[0, 1, 2, 3, 4, 5].map((i) => (
@@ -130,17 +137,6 @@ function MedecinsPage() {
             </Card>
           ))}
         </div>
-      ) : error ? (
-        <Card>
-          <CardContent className="flex flex-col items-center gap-3 py-14 text-center">
-            <p className="text-sm font-medium text-muted-foreground">
-              Impossible de charger le réseau de prescripteurs.
-            </p>
-            <Button variant="outline" onClick={retry}>
-              <RotateCcw className="mr-2 size-4" /> Réessayer
-            </Button>
-          </CardContent>
-        </Card>
       ) : list.length === 0 ? (
         <Card>
           <CardContent className="p-0">
