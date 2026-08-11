@@ -230,11 +230,14 @@ function MedecinsReferentsPage() {
                         <ActionButton
                           variant="outline"
                           size="sm"
+                          className="size-8 p-0"
+                          aria-label={`Envoyer les comptes rendus à ${m.nom}`}
                           action={() => sendReportToReferent(m.id)}
                           toastMessage="Comptes rendus transmis"
                           toastDescription={`${m.nom} · ${m.ville} — ${m.email}`}
                         >
-                          <Send className="mr-2 size-4" /> Comptes rendus
+                          <Send className="size-4" />
+                          <span className="sr-only">Envoyer les comptes rendus</span>
                         </ActionButton>
                       </TableCell>
                     </TableRow>
