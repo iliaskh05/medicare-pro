@@ -39,7 +39,7 @@ function ChatPage() {
     role: profile.label.split(" (")[0] ?? profile.label,
   };
   const { messages, status, isLoading, sendMessage } = useChatChannel(channelId, author);
-  const active = channels.find((c) => c.id === channelId) ?? channels[0];
+  const active = channels.find((c) => c.id === channelId) ?? channels[0]!;
 
   return (
     <div className="space-y-6">
