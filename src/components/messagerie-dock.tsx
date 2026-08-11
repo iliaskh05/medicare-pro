@@ -185,7 +185,7 @@ export function MessagerieDock() {
       {active ? (
         <ChannelThread channelId={active.id} />
       ) : channels.length === 0 ? (
-        <EmptyState title="Aucune donnée disponible" />
+        <EmptyState />
       ) : (
         <ScrollArea className="flex-1">
           <ul className="divide-y divide-border">

@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   Users,
@@ -12,13 +12,14 @@ import {
   CalendarDays,
   FileSpreadsheet,
   ShieldAlert,
-  Loader2,
   MessageCircle,
   Bot,
+  RefreshCw,
 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogContent,
@@ -41,18 +42,29 @@ import {
 } from "@/components/ui/table";
 import { useRole } from "@/hooks/use-role";
 import { CaisseFraudAlert } from "@/components/fraude/caisse-alert";
-import { useAsyncAction } from "@/hooks/use-async-action";
 import { DocumentMenu } from "@/components/document-menu";
-import { PageHeader, Pill, IconTile } from "@/components/ui-kit";
+import { ActionButton } from "@/components/action-button";
+import { PageHeader, Pill, IconTile, EmptyState } from "@/components/ui-kit";
 import { ProbabilityBar } from "@/components/probability-gauge";
+import { javaApi } from "@/lib/api/config";
 import {
-  alertes,
-  comptabilite,
+  fetchDashboardKpis,
+  fetchSalleAttente,
+  fetchPlanningTension,
+  fetchUrgencesFraude,
+  fetchAlertes,
+  fetchSyntheseComptable,
+  EMPTY_DASHBOARD_KPIS,
+  EMPTY_COMPTABILITE,
+  type DashboardKpis,
+} from "@/lib/api/dashboard";
+import {
   formatMAD,
-  planningTension,
-  salleAttente,
-  urgencesFraude,
+  type Alerte,
   type PlanningSlot,
+  type SalleAttente,
+  type SyntheseComptable,
+  type UrgenceFraude,
 } from "@/types/domain";
 
 export const Route = createFileRoute("/dashboard")({
@@ -62,54 +74,18 @@ export const Route = createFileRoute("/dashboard")({
       {
         name: "description",
         content:
-          "Activité du jour du centre de radiologie : patients, chiffre d'affaires en MAD, examens en attente et alertes de facturation.",
+          "Activité du jour du Centre d'Imagerie Médicale : patients, chiffre d'affaires en MAD, examens en attente et alertes de facturation.",
       },
       { property: "og:title", content: "Tableau de bord — RadioCRM" },
       {
         property: "og:description",
-        content: "Suivi temps réel des actes, recettes et alertes du centre de radiologie.",
+        content:
+          "Suivi temps réel des actes, recettes et alertes du Centre d'Imagerie Médicale.",
       },
     ],
   }),
   component: Dashboard,
 });
-
-const kpis = [
-  {
-    label: "Patients du jour",
-    value: "38",
-    hint: "+6 vs hier",
-    positive: true,
-    icon: Users,
-    tone: "primary" as const,
-  },
-  {
-    label: "Chiffre d'affaires mensuel",
-    value: formatMAD(742500),
-    hint: "+12,4 % vs juillet",
-    positive: true,
-    icon: Wallet,
-    tone: "success" as const,
-    finance: true,
-  },
-  {
-    label: "Examens en attente",
-    value: "14",
-    hint: "3 depuis plus de 45 min",
-    positive: false,
-    icon: Clock,
-    tone: "warning" as const,
-  },
-  {
-    label: "Alertes de facturation",
-    value: "5",
-    hint: "2 critiques à traiter",
-    positive: false,
-    icon: AlertTriangle,
-    tone: "destructive" as const,
-    finance: true,
-  },
-];
 
 const statutTone = {
   "En cours": "primary",
@@ -154,7 +130,8 @@ function PlanningHeatmap({ data }: { data: PlanningSlot[] }) {
         >
           <span className="text-[11px] font-medium text-muted-foreground">{slot}</span>
           {days.map((d) => {
-            const cell = data.find((item) => item.dayLabel === d.dayLabel && item.slot === slot)!;
+            const cell = data.find((item) => item.dayLabel === d.dayLabel && item.slot === slot);
+            if (!cell) return <div key={`${d.dayLabel}-${slot}`} className="aspect-square" />;
             return (
               <div
                 key={`${d.dayLabel}-${slot}`}
@@ -169,45 +146,218 @@ function PlanningHeatmap({ data }: { data: PlanningSlot[] }) {
   );
 }
 
+/** Section avec état de chargement / erreur / vide générique. */
+function AsyncSection<T>({
+  isLoading,
+  error,
+  onRetry,
+  isEmpty,
+  emptyMessage = "Aucune donnée disponible",
+  skeleton,
+  children,
+}: {
+  isLoading: boolean;
+  error: string | null;
+  onRetry: () => void;
+  isEmpty: boolean;
+  emptyMessage?: string;
+  skeleton: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  if (isLoading) return <>{skeleton}</>;
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-destructive/30 bg-destructive/5 px-6 py-8 text-center">
+        <AlertTriangle className="size-6 text-destructive" />
+        <p className="text-sm text-muted-foreground">{error}</p>
+        <Button variant="outline" size="sm" onClick={onRetry}>
+          <RefreshCw className="mr-2 size-4" /> Réessayer
+        </Button>
+      </div>
+    );
+  }
+  if (isEmpty) return <EmptyState icon={AlertTriangle} title={emptyMessage} compact />;
+  return <>{children}</>;
+}
+
 function Dashboard() {
   const [botOpen, setBotOpen] = useState(false);
-  const { run: exportComptable, isLoading: exporting } = useAsyncAction(
-    async () => {
-      {
-        const lignes = [
-          "reference;date;patient;examen;montant_mad;statut",
-          ...salleAttente.map(
-            (r, idx) =>
-              `ACT-2026-${String(idx + 1).padStart(4, "0")};2026-08-10;${r.patient};${r.examen};900;valide`,
-          ),
-        ].join("\n");
-        const blob = new Blob([`\ufeff${lignes}\n`], { type: "text/csv;charset=utf-8" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "export_comptable_2026.csv";
-        a.click();
-        URL.revokeObjectURL(url);
-      }
+  const { profile, role } = useRole();
+
+  // KPIs
+  const [kpis, setKpis] = useState<DashboardKpis>(EMPTY_DASHBOARD_KPIS);
+  const [kpisLoading, setKpisLoading] = useState(true);
+  const [kpisError, setKpisError] = useState<string | null>(null);
+
+  // Salle d'attente
+  const [salleAttente, setSalleAttente] = useState<SalleAttente[]>([]);
+  const [salleLoading, setSalleLoading] = useState(true);
+  const [salleError, setSalleError] = useState<string | null>(null);
+
+  // Planning
+  const [planningTension, setPlanningTension] = useState<PlanningSlot[]>([]);
+  const [planningLoading, setPlanningLoading] = useState(true);
+  const [planningError, setPlanningError] = useState<string | null>(null);
+
+  // Urgences fraude
+  const [urgencesFraude, setUrgencesFraude] = useState<UrgenceFraude[]>([]);
+  const [urgencesLoading, setUrgencesLoading] = useState(true);
+  const [urgencesError, setUrgencesError] = useState<string | null>(null);
+
+  // Alertes
+  const [alertes, setAlertes] = useState<Alerte[]>([]);
+  const [alertesLoading, setAlertesLoading] = useState(true);
+  const [alertesError, setAlertesError] = useState<string | null>(null);
+
+  // Synthèse comptable
+  const [comptabilite, setComptabilite] = useState<SyntheseComptable>(EMPTY_COMPTABILITE);
+  const [comptaLoading, setComptaLoading] = useState(true);
+  const [comptaError, setComptaError] = useState<string | null>(null);
+
+  const [reloadKey, setReloadKey] = useState(0);
+  const reload = () => setReloadKey((k) => k + 1);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setKpisLoading(true);
+    setKpisError(null);
+    fetchDashboardKpis(controller.signal)
+      .then(setKpis)
+      .catch((e: unknown) => {
+        if (controller.signal.aborted) return;
+        setKpisError(e instanceof Error ? e.message : "Impossible de charger les indicateurs");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setKpisLoading(false);
+      });
+    return () => controller.abort();
+  }, [reloadKey]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setSalleLoading(true);
+    setSalleError(null);
+    fetchSalleAttente(controller.signal)
+      .then(setSalleAttente)
+      .catch((e: unknown) => {
+        if (controller.signal.aborted) return;
+        setSalleError(e instanceof Error ? e.message : "Impossible de charger la salle d'attente");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setSalleLoading(false);
+      });
+    return () => controller.abort();
+  }, [reloadKey]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setPlanningLoading(true);
+    setPlanningError(null);
+    fetchPlanningTension(controller.signal)
+      .then(setPlanningTension)
+      .catch((e: unknown) => {
+        if (controller.signal.aborted) return;
+        setPlanningError(e instanceof Error ? e.message : "Impossible de charger le planning");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setPlanningLoading(false);
+      });
+    return () => controller.abort();
+  }, [reloadKey]);
+
+  useEffect(() => {
+    if (role !== "directeur") return;
+    const controller = new AbortController();
+    setUrgencesLoading(true);
+    setUrgencesError(null);
+    fetchUrgencesFraude(controller.signal)
+      .then(setUrgencesFraude)
+      .catch((e: unknown) => {
+        if (controller.signal.aborted) return;
+        setUrgencesError(e instanceof Error ? e.message : "Impossible de charger les urgences fraude");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setUrgencesLoading(false);
+      });
+    return () => controller.abort();
+  }, [role, reloadKey]);
+
+  useEffect(() => {
+    if (!profile.canSeeFinance) return;
+    const controller = new AbortController();
+    setAlertesLoading(true);
+    setAlertesError(null);
+    fetchAlertes(controller.signal)
+      .then(setAlertes)
+      .catch((e: unknown) => {
+        if (controller.signal.aborted) return;
+        setAlertesError(e instanceof Error ? e.message : "Impossible de charger les alertes");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setAlertesLoading(false);
+      });
+    return () => controller.abort();
+  }, [profile.canSeeFinance, reloadKey]);
+
+  useEffect(() => {
+    if (!profile.canSeeFinance) return;
+    const controller = new AbortController();
+    setComptaLoading(true);
+    setComptaError(null);
+    fetchSyntheseComptable(controller.signal)
+      .then(setComptabilite)
+      .catch((e: unknown) => {
+        if (controller.signal.aborted) return;
+        setComptaError(e instanceof Error ? e.message : "Impossible de charger la synthèse comptable");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setComptaLoading(false);
+      });
+    return () => controller.abort();
+  }, [profile.canSeeFinance, reloadKey]);
+
+  const kpiCards = [
+    {
+      label: "Patients du jour",
+      value: String(kpis.patientsDuJour),
+      icon: Users,
+      tone: "primary" as const,
+      finance: false,
     },
     {
-      onSuccess: () =>
-        toast.success("Export comptable généré", {
-          description: "export_comptable_2026.csv téléchargé.",
-        }),
-      onError: (error) => toast.error("Export impossible", { description: error.message }),
+      label: "Chiffre d'affaires mensuel",
+      value: formatMAD(kpis.chiffreAffaires),
+      icon: Wallet,
+      tone: "success" as const,
+      finance: true,
     },
-  );
+    {
+      label: "Taux d'occupation",
+      value: `${kpis.tauxOccupation}%`,
+      icon: Clock,
+      tone: "warning" as const,
+      finance: false,
+    },
+    {
+      label: "Actes réalisés",
+      value: String(kpis.actesRealises),
+      icon: AlertTriangle,
+      tone: "destructive" as const,
+      finance: true,
+    },
+  ];
+  const visibleKpis = kpiCards.filter((k) => !k.finance || profile.canSeeFinance);
 
-  const { profile, role } = useRole();
-  const visibleKpis = kpis.filter((k) => !("finance" in k && k.finance) || profile.canSeeFinance);
+  const comptaTotal = comptabilite.validated + comptabilite.pending;
+  const comptaPct = comptaTotal > 0 ? Math.round((comptabilite.validated / comptaTotal) * 100) : 0;
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Tableau de bord"
-        subtitle="Mercredi 5 août 2026 · Centre d'Imagerie Médicale, Casablanca"
+        subtitle="Centre d'Imagerie Médicale"
         actions={
-          <div data-tour="actions" className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <DocumentMenu />
             <Dialog open={botOpen} onOpenChange={setBotOpen}>
               <DialogTrigger asChild>
@@ -221,7 +371,7 @@ function Dashboard() {
                     <Bot className="size-4 text-primary" /> Configuration du Bot Patient
                   </DialogTitle>
                   <DialogDescription>
-                    Paramètres du chatbot WhatsApp du centre (démonstration).
+                    Paramètres du chatbot WhatsApp du centre.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
@@ -253,16 +403,14 @@ function Dashboard() {
                   <Button variant="outline" onClick={() => setBotOpen(false)}>
                     Annuler
                   </Button>
-                  <Button
-                    onClick={() => {
-                      setBotOpen(false);
-                      toast.success("Configuration du bot enregistrée", {
-                        description: "Les patients recevront les réponses automatiques.",
-                      });
-                    }}
+                  <ActionButton
+                    action={() => javaApi("/api/bot/configuration", { method: "PUT" })}
+                    toastMessage="Configuration du bot enregistrée"
+                    toastDescription="Les patients recevront les réponses automatiques."
+                    onDone={() => setBotOpen(false)}
                   >
                     Enregistrer
-                  </Button>
+                  </ActionButton>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
@@ -272,48 +420,63 @@ function Dashboard() {
             <Button asChild>
               <Link to="/facturation">Nouvel acte</Link>
             </Button>
-            {profile.canExportCompta ? (
-              <Button variant="secondary" disabled={exporting} onClick={exportComptable}>
-                {exporting ? (
-                  <Loader2 className="mr-2 size-4 animate-spin" />
-                ) : (
-                  <FileSpreadsheet className="mr-2 size-4" />
-                )}
+            {role === "directeur" ? (
+              <ActionButton
+                variant="secondary"
+                action={() => javaApi("/api/comptabilite/export", { method: "POST" })}
+                toastMessage="Export comptable généré"
+                toastDescription="Le fichier a été transmis au service comptable."
+                errorMessage="Export impossible"
+              >
+                <FileSpreadsheet className="mr-2 size-4" />
                 Export comptable
-              </Button>
+              </ActionButton>
             ) : null}
           </div>
         }
       />
 
-      <div data-tour="kpis" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {visibleKpis.map((kpi) => (
-          <Card key={kpi.label}>
-            <CardContent className="flex items-start gap-4 p-5">
-              <IconTile tone={kpi.tone}>
-                <kpi.icon className="size-5" />
-              </IconTile>
-              <div className="min-w-0">
-                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  {kpi.label}
-                </p>
-                <p className="mt-1 text-xl font-bold tracking-tight sm:text-2xl">{kpi.value}</p>
-                <p
-                  className={`mt-1 flex items-center gap-1 text-xs font-medium ${
-                    kpi.positive ? "text-success" : "text-warning-foreground"
-                  }`}
-                >
-                  {kpi.positive ? (
-                    <TrendingUp className="size-3.5" />
-                  ) : (
-                    <TrendingDown className="size-3.5" />
-                  )}
-                  {kpi.hint}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {kpisLoading
+          ? Array.from({ length: 4 }).map((_, i) => (
+              <Card key={i}>
+                <CardContent className="flex items-start gap-4 p-5">
+                  <Skeleton className="size-10 rounded-xl" />
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <Skeleton className="h-3 w-24" />
+                    <Skeleton className="h-6 w-16" />
+                    <Skeleton className="h-3 w-20" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          : kpisError
+            ? (
+              <Card className="sm:col-span-2 xl:col-span-4">
+                <CardContent className="flex flex-col items-center justify-center gap-3 p-6 text-center">
+                  <AlertTriangle className="size-6 text-destructive" />
+                  <p className="text-sm text-muted-foreground">{kpisError}</p>
+                  <Button variant="outline" size="sm" onClick={reload}>
+                    <RefreshCw className="mr-2 size-4" /> Réessayer
+                  </Button>
+                </CardContent>
+              </Card>
+            )
+            : visibleKpis.map((kpi) => (
+                <Card key={kpi.label}>
+                  <CardContent className="flex items-start gap-4 p-5">
+                    <IconTile tone={kpi.tone}>
+                      <kpi.icon className="size-5" />
+                    </IconTile>
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        {kpi.label}
+                      </p>
+                      <p className="mt-1 text-xl font-bold tracking-tight sm:text-2xl">{kpi.value}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
@@ -331,25 +494,33 @@ function Dashboard() {
             </div>
           </CardHeader>
           <CardContent>
-            <PlanningHeatmap data={planningTension} />
-            <div className="mt-4 flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
-              <span className="inline-flex items-center gap-1.5">
-                <span className="size-2.5 rounded-sm bg-success/80" />
-                Libre
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <span className="size-2.5 rounded-sm bg-primary/70" />
-                Occupé
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <span className="size-2.5 rounded-sm bg-warning" />
-                Saturé
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <span className="size-2.5 rounded-sm bg-destructive" />
-                Critique
-              </span>
-            </div>
+            <AsyncSection
+              isLoading={planningLoading}
+              error={planningError}
+              onRetry={reload}
+              isEmpty={planningTension.length === 0}
+              skeleton={<Skeleton className="h-40 w-full rounded-xl" />}
+            >
+              <PlanningHeatmap data={planningTension} />
+              <div className="mt-4 flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="size-2.5 rounded-sm bg-success/80" />
+                  Libre
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="size-2.5 rounded-sm bg-primary/70" />
+                  Occupé
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="size-2.5 rounded-sm bg-warning" />
+                  Saturé
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="size-2.5 rounded-sm bg-destructive" />
+                  Critique
+                </span>
+              </div>
+            </AsyncSection>
           </CardContent>
         </Card>
 
@@ -364,9 +535,7 @@ function Dashboard() {
                   </IconTile>
                   <div>
                     <CardTitle className="text-base">Urgences Fraude</CardTitle>
-                    <p className="text-xs text-muted-foreground">
-                      3 dernières alertes critiques IA
-                    </p>
+                    <p className="text-xs text-muted-foreground">Dernières alertes critiques IA</p>
                   </div>
                 </div>
                 <Button variant="ghost" size="sm" className="h-8 text-xs" asChild>
@@ -375,28 +544,41 @@ function Dashboard() {
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
-              {urgencesFraude.map((u) => (
-                <div
-                  key={u.id}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-border bg-background p-3"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold">{u.patient}</p>
-                    <p className="text-xs text-muted-foreground">{u.anomalie}</p>
-                    <div className="mt-2">
-                      <ProbabilityBar value={u.score / 100} />
-                    </div>
+              <AsyncSection
+                isLoading={urgencesLoading}
+                error={urgencesError}
+                onRetry={reload}
+                isEmpty={urgencesFraude.length === 0}
+                skeleton={
+                  <div className="space-y-3">
+                    <Skeleton className="h-16 w-full rounded-xl" />
+                    <Skeleton className="h-16 w-full rounded-xl" />
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 whitespace-nowrap text-xs"
-                    asChild
+                }
+              >
+                {urgencesFraude.map((u) => (
+                  <div
+                    key={u.id}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-border bg-background p-3"
                   >
-                    <Link to="/audit">Traiter</Link>
-                  </Button>
-                </div>
-              ))}
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold">{u.patient}</p>
+                      <p className="text-xs text-muted-foreground">{u.anomalie}</p>
+                      <div className="mt-2">
+                        <ProbabilityBar value={u.score / 100} />
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 whitespace-nowrap text-xs"
+                      asChild
+                    >
+                      <Link to="/audit">Traiter</Link>
+                    </Button>
+                  </div>
+                ))}
+              </AsyncSection>
             </CardContent>
           </Card>
         ) : null}
@@ -423,49 +605,58 @@ function Dashboard() {
               </div>
             </CardHeader>
             <CardContent className="space-y-5">
-              <div>
-                <p className="text-3xl font-bold tracking-tight">{comptabilite.validated}</p>
-                <p className="text-sm text-muted-foreground">actes validés prêts pour l'export</p>
-              </div>
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>Progression vers clôture</span>
-                  <span className="font-medium text-foreground">
-                    {Math.round(
-                      (comptabilite.validated / (comptabilite.validated + comptabilite.pending)) *
-                        100,
-                    )}
-                    %
-                  </span>
+              {comptaLoading ? (
+                <div className="space-y-3">
+                  <Skeleton className="h-8 w-16" />
+                  <Skeleton className="h-2 w-full rounded-full" />
+                  <Skeleton className="h-9 w-full rounded-lg" />
                 </div>
-                <div className="h-2 overflow-hidden rounded-full bg-muted">
-                  <div
-                    className="h-full rounded-full bg-success transition-all duration-700"
-                    style={{
-                      width: `${(comptabilite.validated / (comptabilite.validated + comptabilite.pending)) * 100}%`,
-                    }}
-                  />
+              ) : comptaError ? (
+                <div className="flex flex-col items-center justify-center gap-3 text-center">
+                  <AlertTriangle className="size-6 text-destructive" />
+                  <p className="text-sm text-muted-foreground">{comptaError}</p>
+                  <Button variant="outline" size="sm" onClick={reload}>
+                    <RefreshCw className="mr-2 size-4" /> Réessayer
+                  </Button>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  {comptabilite.pending} actes en attente · Dernier export {comptabilite.lastExport}
-                </p>
-              </div>
-              {profile.canExportCompta ? (
-                <Button className="w-full shadow-sm" disabled={exporting} onClick={exportComptable}>
-                  {exporting ? (
-                    <>
-                      <Loader2 className="mr-2 size-4 animate-spin" /> Génération de l'export…
-                    </>
-                  ) : (
-                    <>
-                      <FileSpreadsheet className="mr-2 size-4" /> Export comptable (CSV)
-                    </>
-                  )}
-                </Button>
               ) : (
-                <p className="rounded-lg border border-dashed border-border bg-muted/40 px-3 py-2.5 text-center text-xs text-muted-foreground">
-                  Export comptable réservé au profil Directeur
-                </p>
+                <>
+                  <div>
+                    <p className="text-3xl font-bold tracking-tight">{comptabilite.validated}</p>
+                    <p className="text-sm text-muted-foreground">actes validés prêts pour l'export</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>Progression vers clôture</span>
+                      <span className="font-medium text-foreground">{comptaPct}%</span>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-muted">
+                      <div
+                        className="h-full rounded-full bg-success transition-all duration-700"
+                        style={{ width: `${comptaPct}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {comptabilite.pending} actes en attente · Dernier export{" "}
+                      {comptabilite.lastExport ?? "jamais"}
+                    </p>
+                  </div>
+                  {profile.canExportCompta ? (
+                    <ActionButton
+                      className="w-full shadow-sm"
+                      action={() => javaApi("/api/comptabilite/export", { method: "POST" })}
+                      toastMessage="Export comptable généré"
+                      toastDescription="Le fichier a été transmis au service comptable."
+                      errorMessage="Export impossible"
+                    >
+                      <FileSpreadsheet className="mr-2 size-4" /> Export comptable (CSV)
+                    </ActionButton>
+                  ) : (
+                    <p className="rounded-lg border border-dashed border-border bg-muted/40 px-3 py-2.5 text-center text-xs text-muted-foreground">
+                      Export comptable réservé au profil Directeur
+                    </p>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>
@@ -483,33 +674,47 @@ function Dashboard() {
             </Button>
           </CardHeader>
           <CardContent className="px-0 pb-2">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="pl-6">Heure</TableHead>
-                  <TableHead>Patient</TableHead>
-                  <TableHead className="hidden sm:table-cell">Examen</TableHead>
-                  <TableHead className="pr-6 text-right">Statut</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {salleAttente.map((r) => (
-                  <TableRow key={r.heure}>
-                    <TableCell className="pl-6 font-mono text-xs">{r.heure}</TableCell>
-                    <TableCell>
-                      <p className="font-medium">{r.patient}</p>
-                      <p className="text-xs text-muted-foreground">{r.medecin}</p>
-                    </TableCell>
-                    <TableCell className="hidden text-sm text-muted-foreground sm:table-cell">
-                      {r.examen}
-                    </TableCell>
-                    <TableCell className="pr-6 text-right">
-                      <Pill tone={statutTone[r.statut]}>{r.statut}</Pill>
-                    </TableCell>
+            <AsyncSection
+              isLoading={salleLoading}
+              error={salleError}
+              onRetry={reload}
+              isEmpty={salleAttente.length === 0}
+              skeleton={
+                <div className="space-y-2 px-6">
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+              }
+            >
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="pl-6">Heure</TableHead>
+                    <TableHead>Patient</TableHead>
+                    <TableHead className="hidden sm:table-cell">Examen</TableHead>
+                    <TableHead className="pr-6 text-right">Statut</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {salleAttente.map((r) => (
+                    <TableRow key={r.heure}>
+                      <TableCell className="pl-6 font-mono text-xs">{r.heure}</TableCell>
+                      <TableCell>
+                        <p className="font-medium">{r.patient}</p>
+                        <p className="text-xs text-muted-foreground">{r.medecin}</p>
+                      </TableCell>
+                      <TableCell className="hidden text-sm text-muted-foreground sm:table-cell">
+                        {r.examen}
+                      </TableCell>
+                      <TableCell className="pr-6 text-right">
+                        <Pill tone={statutTone[r.statut]}>{r.statut}</Pill>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </AsyncSection>
           </CardContent>
         </Card>
 
@@ -524,21 +729,34 @@ function Dashboard() {
               </Button>
             </CardHeader>
             <CardContent className="space-y-3">
-              {alertes.map((a) => (
-                <div
-                  key={a.id}
-                  className="rounded-xl border border-border bg-background p-3 transition-colors hover:border-primary/40"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-semibold">{a.titre}</p>
-                    <Pill tone={niveauTone[a.niveau]}>{niveauLabel[a.niveau]}</Pill>
+              <AsyncSection
+                isLoading={alertesLoading}
+                error={alertesError}
+                onRetry={reload}
+                isEmpty={alertes.length === 0}
+                skeleton={
+                  <div className="space-y-3">
+                    <Skeleton className="h-16 w-full rounded-xl" />
+                    <Skeleton className="h-16 w-full rounded-xl" />
                   </div>
-                  <p className="mt-1 text-xs text-muted-foreground">{a.detail}</p>
-                  <p className="mt-2 font-mono text-[11px] text-muted-foreground">
-                    {a.id} · {a.temps}
-                  </p>
-                </div>
-              ))}
+                }
+              >
+                {alertes.map((a) => (
+                  <div
+                    key={a.id}
+                    className="rounded-xl border border-border bg-background p-3 transition-colors hover:border-primary/40"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-semibold">{a.titre}</p>
+                      <Pill tone={niveauTone[a.niveau]}>{niveauLabel[a.niveau]}</Pill>
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">{a.detail}</p>
+                    <p className="mt-2 font-mono text-[11px] text-muted-foreground">
+                      {a.id} · {a.temps}
+                    </p>
+                  </div>
+                ))}
+              </AsyncSection>
             </CardContent>
           </Card>
         ) : null}
