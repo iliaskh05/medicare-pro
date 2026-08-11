@@ -9,6 +9,8 @@ import {
   MessagesSquare,
   MessageCircle,
   Contact,
+  Settings,
+
 } from "lucide-react";
 
 import {
