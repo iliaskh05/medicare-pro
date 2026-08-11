@@ -1,6 +1,6 @@
-import { factures, type Facture } from "@/data/mock";
+import type { Facture } from "@/types/domain";
 
-import { isJavaApiConfigured, javaApi } from "./config";
+import { javaApi } from "./config";
 
 export type InvoicePayload = {
   patientId: string;
@@ -12,53 +12,20 @@ export type InvoicePayload = {
   remise?: number;
 };
 
-/**
- * Liste des factures du centre.
- * TODO backend Java : GET /api/factures
- */
-export async function fetchInvoices(): Promise<Facture[]> {
-  if (isJavaApiConfigured()) return javaApi<Facture[]>("/api/factures");
-  return factures;
+/** GET {JAVA_API_BASE}/api/factures */
+export async function fetchInvoices(signal?: AbortSignal): Promise<Facture[]> {
+  const rows = await javaApi<Facture[]>("/api/factures", signal ? { signal } : {});
+  return rows ?? [];
 }
 
-/**
- * Enregistre une facture / un règlement caisse.
- * TODO backend Java : POST /api/factures
- */
+/** POST {JAVA_API_BASE}/api/factures */
 export async function submitInvoice(payload: InvoicePayload): Promise<{ reference: string }> {
-  if (isJavaApiConfigured()) {
-    return javaApi<{ reference: string }>("/api/factures", { method: "POST", body: payload });
-  }
-  return { reference: `FCT-${Date.now().toString().slice(-4)}` };
+  return javaApi<{ reference: string }>("/api/factures", { method: "POST", body: payload });
 }
 
-/**
- * Marque une facture comme réglée.
- * TODO backend Java : PATCH /api/factures/{reference}/reglement
- */
+/** PATCH {JAVA_API_BASE}/api/factures/{reference}/reglement */
 export async function settleInvoice(reference: string): Promise<void> {
-  if (isJavaApiConfigured()) {
-    await javaApi<void>(`/api/factures/${encodeURIComponent(reference)}/reglement`, {
-      method: "PATCH",
-    });
-  }
-}
-
-/**
- * Export comptable des dossiers validés (flux CSV renvoyé par le backend).
- * TODO backend Java : GET /api/factures/export?format=csv
- */
-export async function fetchAccountingExport(params: {
-  format: "csv" | "pdf";
-  from?: string;
-  to?: string;
-}): Promise<Blob | null> {
-  if (!isJavaApiConfigured()) return null;
-  const search = new URLSearchParams({
-    format: params.format,
-    ...(params.from ? { from: params.from } : {}),
-    ...(params.to ? { to: params.to } : {}),
+  await javaApi<void>(`/api/factures/${encodeURIComponent(reference)}/reglement`, {
+    method: "PATCH",
   });
-  const res = await fetch(`/api/factures/export?${search.toString()}`);
-  return res.ok ? res.blob() : null;
 }
