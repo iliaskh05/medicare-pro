@@ -12,11 +12,13 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuditRouteImport } from './routes/audit'
 import { Route as ChatRouteImport } from './routes/chat'
+import { Route as ComptesRendusRouteImport } from './routes/comptes-rendus'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as FacturationRouteImport } from './routes/facturation'
 import { Route as ImagerieRouteImport } from './routes/imagerie'
 import { Route as MedecinsRouteImport } from './routes/medecins'
 import { Route as MedecinsReferentsRouteImport } from './routes/medecins-referents'
+import { Route as NumerisationRouteImport } from './routes/numerisation'
 import { Route as ParametresRouteImport } from './routes/parametres'
 import { Route as PatientsRouteImport } from './routes/patients'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
@@ -38,6 +40,11 @@ const AuditRoute = AuditRouteImport.update({
 const ChatRoute = ChatRouteImport.update({
   id: '/chat',
   path: '/chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ComptesRendusRoute = ComptesRendusRouteImport.update({
+  id: '/comptes-rendus',
+  path: '/comptes-rendus',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -63,6 +70,11 @@ const MedecinsRoute = MedecinsRouteImport.update({
 const MedecinsReferentsRoute = MedecinsReferentsRouteImport.update({
   id: '/medecins-referents',
   path: '/medecins-referents',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NumerisationRoute = NumerisationRouteImport.update({
+  id: '/numerisation',
+  path: '/numerisation',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ParametresRoute = ParametresRouteImport.update({
@@ -105,11 +117,13 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/audit': typeof AuditRoute
   '/chat': typeof ChatRoute
+  '/comptes-rendus': typeof ComptesRendusRoute
   '/dashboard': typeof DashboardRoute
   '/facturation': typeof FacturationRoute
   '/imagerie': typeof ImagerieRoute
   '/medecins': typeof MedecinsRoute
   '/medecins-referents': typeof MedecinsReferentsRoute
+  '/numerisation': typeof NumerisationRoute
   '/parametres': typeof ParametresRoute
   '/patients': typeof PatientsRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -122,11 +136,13 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/audit': typeof AuditRoute
   '/chat': typeof ChatRoute
+  '/comptes-rendus': typeof ComptesRendusRoute
   '/dashboard': typeof DashboardRoute
   '/facturation': typeof FacturationRoute
   '/imagerie': typeof ImagerieRoute
   '/medecins': typeof MedecinsRoute
   '/medecins-referents': typeof MedecinsReferentsRoute
+  '/numerisation': typeof NumerisationRoute
   '/parametres': typeof ParametresRoute
   '/patients': typeof PatientsRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -140,11 +156,13 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/audit': typeof AuditRoute
   '/chat': typeof ChatRoute
+  '/comptes-rendus': typeof ComptesRendusRoute
   '/dashboard': typeof DashboardRoute
   '/facturation': typeof FacturationRoute
   '/imagerie': typeof ImagerieRoute
   '/medecins': typeof MedecinsRoute
   '/medecins-referents': typeof MedecinsReferentsRoute
+  '/numerisation': typeof NumerisationRoute
   '/parametres': typeof ParametresRoute
   '/patients': typeof PatientsRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -159,11 +177,13 @@ export interface FileRouteTypes {
     | '/'
     | '/audit'
     | '/chat'
+    | '/comptes-rendus'
     | '/dashboard'
     | '/facturation'
     | '/imagerie'
     | '/medecins'
     | '/medecins-referents'
+    | '/numerisation'
     | '/parametres'
     | '/patients'
     | '/sitemap.xml'
@@ -176,11 +196,13 @@ export interface FileRouteTypes {
     | '/'
     | '/audit'
     | '/chat'
+    | '/comptes-rendus'
     | '/dashboard'
     | '/facturation'
     | '/imagerie'
     | '/medecins'
     | '/medecins-referents'
+    | '/numerisation'
     | '/parametres'
     | '/patients'
     | '/sitemap.xml'
@@ -193,11 +215,13 @@ export interface FileRouteTypes {
     | '/'
     | '/audit'
     | '/chat'
+    | '/comptes-rendus'
     | '/dashboard'
     | '/facturation'
     | '/imagerie'
     | '/medecins'
     | '/medecins-referents'
+    | '/numerisation'
     | '/parametres'
     | '/patients'
     | '/sitemap.xml'
@@ -211,11 +235,13 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuditRoute: typeof AuditRoute
   ChatRoute: typeof ChatRoute
+  ComptesRendusRoute: typeof ComptesRendusRoute
   DashboardRoute: typeof DashboardRoute
   FacturationRoute: typeof FacturationRoute
   ImagerieRoute: typeof ImagerieRoute
   MedecinsRoute: typeof MedecinsRoute
   MedecinsReferentsRoute: typeof MedecinsReferentsRoute
+  NumerisationRoute: typeof NumerisationRoute
   ParametresRoute: typeof ParametresRoute
   PatientsRoute: typeof PatientsRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
@@ -246,6 +272,13 @@ declare module '@tanstack/react-router' {
       path: '/chat'
       fullPath: '/chat'
       preLoaderRoute: typeof ChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/comptes-rendus': {
+      id: '/comptes-rendus'
+      path: '/comptes-rendus'
+      fullPath: '/comptes-rendus'
+      preLoaderRoute: typeof ComptesRendusRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -281,6 +314,13 @@ declare module '@tanstack/react-router' {
       path: '/medecins-referents'
       fullPath: '/medecins-referents'
       preLoaderRoute: typeof MedecinsReferentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/numerisation': {
+      id: '/numerisation'
+      path: '/numerisation'
+      fullPath: '/numerisation'
+      preLoaderRoute: typeof NumerisationRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/parametres': {
@@ -339,11 +379,13 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuditRoute: AuditRoute,
   ChatRoute: ChatRoute,
+  ComptesRendusRoute: ComptesRendusRoute,
   DashboardRoute: DashboardRoute,
   FacturationRoute: FacturationRoute,
   ImagerieRoute: ImagerieRoute,
   MedecinsRoute: MedecinsRoute,
   MedecinsReferentsRoute: MedecinsReferentsRoute,
+  NumerisationRoute: NumerisationRoute,
   ParametresRoute: ParametresRoute,
   PatientsRoute: PatientsRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,

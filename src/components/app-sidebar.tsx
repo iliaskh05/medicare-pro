@@ -1,15 +1,17 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
-  LayoutDashboard,
+  ClipboardList,
   Users,
   ReceiptText,
-  Stethoscope,
+  Printer,
+  Mic,
   ShieldAlert,
   ScanLine,
   MessagesSquare,
   MessageCircle,
   Contact,
   Settings,
+  LayoutDashboard,
 } from "lucide-react";
 
 import {
@@ -27,27 +29,56 @@ import {
 import logoRadioCrm from "@/assets/logo-radiocrm.png";
 import { useRole } from "@/hooks/use-role";
 
-const items = [
-  { title: "Tableau de bord", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Patients", url: "/patients", icon: Users },
-  { title: "Actes & Facturation", url: "/facturation", icon: ReceiptText, finance: true },
-  { title: "Visionneuse IA", url: "/viewer", icon: ScanLine },
-  { title: "Chat médecins", url: "/chat", icon: MessagesSquare },
-  { title: "WhatsApp", url: "/whatsapp", icon: MessageCircle },
-  { title: "Médecins", url: "/medecins", icon: Stethoscope },
-  { title: "Correspondants", url: "/medecins-referents", icon: Contact },
-  { title: "Audit & Conformité", url: "/audit", icon: ShieldAlert, fraude: true },
-  { title: "Profil & Paramètres", url: "/parametres", icon: Settings },
-] as const;
+type NavItem = {
+  title: string;
+  url: string;
+  icon: typeof Users;
+  finance?: boolean;
+  fraude?: boolean;
+};
+
+const navGroups: { label: string; items: NavItem[] }[] = [
+  {
+    label: "Opérationnel",
+    items: [
+      { title: "Worklist", url: "/worklist", icon: ClipboardList },
+      { title: "Dossiers patients", url: "/patients", icon: Users },
+      { title: "Numérisation & étiquettes", url: "/numerisation", icon: Printer },
+      { title: "Tableau de bord", url: "/dashboard", icon: LayoutDashboard },
+    ],
+  },
+  {
+    label: "Médical & administratif",
+    items: [
+      { title: "Comptes rendus", url: "/comptes-rendus", icon: Mic },
+      { title: "Visionneuse IA", url: "/viewer", icon: ScanLine },
+      { title: "Caisse & facturation", url: "/facturation", icon: ReceiptText, finance: true },
+      { title: "Correspondants", url: "/medecins-referents", icon: Contact },
+      { title: "Chat médecins", url: "/chat", icon: MessagesSquare },
+      { title: "WhatsApp patients", url: "/whatsapp", icon: MessageCircle },
+    ],
+  },
+  {
+    label: "Direction (Mr Adnane)",
+    items: [
+      { title: "Audit & fraude", url: "/audit", icon: ShieldAlert, fraude: true },
+      { title: "Configuration", url: "/parametres", icon: Settings },
+    ],
+  },
+];
 
 export function AppSidebar() {
   const currentPath = useRouterState({ select: (r) => r.location.pathname });
   const { profile } = useRole();
-  const visibleItems = items.filter(
-    (i) =>
-      (!("finance" in i && i.finance) || profile.canSeeFinance) &&
-      (!("fraude" in i && i.fraude) || profile.canSeeFraudModule),
-  );
+  const visibleGroups = navGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter(
+        (i) => (!i.finance || profile.canSeeFinance) && (!i.fraude || profile.canSeeFraudModule),
+      ),
+    }))
+    .filter((group) => group.items.length > 0);
+
 
   return (
     <Sidebar collapsible="icon">
