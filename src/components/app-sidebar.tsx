@@ -103,34 +103,37 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {visibleItems.map((item) => (
-                <SidebarMenuItem key={item.url}>
-                  <SidebarMenuButton
-                    asChild
-                    tooltip={item.title}
-                    isActive={currentPath === item.url}
-                  >
-                    <Link to={item.url} className="flex items-center gap-2 font-medium">
-                      <item.icon
-                        className={
-                          currentPath === item.url
-                            ? "size-4 text-[oklch(0.78_0.13_235)]"
-                            : "size-4 opacity-80"
-                        }
-                      />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {visibleGroups.map((group) => (
+          <SidebarGroup key={group.label}>
+            <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {group.items.map((item) => (
+                  <SidebarMenuItem key={item.url}>
+                    <SidebarMenuButton
+                      asChild
+                      tooltip={item.title}
+                      isActive={currentPath === item.url}
+                    >
+                      <Link to={item.url} className="flex items-center gap-2 font-medium">
+                        <item.icon
+                          className={
+                            currentPath === item.url
+                              ? "size-4 text-[oklch(0.78_0.13_235)]"
+                              : "size-4 opacity-80"
+                          }
+                        />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
       </SidebarContent>
+
 
       <SidebarFooter className="border-t border-sidebar-border">
         <div className="rounded-lg bg-sidebar-accent px-3 py-2 group-data-[collapsible=icon]:hidden">
