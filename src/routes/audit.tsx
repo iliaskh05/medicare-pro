@@ -69,6 +69,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { PageHeader, Pill, IconTile, EmptyState } from "@/components/ui-kit";
+import { DirectionStats } from "@/components/direction-stats";
 import { useRole } from "@/hooks/use-role";
 import { FraudDashboard } from "@/components/fraude/fraud-dashboard";
 import { telechargerDossierPdf } from "@/lib/pdf-export";
@@ -416,6 +417,8 @@ function FraudAuditModule() {
           </CardContent>
         </Card>
       ) : null}
+
+      <DirectionStats anomaliesCount={anomalies.length} showFinance={profile.canSeeFinance} />
 
       <FraudDashboard sensitivity={seuil} />
 
