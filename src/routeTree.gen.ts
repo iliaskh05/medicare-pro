@@ -22,6 +22,7 @@ import { Route as PatientsRouteImport } from './routes/patients'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ViewerRouteImport } from './routes/viewer'
 import { Route as WhatsappRouteImport } from './routes/whatsapp'
+import { Route as WorklistRouteImport } from './routes/worklist'
 import { Route as PatientPatientIdRouteImport } from './routes/patient.$patientId'
 
 const IndexRoute = IndexRouteImport.update({
@@ -89,6 +90,11 @@ const WhatsappRoute = WhatsappRouteImport.update({
   path: '/whatsapp',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WorklistRoute = WorklistRouteImport.update({
+  id: '/worklist',
+  path: '/worklist',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PatientPatientIdRoute = PatientPatientIdRouteImport.update({
   id: '/patient/$patientId',
   path: '/patient/$patientId',
@@ -109,6 +115,7 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/viewer': typeof ViewerRoute
   '/whatsapp': typeof WhatsappRoute
+  '/worklist': typeof WorklistRoute
   '/patient/$patientId': typeof PatientPatientIdRoute
 }
 export interface FileRoutesByTo {
@@ -125,6 +132,7 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/viewer': typeof ViewerRoute
   '/whatsapp': typeof WhatsappRoute
+  '/worklist': typeof WorklistRoute
   '/patient/$patientId': typeof PatientPatientIdRoute
 }
 export interface FileRoutesById {
@@ -142,6 +150,7 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/viewer': typeof ViewerRoute
   '/whatsapp': typeof WhatsappRoute
+  '/worklist': typeof WorklistRoute
   '/patient/$patientId': typeof PatientPatientIdRoute
 }
 export interface FileRouteTypes {
@@ -160,6 +169,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/viewer'
     | '/whatsapp'
+    | '/worklist'
     | '/patient/$patientId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -176,6 +186,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/viewer'
     | '/whatsapp'
+    | '/worklist'
     | '/patient/$patientId'
   id:
     | '__root__'
@@ -192,6 +203,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/viewer'
     | '/whatsapp'
+    | '/worklist'
     | '/patient/$patientId'
   fileRoutesById: FileRoutesById
 }
@@ -209,6 +221,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   ViewerRoute: typeof ViewerRoute
   WhatsappRoute: typeof WhatsappRoute
+  WorklistRoute: typeof WorklistRoute
   PatientPatientIdRoute: typeof PatientPatientIdRoute
 }
 
@@ -305,6 +318,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WhatsappRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/worklist': {
+      id: '/worklist'
+      path: '/worklist'
+      fullPath: '/worklist'
+      preLoaderRoute: typeof WorklistRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/patient/$patientId': {
       id: '/patient/$patientId'
       path: '/patient/$patientId'
@@ -329,6 +349,7 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   ViewerRoute: ViewerRoute,
   WhatsappRoute: WhatsappRoute,
+  WorklistRoute: WorklistRoute,
   PatientPatientIdRoute: PatientPatientIdRoute,
 }
 export const routeTree = rootRouteImport
