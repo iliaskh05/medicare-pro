@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import logoRadioCrm from "@/assets/logo-radiocrm.png";
-import loginBg from "@/assets/login-bg.jpg";
+import loginBgAsset from "@/assets/login-bg.jpg.asset.json";
 
 export const Route = createFileRoute("/")({
   head: () => ({
