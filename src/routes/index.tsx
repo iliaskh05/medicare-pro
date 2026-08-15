@@ -117,7 +117,7 @@ function LoginPage() {
       <div
         aria-hidden
         className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: `url(${loginBg})` }}
+        style={{ backgroundImage: `url(${loginBgAsset.url})` }}
       />
 
       {/* Overlay bleu nuit */}
