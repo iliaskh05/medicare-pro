@@ -177,8 +177,97 @@
     cursor: pointer;
   }
 
-  button:disabled,
-  [aria-disabled="true"] {
-    cursor: not-allowed;
+/* ================== Login page — Premium Glassmorphism ================== */
+
+@utility login-overlay {
+  background: linear-gradient(
+    135deg,
+    oklch(0.12 0.04 260 / 0.93),
+    oklch(0.15 0.08 255 / 0.82),
+    oklch(0.1 0.04 260 / 0.93)
+  );
+}
+
+@utility glass-card {
+  background: oklch(1 0 0 / 0.1);
+  backdrop-filter: blur(24px) saturate(140%);
+  border: 1px solid oklch(1 0 0 / 0.2);
+  box-shadow: 0 25px 50px -12px oklch(0 0 0 / 0.5);
+}
+
+@utility glass-card-solid {
+  background: oklch(0.15 0.04 260 / 0.72);
+  backdrop-filter: blur(24px) saturate(140%);
+  border: 1px solid oklch(1 0 0 / 0.12);
+}
+
+@utility login-title {
+  color: oklch(1 0 0);
+  text-shadow: 0 0 40px oklch(0.546 0.215 262.9 / 0.35), 0 2px 4px oklch(0 0 0 / 0.3);
+}
+
+@utility login-subtitle {
+  color: oklch(0.85 0.02 250);
+}
+
+@utility login-pill-tabs {
+  display: grid;
+  width: 100%;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  background: oklch(0 0 0 / 0.25);
+  border-radius: 9999px;
+  padding: 0.25rem;
+}
+
+@utility login-pill-trigger {
+  color: oklch(0.82 0.02 250);
+  border-radius: 9999px;
+  transition: all 200ms ease;
+
+  &[data-state="active"] {
+    background: oklch(1 0 0 / 0.15);
+    color: oklch(1 0 0);
+    box-shadow: 0 4px 12px oklch(0 0 0 / 0.2);
   }
 }
+
+@utility login-input {
+  background: oklch(0.97 0.01 250);
+  border-color: transparent;
+  transition: all 200ms ease;
+
+  &:focus {
+    background: oklch(1 0 0);
+    border-color: oklch(0.55 0.22 262);
+    box-shadow: 0 0 0 2px oklch(0.55 0.22 262 / 0.3);
+  }
+
+  &::placeholder {
+    color: oklch(0.65 0.02 250);
+  }
+}
+
+@utility btn-premium {
+  background: linear-gradient(135deg, oklch(0.55 0.22 262), oklch(0.45 0.22 274));
+  color: oklch(1 0 0);
+  font-weight: 700;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px -5px oklch(0.55 0.22 262 / 0.35);
+  }
+
+  &:focus-visible {
+    outline: 2px solid oklch(0.75 0.15 262);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+}
+
