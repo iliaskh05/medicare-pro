@@ -177,6 +177,12 @@
     cursor: pointer;
   }
 
+  button:disabled,
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+}
+
 /* ================== Login page — Premium Glassmorphism ================== */
 
 @utility login-overlay {
