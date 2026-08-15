@@ -40,7 +40,7 @@ const emptyDraft = {
   dateHeure: "",
 };
 
-export function NouvelExamenDialog({ onCreated }: { onCreated?: (item: WorklistItem) => void }) {
+export function NouvelExamenDialog({ onCreated }: { onCreated?: (item?: WorklistItem) => void }) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(emptyDraft);
   const [prescripteur, setPrescripteur] = useState<{ id: string | null; nom: string }>({

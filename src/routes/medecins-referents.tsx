@@ -22,10 +22,8 @@ import {
 } from "@/components/ui/table";
 import { ActionButton } from "@/components/action-button";
 import { EmptyState, PageHeader, Pill } from "@/components/ui-kit";
-import { mapMedecinDto, sendReportToReferent, type MedecinDto } from "@/lib/api/referents";
+import { fetchMedecins, sendReportToReferent } from "@/lib/api/referents";
 import type { Referent } from "@/types/referent";
-
-const MEDECINS_API_URL = "http://localhost:8080/api/medecins";
 
 export const Route = createFileRoute("/medecins-referents")({
   head: () => ({
@@ -63,21 +61,9 @@ function MedecinsReferentsPage() {
     setIsLoading(true);
     setError(null);
 
-    fetch(MEDECINS_API_URL, {
-      method: "GET",
-      headers: { Accept: "application/json" },
-      signal: controller.signal,
-    })
-      .then(async (res) => {
-        if (!res.ok) {
-          throw new Error(`Erreur ${res.status} sur /api/medecins`);
-        }
-        return (await res.json()) as MedecinDto[];
-      })
+    fetchMedecins(controller.signal)
       .then((rows) => {
-        if (!controller.signal.aborted) {
-          setMedecins((rows ?? []).map(mapMedecinDto));
-        }
+        if (!controller.signal.aborted) setMedecins(rows);
       })
       .catch((e: unknown) => {
         if (controller.signal.aborted) return;

@@ -43,14 +43,68 @@ public class WorklistService {
     private final MedecinReferentRepository medecinReferentRepository;
 
     @Transactional(readOnly = true)
-    public List<WorklistItemDto> listByDate(LocalDate date) {
+    public List<WorklistItemDto> listByDate(LocalDate date, String search, String status) {
         LocalDate jour = date != null ? date : LocalDate.now(ZONE);
         LocalDateTime debut = jour.atStartOfDay();
         LocalDateTime fin = jour.plusDays(1).atStartOfDay();
 
-        return examenRepository.findByDateExamenBetween(debut, fin).stream()
+        String searchTerm = isBlank(search) ? null : search.trim();
+        EtatPatient etatFilter = parseStatusFilter(status);
+
+        return examenRepository.searchWorklist(debut, fin, searchTerm, etatFilter).stream()
                 .map(this::toDto)
                 .toList();
+    }
+
+    @Transactional
+    public WorklistItemDto updateStatus(Long id, String nouveauStatut) {
+        Examen examen =
+                examenRepository
+                        .findById(id)
+                        .orElseThrow(
+                                () ->
+                                        new ResponseStatusException(
+                                                HttpStatus.NOT_FOUND, "Examen introuvable"));
+
+        EtatPatient etat = parseStatusFilter(nouveauStatut);
+        if (etat == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "nouveauStatut invalide (attendu: attendu, arrive, retard, attente_longue)");
+        }
+
+        examen.setEtatPatient(etat);
+
+        HistoriqueExamen hist = new HistoriqueExamen();
+        hist.setExamen(examen);
+        hist.setDate(LocalDateTime.now(ZONE));
+        hist.setAuteur("Worklist");
+        hist.setAction("Statut patient → " + etat.name());
+        examen.getHistorique().add(hist);
+
+        return toDto(examenRepository.save(examen));
+    }
+
+    private static EtatPatient parseStatusFilter(String status) {
+        if (isBlank(status) || "tous".equalsIgnoreCase(status.trim())) {
+            return null;
+        }
+        String raw = status.trim().toLowerCase();
+        return switch (raw) {
+            case "en_attente", "attendu", "attente" -> EtatPatient.attendu;
+            case "en_cours", "arrive", "arrivé", "termine_arrive" -> EtatPatient.arrive;
+            case "retard", "en_retard" -> EtatPatient.retard;
+            case "attente_longue", "trop_attendu" -> EtatPatient.attente_longue;
+            case "termine", "terminé" -> EtatPatient.arrive; // alias UI
+            default -> {
+                try {
+                    yield EtatPatient.valueOf(raw);
+                } catch (IllegalArgumentException ex) {
+                    throw new ResponseStatusException(
+                            HttpStatus.BAD_REQUEST, "status invalide: " + status);
+                }
+            }
+        };
     }
 
     @Transactional

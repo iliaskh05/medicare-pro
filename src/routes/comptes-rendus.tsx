@@ -61,7 +61,7 @@ function ComptesRendusPage() {
     const controller = new AbortController();
     setIsLoading(true);
     setError(null);
-    fetchWorklist(new Date().toISOString().slice(0, 10), controller.signal)
+    fetchWorklist({ date: new Date().toISOString().slice(0, 10) }, controller.signal)
       .then(setItems)
       .catch((e: unknown) => {
         if (controller.signal.aborted) return;

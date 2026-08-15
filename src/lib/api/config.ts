@@ -44,16 +44,40 @@ type RequestOptions = {
   signal?: AbortSignal;
 };
 
-function authHeaders(): Record<string, string> {
-  const token =
-    typeof window !== "undefined" ? window.sessionStorage.getItem("radiocrm:token") : null;
-  return token ? { Authorization: `Bearer ${token}` } : {};
+function readToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return (
+    window.localStorage.getItem("radiocrm:token") ??
+    window.sessionStorage.getItem("radiocrm:token")
+  );
+}
+
+function clearSessionAndRedirectToLogin() {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem("radiocrm:token");
+  window.localStorage.removeItem("radiocrm:user");
+  window.sessionStorage.removeItem("radiocrm:token");
+  window.sessionStorage.removeItem("radiocrm:role");
+
+  const path = window.location.pathname;
+  if (path !== "/" && path !== "") {
+    window.location.assign("/");
+  }
+}
+
+async function parseErrorMessage(res: Response, fallback: string): Promise<string> {
+  try {
+    const data = (await res.json()) as { message?: string };
+    if (data?.message) return data.message;
+  } catch {
+    /* ignore */
+  }
+  return fallback;
 }
 
 /**
- * Point d'entrée HTTP unique. Toutes les fonctions de service passent par ici :
- * il suffira de brancher l'authentification définitive (JWT du backend Java)
- * à cet endroit.
+ * Point d'entrée HTTP unique. Attache le JWT Bearer et gère 401/403
+ * (session expirée → nettoyage + redirection login).
  */
 export async function httpRequest<T>(
   base: string | undefined,
@@ -61,16 +85,15 @@ export async function httpRequest<T>(
   { method = "GET", body, headers, signal }: RequestOptions = {},
 ): Promise<T> {
   if (!base) {
-    throw new ApiError(
-      "URL du service indisponible.",
-      0,
-      "backend_not_configured",
-    );
+    throw new ApiError("URL du service indisponible.", 0, "backend_not_configured");
   }
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
   signal?.addEventListener("abort", () => controller.abort());
+
+  const token = readToken();
+  const isJavaApi = base === JAVA_API_BASE;
 
   try {
     const res = await fetch(`${base}${path}`, {
@@ -79,14 +102,30 @@ export async function httpRequest<T>(
       headers: {
         Accept: "application/json",
         ...(body ? { "Content-Type": "application/json" } : {}),
-        ...authHeaders(),
+        ...(isJavaApi && token ? { Authorization: `Bearer ${token}` } : {}),
         ...headers,
       },
       ...(body ? { body: JSON.stringify(body) } : {}),
     });
 
+    if (isJavaApi && (res.status === 401 || res.status === 403)) {
+      clearSessionAndRedirectToLogin();
+      throw new ApiError(
+        await parseErrorMessage(
+          res,
+          res.status === 401 ? "Session expirée — reconnexion requise" : "Accès refusé",
+        ),
+        res.status,
+        "unauthorized",
+      );
+    }
+
     if (!res.ok) {
-      throw new ApiError(`Erreur ${res.status} sur ${path}`, res.status, "http_error");
+      throw new ApiError(
+        await parseErrorMessage(res, `Erreur ${res.status} sur ${path}`),
+        res.status,
+        "http_error",
+      );
     }
     if (res.status === 204) return undefined as T;
     return (await res.json()) as T;

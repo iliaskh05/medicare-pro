@@ -22,7 +22,7 @@ export function DirectionStats({
 
   useEffect(() => {
     const controller = new AbortController();
-    fetchWorklist(new Date().toISOString().slice(0, 10), controller.signal)
+    fetchWorklist({ date: new Date().toISOString().slice(0, 10) }, controller.signal)
       .then((rows) => {
         setExamens(rows.length);
         setCa(

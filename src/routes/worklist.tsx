@@ -43,7 +43,7 @@ import {
 import { EmptyState, PageHeader, ServiceNotice } from "@/components/ui-kit";
 import {
   CompteRenduBadge,
-  EtatPatientBadge,
+  EtatPatientStatusMenu,
   PaiementBadge,
 } from "@/components/worklist/status-badges";
 import { NouvelExamenDialog } from "@/components/worklist/nouvel-examen-dialog";
@@ -51,7 +51,9 @@ import { ExamenSheet } from "@/components/worklist/examen-sheet";
 import {
   MODALITES,
   fetchWorklist,
+  updateExamenStatus,
   updateWorklistStatut,
+  type EtatPatient,
   type StatutCompteRendu,
   type StatutPaiement,
   type WorklistItem,
@@ -91,18 +93,33 @@ function WorklistPage() {
   const [reloadKey, setReloadKey] = useState(0);
 
   const [query, setQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("tous");
   const [modalite, setModalite] = useState("toutes");
   const [statutCr, setStatutCr] = useState("tous");
   const [paiement, setPaiement] = useState("tous");
+  const [statusUpdatingId, setStatusUpdatingId] = useState<string | null>(null);
 
   const [selected, setSelected] = useState<WorklistItem | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
 
   useEffect(() => {
+    const t = window.setTimeout(() => setDebouncedSearch(query.trim()), 300);
+    return () => window.clearTimeout(t);
+  }, [query]);
+
+  useEffect(() => {
     const controller = new AbortController();
     setIsLoading(true);
     setError(null);
-    fetchWorklist(date, controller.signal)
+    fetchWorklist(
+      {
+        date,
+        search: debouncedSearch || undefined,
+        status: statusFilter === "tous" ? undefined : statusFilter,
+      },
+      controller.signal,
+    )
       .then((rows) => setItems(rows))
       .catch((e: unknown) => {
         if (controller.signal.aborted) return;
@@ -113,38 +130,52 @@ function WorklistPage() {
         if (!controller.signal.aborted) setIsLoading(false);
       });
     return () => controller.abort();
-  }, [date, reloadKey]);
+  }, [date, debouncedSearch, statusFilter, reloadKey]);
 
   const rows = useMemo(() => {
-    const q = query.trim().toLowerCase();
     return items.filter(
       (i) =>
-        (!q ||
-          i.patient.toLowerCase().includes(q) ||
-          i.numSejour.toLowerCase().includes(q) ||
-          (i.cin ?? "").toLowerCase().includes(q)) &&
         (modalite === "toutes" || i.modalite === modalite) &&
         (statutCr === "tous" || i.statutCr === statutCr) &&
         (paiement === "tous" || i.paiement === paiement),
     );
-  }, [items, query, modalite, statutCr, paiement]);
+  }, [items, modalite, statutCr, paiement]);
 
   const openSheet = useCallback((item: WorklistItem) => {
     setSelected(item);
     setSheetOpen(true);
   }, []);
 
+  const changeEtatPatient = useCallback(async (item: WorklistItem, nouveauStatut: EtatPatient) => {
+    if (item.etatPatient === nouveauStatut) return;
+    setStatusUpdatingId(item.id);
+    try {
+      await updateExamenStatus(item.id, nouveauStatut);
+      toast.success(`État mis à jour — ${item.patient}`);
+      setReloadKey((k) => k + 1);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Mise à jour impossible.");
+    } finally {
+      setStatusUpdatingId(null);
+    }
+  }, []);
+
   const changeStatut = useCallback(
     async (item: WorklistItem, patch: Partial<WorklistItem>) => {
+      if (patch.etatPatient) {
+        await changeEtatPatient(item, patch.etatPatient);
+        return;
+      }
       setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, ...patch } : i)));
       try {
         await updateWorklistStatut(item.id, patch);
         toast.success(`Statut mis à jour — ${item.patient}`);
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "Mise à jour impossible.");
+        setReloadKey((k) => k + 1);
       }
     },
-    [],
+    [changeEtatPatient],
   );
 
   const crOptions: { value: StatutCompteRendu; label: string }[] = [
@@ -168,7 +199,13 @@ function WorklistPage() {
             ? "Chargement de la file d'attente…"
             : `${rows.length} examen(s) affiché(s) — Centre d'Imagerie Médicale`
         }
-        actions={<NouvelExamenDialog onCreated={(item) => setItems((prev) => [item, ...prev])} />}
+        actions={
+          <NouvelExamenDialog
+            onCreated={() => {
+              setReloadKey((k) => k + 1);
+            }}
+          />
+        }
       />
 
       <Card data-tour="worklist-filtres">
@@ -200,13 +237,28 @@ function WorklistPage() {
             />
           </div>
           <div className="space-y-1.5 lg:col-span-2">
+            <Label className="text-xs text-muted-foreground">État patient</Label>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="tous">Tous</SelectItem>
+                <SelectItem value="attendu">En attente</SelectItem>
+                <SelectItem value="arrive">En cours</SelectItem>
+                <SelectItem value="retard">En retard</SelectItem>
+                <SelectItem value="attente_longue">Trop attendu</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5 lg:col-span-1">
             <Label className="text-xs text-muted-foreground">Modalité</Label>
             <Select value={modalite} onValueChange={setModalite}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="toutes">Toutes modalités</SelectItem>
+                <SelectItem value="toutes">Toutes</SelectItem>
                 {MODALITES.map((m) => (
                   <SelectItem key={m} value={m}>
                     {m}
@@ -231,14 +283,14 @@ function WorklistPage() {
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-1.5 lg:col-span-2">
+          <div className="space-y-1.5 lg:col-span-1">
             <Label className="text-xs text-muted-foreground">Paiement</Label>
             <Select value={paiement} onValueChange={setPaiement}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="tous">Tous les paiements</SelectItem>
+                <SelectItem value="tous">Tous</SelectItem>
                 {paiementOptions.map((o) => (
                   <SelectItem key={o.value} value={o.value}>
                     {o.label}
@@ -262,7 +314,7 @@ function WorklistPage() {
 
       {error ? (
         <ServiceNotice
-          message="File d'attente en attente de connexion au serveur du centre."
+          message={error || "File d'attente en attente de connexion au serveur du centre."}
           onRetry={() => setReloadKey((k) => k + 1)}
         />
       ) : null}
@@ -300,8 +352,12 @@ function WorklistPage() {
                         className="cursor-pointer text-sm"
                         onClick={() => openSheet(i)}
                       >
-                        <TableCell className="pl-6">
-                          <EtatPatientBadge etat={i.etatPatient} />
+                        <TableCell className="pl-6" onClick={(e) => e.stopPropagation()}>
+                          <EtatPatientStatusMenu
+                            etat={i.etatPatient}
+                            disabled={statusUpdatingId === i.id}
+                            onSelect={(next) => void changeEtatPatient(i, next)}
+                          />
                         </TableCell>
                         <TableCell className="font-medium">{i.patient}</TableCell>
                         <TableCell className="font-mono text-xs">{i.numSejour}</TableCell>

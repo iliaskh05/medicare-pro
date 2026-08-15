@@ -34,6 +34,7 @@ public class MedecinReferent {
 
     private String specialite;
 
+    @Column(columnDefinition = "TEXT")
     private String adresse;
 
     private String ville;

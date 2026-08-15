@@ -1,5 +1,6 @@
 package com.crm.medicare.repository;
 
+import com.crm.medicare.entity.EtatPatient;
 import com.crm.medicare.entity.Examen;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -13,14 +14,24 @@ public interface ExamenRepository extends JpaRepository<Examen, Long> {
 
     @Query(
             """
-            SELECT e FROM Examen e
-            JOIN FETCH e.patient
+            SELECT DISTINCT e FROM Examen e
+            JOIN FETCH e.patient p
             LEFT JOIN FETCH e.prescripteur
             WHERE e.dateExamen >= :debut AND e.dateExamen < :fin
+              AND (
+                :search IS NULL OR :search = ''
+                OR LOWER(p.nomComplet) LIKE LOWER(CONCAT('%', :search, '%'))
+                OR LOWER(e.numSejour) LIKE LOWER(CONCAT('%', :search, '%'))
+                OR LOWER(COALESCE(p.cin, '')) LIKE LOWER(CONCAT('%', :search, '%'))
+              )
+              AND (:status IS NULL OR e.etatPatient = :status)
             ORDER BY e.dateExamen ASC
             """)
-    List<Examen> findByDateExamenBetween(
-            @Param("debut") LocalDateTime debut, @Param("fin") LocalDateTime fin);
+    List<Examen> searchWorklist(
+            @Param("debut") LocalDateTime debut,
+            @Param("fin") LocalDateTime fin,
+            @Param("search") String search,
+            @Param("status") EtatPatient status);
 
     long countByNumSejourStartingWith(String prefix);
 }

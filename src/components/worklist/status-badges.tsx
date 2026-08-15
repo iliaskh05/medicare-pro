@@ -12,6 +12,13 @@ import {
 } from "lucide-react";
 import type { ComponentType } from "react";
 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import type { EtatPatient, StatutCompteRendu, StatutPaiement } from "@/lib/api/worklist";
 
@@ -102,6 +109,53 @@ function Badge({ def }: { def: BadgeDef }) {
 
 export function EtatPatientBadge({ etat }: { etat: EtatPatient }) {
   return <Badge def={etatMap[etat] ?? etatMap.attendu} />;
+}
+
+/** Pastille cliquable pour changer l'état patient (PATCH /api/worklist/{id}/status). */
+export function EtatPatientStatusMenu({
+  etat,
+  onSelect,
+  disabled,
+}: {
+  etat: EtatPatient;
+  onSelect: (next: EtatPatient) => void;
+  disabled?: boolean;
+}) {
+  const current = etatMap[etat] ?? etatMap.attendu;
+  const Icon = current.icon;
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild disabled={disabled}>
+        <button
+          type="button"
+          className={cn(
+            "inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            current.className,
+            disabled && "pointer-events-none opacity-60",
+          )}
+          onClick={(e) => e.stopPropagation()}
+          aria-label="Modifier l'état du patient"
+        >
+          <Icon className="size-3.5" aria-hidden />
+          {current.label}
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-44" onClick={(e) => e.stopPropagation()}>
+        <DropdownMenuLabel className="text-xs">État patient</DropdownMenuLabel>
+        {(Object.keys(etatMap) as EtatPatient[]).map((key) => {
+          const def = etatMap[key];
+          const ItemIcon = def.icon;
+          return (
+            <DropdownMenuItem key={key} onClick={() => onSelect(key)}>
+              <ItemIcon className="mr-2 size-3.5" />
+              {def.label}
+            </DropdownMenuItem>
+          );
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 }
 
 export function CompteRenduBadge({ statut }: { statut: StatutCompteRendu }) {

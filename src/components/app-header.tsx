@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { ActionButton } from "@/components/action-button";
-import { roleProfiles, useRole, type AppRole } from "@/hooks/use-role";
+import { roleProfiles, useRole, clearAuthSession, type AppRole } from "@/hooks/use-role";
 import { useTheme } from "@/hooks/use-theme";
 
 const roleIcons: Record<AppRole, typeof ShieldCheck> = {
@@ -40,6 +40,12 @@ export function AppHeader() {
   const navigate = useNavigate();
 
   const RoleIcon = roleIcons[role];
+
+  function handleLogout() {
+    clearAuthSession();
+    toast.success("Session fermée en toute sécurité.");
+    void navigate({ to: "/" });
+  }
 
   return (
     <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-border bg-surface/90 px-3 backdrop-blur sm:px-6">
@@ -136,13 +142,7 @@ export function AppHeader() {
             </DropdownMenuItem>
 
             <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="text-destructive"
-              onClick={() => {
-                toast.success("Session fermée en toute sécurité.");
-                void navigate({ to: "/" });
-              }}
-            >
+            <DropdownMenuItem className="text-destructive" onClick={handleLogout}>
               Se déconnecter
             </DropdownMenuItem>
           </DropdownMenuContent>

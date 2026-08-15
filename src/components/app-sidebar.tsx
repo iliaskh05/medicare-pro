@@ -59,7 +59,7 @@ const navGroups: { label: string; items: NavItem[] }[] = [
     ],
   },
   {
-    label: "Direction (Mr Adnane)",
+    label: "Direction",
     items: [
       { title: "Audit & fraude", url: "/audit", icon: ShieldAlert, fraude: true },
       { title: "Configuration", url: "/parametres", icon: Settings },

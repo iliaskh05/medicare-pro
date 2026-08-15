@@ -15,12 +15,14 @@ import { Route as ChatRouteImport } from './routes/chat'
 import { Route as ComptesRendusRouteImport } from './routes/comptes-rendus'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as FacturationRouteImport } from './routes/facturation'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as ImagerieRouteImport } from './routes/imagerie'
 import { Route as MedecinsRouteImport } from './routes/medecins'
 import { Route as MedecinsReferentsRouteImport } from './routes/medecins-referents'
 import { Route as NumerisationRouteImport } from './routes/numerisation'
 import { Route as ParametresRouteImport } from './routes/parametres'
 import { Route as PatientsRouteImport } from './routes/patients'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ViewerRouteImport } from './routes/viewer'
 import { Route as WhatsappRouteImport } from './routes/whatsapp'
@@ -57,6 +59,11 @@ const FacturationRoute = FacturationRouteImport.update({
   path: '/facturation',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ImagerieRoute = ImagerieRouteImport.update({
   id: '/imagerie',
   path: '/imagerie',
@@ -85,6 +92,11 @@ const ParametresRoute = ParametresRouteImport.update({
 const PatientsRoute = PatientsRouteImport.update({
   id: '/patients',
   path: '/patients',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
@@ -120,12 +132,14 @@ export interface FileRoutesByFullPath {
   '/comptes-rendus': typeof ComptesRendusRoute
   '/dashboard': typeof DashboardRoute
   '/facturation': typeof FacturationRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/imagerie': typeof ImagerieRoute
   '/medecins': typeof MedecinsRoute
   '/medecins-referents': typeof MedecinsReferentsRoute
   '/numerisation': typeof NumerisationRoute
   '/parametres': typeof ParametresRoute
   '/patients': typeof PatientsRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/viewer': typeof ViewerRoute
   '/whatsapp': typeof WhatsappRoute
@@ -139,12 +153,14 @@ export interface FileRoutesByTo {
   '/comptes-rendus': typeof ComptesRendusRoute
   '/dashboard': typeof DashboardRoute
   '/facturation': typeof FacturationRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/imagerie': typeof ImagerieRoute
   '/medecins': typeof MedecinsRoute
   '/medecins-referents': typeof MedecinsReferentsRoute
   '/numerisation': typeof NumerisationRoute
   '/parametres': typeof ParametresRoute
   '/patients': typeof PatientsRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/viewer': typeof ViewerRoute
   '/whatsapp': typeof WhatsappRoute
@@ -159,12 +175,14 @@ export interface FileRoutesById {
   '/comptes-rendus': typeof ComptesRendusRoute
   '/dashboard': typeof DashboardRoute
   '/facturation': typeof FacturationRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/imagerie': typeof ImagerieRoute
   '/medecins': typeof MedecinsRoute
   '/medecins-referents': typeof MedecinsReferentsRoute
   '/numerisation': typeof NumerisationRoute
   '/parametres': typeof ParametresRoute
   '/patients': typeof PatientsRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/viewer': typeof ViewerRoute
   '/whatsapp': typeof WhatsappRoute
@@ -180,12 +198,14 @@ export interface FileRouteTypes {
     | '/comptes-rendus'
     | '/dashboard'
     | '/facturation'
+    | '/forgot-password'
     | '/imagerie'
     | '/medecins'
     | '/medecins-referents'
     | '/numerisation'
     | '/parametres'
     | '/patients'
+    | '/reset-password'
     | '/sitemap.xml'
     | '/viewer'
     | '/whatsapp'
@@ -199,12 +219,14 @@ export interface FileRouteTypes {
     | '/comptes-rendus'
     | '/dashboard'
     | '/facturation'
+    | '/forgot-password'
     | '/imagerie'
     | '/medecins'
     | '/medecins-referents'
     | '/numerisation'
     | '/parametres'
     | '/patients'
+    | '/reset-password'
     | '/sitemap.xml'
     | '/viewer'
     | '/whatsapp'
@@ -218,12 +240,14 @@ export interface FileRouteTypes {
     | '/comptes-rendus'
     | '/dashboard'
     | '/facturation'
+    | '/forgot-password'
     | '/imagerie'
     | '/medecins'
     | '/medecins-referents'
     | '/numerisation'
     | '/parametres'
     | '/patients'
+    | '/reset-password'
     | '/sitemap.xml'
     | '/viewer'
     | '/whatsapp'
@@ -238,12 +262,14 @@ export interface RootRouteChildren {
   ComptesRendusRoute: typeof ComptesRendusRoute
   DashboardRoute: typeof DashboardRoute
   FacturationRoute: typeof FacturationRoute
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
   ImagerieRoute: typeof ImagerieRoute
   MedecinsRoute: typeof MedecinsRoute
   MedecinsReferentsRoute: typeof MedecinsReferentsRoute
   NumerisationRoute: typeof NumerisationRoute
   ParametresRoute: typeof ParametresRoute
   PatientsRoute: typeof PatientsRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   ViewerRoute: typeof ViewerRoute
   WhatsappRoute: typeof WhatsappRoute
@@ -295,6 +321,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FacturationRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/imagerie': {
       id: '/imagerie'
       path: '/imagerie'
@@ -335,6 +368,13 @@ declare module '@tanstack/react-router' {
       path: '/patients'
       fullPath: '/patients'
       preLoaderRoute: typeof PatientsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sitemap.xml': {
@@ -382,12 +422,14 @@ const rootRouteChildren: RootRouteChildren = {
   ComptesRendusRoute: ComptesRendusRoute,
   DashboardRoute: DashboardRoute,
   FacturationRoute: FacturationRoute,
+  ForgotPasswordRoute: ForgotPasswordRoute,
   ImagerieRoute: ImagerieRoute,
   MedecinsRoute: MedecinsRoute,
   MedecinsReferentsRoute: MedecinsReferentsRoute,
   NumerisationRoute: NumerisationRoute,
   ParametresRoute: ParametresRoute,
   PatientsRoute: PatientsRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   ViewerRoute: ViewerRoute,
   WhatsappRoute: WhatsappRoute,

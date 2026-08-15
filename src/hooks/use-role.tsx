@@ -22,10 +22,10 @@ export type RoleProfile = {
 export const roleProfiles: Record<AppRole, RoleProfile> = {
   directeur: {
     id: "directeur",
-    label: "Directeur (Mr Adnane)",
+    label: "Directeur",
     fonction: "Direction du centre",
-    nom: "Mr Adnane",
-    initiales: "MA",
+    nom: "Directeur",
+    initiales: "DI",
     canSeeFraudModule: true,
     canExportCompta: true,
     canValiderAnomalie: true,
@@ -33,10 +33,10 @@ export const roleProfiles: Record<AppRole, RoleProfile> = {
   },
   accueil: {
     id: "accueil",
-    label: "Accueil",
+    label: "Secrétariat",
     fonction: "Accueil & caisse",
-    nom: "Poste Accueil",
-    initiales: "AC",
+    nom: "Secrétariat",
+    initiales: "SE",
     canSeeFraudModule: false,
     canExportCompta: false,
     canValiderAnomalie: false,
@@ -44,10 +44,10 @@ export const roleProfiles: Record<AppRole, RoleProfile> = {
   },
   technicien: {
     id: "technicien",
-    label: "Technicien",
+    label: "Manipulateur",
     fonction: "Manipulateur en imagerie",
-    nom: "Poste Technicien",
-    initiales: "TE",
+    nom: "Manipulateur",
+    initiales: "MA",
     canSeeFraudModule: false,
     canExportCompta: false,
     canValiderAnomalie: false,
@@ -55,10 +55,10 @@ export const roleProfiles: Record<AppRole, RoleProfile> = {
   },
   medecin: {
     id: "medecin",
-    label: "Médecin",
+    label: "Radiologue",
     fonction: "Imagerie & comptes rendus",
-    nom: "Poste Médecin",
-    initiales: "ME",
+    nom: "Radiologue",
+    initiales: "RA",
     canSeeFraudModule: false,
     canExportCompta: false,
     canValiderAnomalie: true,
@@ -66,7 +66,8 @@ export const roleProfiles: Record<AppRole, RoleProfile> = {
   },
 };
 
-const STORAGE_KEY = "radiocrm:role";
+const ROLE_STORAGE_KEY = "radiocrm:role";
+const USER_STORAGE_KEY = "radiocrm:user";
 
 /** Utilisateur connecté (fourni par le backend d'authentification). */
 export type AppUser = {
@@ -78,10 +79,17 @@ export type AppUser = {
   initiales: string;
 };
 
+type StoredAuthUser = {
+  id?: number | string;
+  nom?: string;
+  nomComplet?: string;
+  role?: string;
+};
+
 const roleLabels: Record<AppRole, string> = {
   directeur: "Directeur",
-  accueil: "Accueil",
-  technicien: "Technicien",
+  accueil: "Secrétariat",
+  technicien: "Manipulateur",
   medecin: "Radiologue",
 };
 
@@ -96,6 +104,48 @@ type RoleContextValue = {
   ) => boolean;
 };
 
+function isRole(value: string | null): value is AppRole {
+  return value !== null && value in roleProfiles;
+}
+
+/** Mappe les rôles Spring Boot vers les rôles UI. */
+export function mapBackendRole(role: string | null | undefined): AppRole {
+  if (!role) return "directeur";
+  switch (role.toUpperCase()) {
+    case "DIRECTEUR":
+      return "directeur";
+    case "RADIOLOGUE":
+      return "medecin";
+    case "MANIPULATEUR":
+      return "technicien";
+    case "SECRETARIAT":
+      return "accueil";
+    default:
+      return isRole(role.toLowerCase()) ? (role.toLowerCase() as AppRole) : "directeur";
+  }
+}
+
+function initialsFrom(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  return parts
+    .map((p) => p[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+}
+
+function readStoredUser(): StoredAuthUser | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(USER_STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as StoredAuthUser;
+  } catch {
+    return null;
+  }
+}
+
 function toUser(profile: RoleProfile): AppUser {
   return {
     nom: profile.nom,
@@ -108,30 +158,40 @@ function toUser(profile: RoleProfile): AppUser {
 
 const RoleContext = createContext<RoleContextValue | null>(null);
 
-function isRole(value: string | null): value is AppRole {
-  return value !== null && value in roleProfiles;
-}
-
 export function RoleProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<AppRole>("directeur");
+  const [displayName, setDisplayName] = useState<string | null>(null);
 
-  // Le rôle actif provient du backend d'authentification ; en attendant il est
-  // conservé côté session pour survivre à la navigation.
   useEffect(() => {
-    const stored = window.sessionStorage.getItem(STORAGE_KEY);
-    if (isRole(stored)) setRole(stored);
+    const storedUser = readStoredUser();
+    if (storedUser) {
+      const mapped = mapBackendRole(storedUser.role);
+      setRole(mapped);
+      setDisplayName(storedUser.nomComplet || storedUser.nom || null);
+      return;
+    }
+
+    const storedRole = window.sessionStorage.getItem(ROLE_STORAGE_KEY);
+    if (isRole(storedRole)) setRole(storedRole);
   }, []);
 
   useEffect(() => {
     try {
-      window.sessionStorage.setItem(STORAGE_KEY, role);
+      window.sessionStorage.setItem(ROLE_STORAGE_KEY, role);
     } catch {
       /* stockage indisponible : le rôle reste en mémoire */
     }
   }, [role]);
 
   const value = useMemo<RoleContextValue>(() => {
-    const profile = roleProfiles[role];
+    const base = roleProfiles[role];
+    const nom = displayName?.trim() || base.nom;
+    const profile: RoleProfile = {
+      ...base,
+      nom,
+      label: roleLabels[role],
+      initiales: initialsFrom(nom),
+    };
     return {
       role,
       profile,
@@ -139,7 +199,7 @@ export function RoleProvider({ children }: { children: ReactNode }) {
       setRole,
       hasPermission: (permission) => profile[permission],
     };
-  }, [role]);
+  }, [role, displayName]);
 
   return <RoleContext.Provider value={value}>{children}</RoleContext.Provider>;
 }
@@ -161,4 +221,13 @@ export function useRole(): RoleContextValue {
 /** Accès direct à l'utilisateur connecté et à son rôle métier. */
 export function useUser(): AppUser {
   return useRole().user;
+}
+
+/** Efface la session locale (token + profil). */
+export function clearAuthSession() {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem("radiocrm:token");
+  window.localStorage.removeItem("radiocrm:user");
+  window.sessionStorage.removeItem("radiocrm:token");
+  window.sessionStorage.removeItem(ROLE_STORAGE_KEY);
 }

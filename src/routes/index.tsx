@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Building2, Lock, Mail, ShieldCheck, Sparkles, User } from "lucide-react";
 
@@ -55,6 +55,7 @@ function LoginPage() {
   const [loginPassword, setLoginPassword] = useState("");
   const [loginRemember, setLoginRemember] = useState(false);
   const [loginLoading, setLoginLoading] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
 
   /* ---------- Création de compte ---------- */
   const [registerName, setRegisterName] = useState("");
@@ -84,12 +85,50 @@ function LoginPage() {
     if (!canSubmitLogin) return;
 
     setLoginLoading(true);
+    setLoginError(null);
     try {
-      // TODO: remplacer par l'appel Spring Boot /api/auth/login
-      // const session = await fetch('/api/auth/login', { method: 'POST', body: JSON.stringify({ email: loginEmail, password: loginPassword }) });
-      // if (session.ok) navigate({ to: '/worklist' });
-      await new Promise((resolve) => setTimeout(resolve, 600));
-      navigate({ to: "/worklist" });
+      const response = await fetch("http://localhost:8080/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: loginEmail.trim(),
+          motDePasse: loginPassword,
+        }),
+      });
+
+      if (!response.ok) {
+        const errData = (await response.json().catch(() => ({}))) as { message?: string };
+        const message =
+          response.status === 401
+            ? errData.message || "Email ou mot de passe incorrect"
+            : errData.message || "Connexion impossible";
+        throw new Error(message);
+      }
+
+      const data = (await response.json()) as {
+        token?: string;
+        utilisateur?: { id?: number; nom?: string; role?: string };
+      };
+
+      if (data.token) {
+        window.localStorage.setItem("radiocrm:token", data.token);
+        window.sessionStorage.setItem("radiocrm:token", data.token);
+      }
+
+      if (data.utilisateur) {
+        const utilisateur = {
+          ...data.utilisateur,
+          nomComplet: data.utilisateur.nom ?? "",
+        };
+        window.localStorage.setItem("radiocrm:user", JSON.stringify(utilisateur));
+      }
+
+      void navigate({ to: "/worklist" });
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : "Impossible de se connecter";
+      setLoginError(message);
+      alert(message);
     } finally {
       setLoginLoading(false);
     }
@@ -101,11 +140,43 @@ function LoginPage() {
 
     setRegisterLoading(true);
     try {
-      // TODO: remplacer par l'appel Spring Boot /api/auth/register
-      // const res = await fetch('/api/auth/register', { method: 'POST', body: JSON.stringify({ fullName: registerName, email: registerEmail, role: registerRole, password: registerPassword }) });
-      await new Promise((resolve) => setTimeout(resolve, 600));
-      // Basculer vers l'onglet de connexion après création
-      document.querySelector<HTMLButtonElement>('[value="login"]')?.click();
+      const response = await fetch("http://localhost:8080/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nomComplet: registerName.trim(),
+          email: registerEmail.trim(),
+          motDePasse: registerPassword,
+          role: registerRole.toUpperCase(),
+        }),
+      });
+
+      if (!response.ok) {
+        const errData = (await response.json().catch(() => ({}))) as { message?: string };
+        throw new Error(errData.message || "Erreur lors de la création du compte");
+      }
+
+      const data = (await response.json()) as {
+        token?: string;
+        utilisateur?: { id?: number; nom?: string; role?: string };
+      };
+      if (data.token) {
+        window.sessionStorage.setItem("radiocrm:token", data.token);
+        window.localStorage.setItem("radiocrm:token", data.token);
+      }
+      if (data.utilisateur) {
+        window.localStorage.setItem(
+          "radiocrm:user",
+          JSON.stringify({
+            ...data.utilisateur,
+            nomComplet: data.utilisateur.nom ?? "",
+          }),
+        );
+      }
+
+      void navigate({ to: "/worklist" });
+    } catch (error: unknown) {
+      alert(error instanceof Error ? error.message : "Impossible de créer le compte");
     } finally {
       setRegisterLoading(false);
     }
@@ -198,9 +269,9 @@ function LoginPage() {
                   <Label htmlFor="login-password" className="login-text text-sm font-medium">
                     Mot de passe
                   </Label>
-                  <button type="button" className="login-link text-xs font-medium">
+                  <Link to="/forgot-password" className="login-link text-xs font-medium">
                     Mot de passe oublié ?
-                  </button>
+                  </Link>
                 </div>
                 <div className="relative">
                   <Lock className="login-input-icon pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2" />
@@ -236,6 +307,7 @@ function LoginPage() {
               >
                 {loginLoading ? "Connexion en cours..." : "Se connecter"}
               </Button>
+              {loginError ? <p className="login-error text-center text-xs">{loginError}</p> : null}
             </form>
           </TabsContent>
 
