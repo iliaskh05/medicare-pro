@@ -221,7 +221,7 @@ function LoginPage() {
                   id="login-remember"
                   checked={loginRemember}
                   onCheckedChange={(checked) => setLoginRemember(checked === true)}
-                  className="border-white/30 data-[state=checked]:border-white data-[state=checked]:bg-white data-[state=checked]:text-primary"
+                  className="border-white/60 data-[state=checked]:border-white data-[state=checked]:bg-white data-[state=checked]:text-primary"
                 />
                 <Label htmlFor="login-remember" className="login-muted text-sm font-normal">
                   Garder ma session active
