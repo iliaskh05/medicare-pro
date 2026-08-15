@@ -15,12 +15,12 @@ function readBase(key: string): string | undefined {
 }
 
 /** Backend Spring Boot du centre (serveur local du centre). */
-export const JAVA_API_BASE = readBase("VITE_JAVA_API_URL");
+export const JAVA_API_BASE = readBase("VITE_JAVA_API_URL") ?? "http://localhost:8080";
 
 /** Microservice Python de scoring / clustering. */
 export const ML_API_BASE = readBase("VITE_ML_API_URL");
 
-/** Vrai lorsqu'aucun backend n'est configuré (poste de démonstration / build web). */
+/** Toujours vrai : l'API Java pointe par défaut sur localhost:8080. */
 export const API_CONFIGURED = Boolean(JAVA_API_BASE);
 
 export const API_TIMEOUT_MS = Number(import.meta.env?.["VITE_API_TIMEOUT_MS"] ?? 15000);
@@ -62,7 +62,7 @@ export async function httpRequest<T>(
 ): Promise<T> {
   if (!base) {
     throw new ApiError(
-      "Service de données non configuré sur ce poste.",
+      "URL du service indisponible.",
       0,
       "backend_not_configured",
     );

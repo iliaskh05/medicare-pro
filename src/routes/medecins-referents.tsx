@@ -22,8 +22,10 @@ import {
 } from "@/components/ui/table";
 import { ActionButton } from "@/components/action-button";
 import { EmptyState, PageHeader, Pill } from "@/components/ui-kit";
-import { fetchMedecins, sendReportToReferent } from "@/lib/api/referents";
+import { mapMedecinDto, sendReportToReferent, type MedecinDto } from "@/lib/api/referents";
 import type { Referent } from "@/types/referent";
+
+const MEDECINS_API_URL = "http://localhost:8080/api/medecins";
 
 export const Route = createFileRoute("/medecins-referents")({
   head: () => ({
@@ -57,27 +59,36 @@ function MedecinsReferentsPage() {
   const [specialite, setSpecialite] = useState("toutes");
 
   useEffect(() => {
-    let cancelled = false;
+    const controller = new AbortController();
     setIsLoading(true);
     setError(null);
 
-    fetchMedecins()
-      .then((data) => {
-        if (!cancelled) setMedecins(data);
+    fetch(MEDECINS_API_URL, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+      signal: controller.signal,
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          throw new Error(`Erreur ${res.status} sur /api/medecins`);
+        }
+        return (await res.json()) as MedecinDto[];
       })
-      .catch((e: unknown) => {
-        if (!cancelled) {
-          setError(e instanceof Error ? e.message : "Répertoire indisponible");
-          setMedecins([]);
+      .then((rows) => {
+        if (!controller.signal.aborted) {
+          setMedecins((rows ?? []).map(mapMedecinDto));
         }
       })
+      .catch((e: unknown) => {
+        if (controller.signal.aborted) return;
+        setError(e instanceof Error ? e.message : "Répertoire indisponible");
+        setMedecins([]);
+      })
       .finally(() => {
-        if (!cancelled) setIsLoading(false);
+        if (!controller.signal.aborted) setIsLoading(false);
       });
 
-    return () => {
-      cancelled = true;
-    };
+    return () => controller.abort();
   }, [reloadKey]);
 
   const villes = useMemo(
@@ -166,8 +177,8 @@ function MedecinsReferentsPage() {
             <div className="px-6 py-8">
               <EmptyState
                 icon={MapPin}
-                title="Répertoire indisponible"
-                description={`Le service Java n'a pas répondu : ${error}`}
+                title="Impossible de charger le répertoire"
+                description={error}
                 action={
                   <Button variant="outline" size="sm" onClick={() => setReloadKey((k) => k + 1)}>
                     <RefreshCw className="mr-2 size-4" /> Réessayer
@@ -215,9 +226,13 @@ function MedecinsReferentsPage() {
                         {m.telephone}
                       </TableCell>
                       <TableCell className="text-sm">
-                        <a href={`mailto:${m.email}`} className="hover:text-primary">
-                          {m.email}
-                        </a>
+                        {m.email ? (
+                          <a href={`mailto:${m.email}`} className="hover:text-primary">
+                            {m.email}
+                          </a>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-sm">{m.ville}</TableCell>
                       <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
