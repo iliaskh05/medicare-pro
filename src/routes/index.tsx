@@ -350,7 +350,7 @@ function LoginPage() {
               <Button
                 type="submit"
                 size="lg"
-                className="btn-premium login-text h-11 w-full rounded-xl"
+                className="btn-premium h-11 w-full rounded-xl !text-white"
                 disabled={!canSubmitRegister || registerLoading}
               >
                 {registerLoading ? "Création en cours..." : "Créer mon compte"}
