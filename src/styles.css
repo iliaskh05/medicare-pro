@@ -210,6 +210,28 @@
   color: oklch(0.85 0.02 250);
 }
 
+@utility login-text {
+  color: oklch(1 0 0);
+}
+
+@utility login-muted {
+  color: oklch(0.85 0.02 250);
+}
+
+@utility login-error {
+  color: oklch(0.75 0.15 25);
+}
+
+@utility login-link {
+  color: oklch(0.8 0.12 250);
+  transition: color 150ms ease;
+
+  &:hover {
+    color: oklch(1 0 0);
+    text-decoration: underline;
+  }
+}
+
 @utility login-pill-tabs {
   display: grid;
   width: 100%;
