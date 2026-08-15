@@ -4,6 +4,7 @@ import com.crm.medicare.entity.EtatPatient;
 import com.crm.medicare.entity.Examen;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -32,6 +33,15 @@ public interface ExamenRepository extends JpaRepository<Examen, Long> {
             @Param("fin") LocalDateTime fin,
             @Param("search") String search,
             @Param("status") EtatPatient status);
+
+    @Query(
+            """
+            SELECT e FROM Examen e
+            JOIN FETCH e.patient
+            LEFT JOIN FETCH e.prescripteur
+            WHERE e.id = :id
+            """)
+    Optional<Examen> findByIdWithPatient(@Param("id") Long id);
 
     long countByNumSejourStartingWith(String prefix);
 }

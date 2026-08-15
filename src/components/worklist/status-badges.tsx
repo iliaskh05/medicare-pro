@@ -35,7 +35,7 @@ const etatMap: Record<EtatPatient, BadgeDef> = {
     className: "border-border bg-muted text-muted-foreground",
   },
   arrive: {
-    label: "Arrivé",
+    label: "Terminé",
     icon: UserCheck,
     className: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
   },

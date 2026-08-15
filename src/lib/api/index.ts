@@ -10,3 +10,6 @@ export * from "./dashboard";
 export * from "./imaging";
 export * from "./whatsapp";
 export * from "./anomalies";
+export * from "./factures";
+export * from "./imagerie";
+export * from "./worklist";

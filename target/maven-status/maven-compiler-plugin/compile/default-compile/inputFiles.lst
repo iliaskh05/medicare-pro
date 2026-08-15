@@ -1,5 +1,7 @@
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\controller\AuditController.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\controller\AuthController.java
+C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\controller\FactureController.java
+C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\controller\ImagerieController.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\controller\MedecinReferentController.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\controller\PatientController.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\controller\WorklistController.java
@@ -7,6 +9,7 @@ C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dto\ApiError
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dto\AuthResponse.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dto\ForgotPasswordRequest.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dto\HistoriqueItemDto.java
+C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dto\ImagerieStudyDto.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dto\LoginRequest.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dto\MessageResponse.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dto\RegisterRequest.java
@@ -37,4 +40,6 @@ C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\security\Jwt
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\security\SecurityConfig.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\service\AuthService.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\service\EmailService.java
+C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\service\FactureService.java
+C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\service\ImagerieService.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\service\WorklistService.java

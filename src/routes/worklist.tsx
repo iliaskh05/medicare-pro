@@ -2,6 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ClipboardList,
+  Eye,
+  FileDown,
   FileText,
   ListFilter,
   MoreHorizontal,
@@ -48,6 +50,8 @@ import {
 } from "@/components/worklist/status-badges";
 import { NouvelExamenDialog } from "@/components/worklist/nouvel-examen-dialog";
 import { ExamenSheet } from "@/components/worklist/examen-sheet";
+import { DicomViewerModal } from "@/components/worklist/dicom-viewer-modal";
+import { downloadFactureExamen } from "@/lib/api/factures";
 import {
   MODALITES,
   fetchWorklist,
@@ -102,6 +106,9 @@ function WorklistPage() {
 
   const [selected, setSelected] = useState<WorklistItem | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [viewerExamenId, setViewerExamenId] = useState<string | null>(null);
+  const [viewerPatient, setViewerPatient] = useState<string>("");
+  const [viewerOpen, setViewerOpen] = useState(false);
 
   useEffect(() => {
     const t = window.setTimeout(() => setDebouncedSearch(query.trim()), 300);
@@ -146,6 +153,12 @@ function WorklistPage() {
     setSheetOpen(true);
   }, []);
 
+  const openImagerie = useCallback((item: WorklistItem) => {
+    setViewerExamenId(item.id);
+    setViewerPatient(item.patient);
+    setViewerOpen(true);
+  }, []);
+
   const changeEtatPatient = useCallback(async (item: WorklistItem, nouveauStatut: EtatPatient) => {
     if (item.etatPatient === nouveauStatut) return;
     setStatusUpdatingId(item.id);
@@ -177,6 +190,19 @@ function WorklistPage() {
     },
     [changeEtatPatient],
   );
+
+  const downloadFacture = useCallback(async (item: WorklistItem) => {
+    if (item.etatPatient !== "arrive") {
+      toast.error("La facture PDF n'est disponible que pour un examen terminé.");
+      return;
+    }
+    try {
+      await downloadFactureExamen(item.id, item.patient);
+      toast.success(`Facture PDF téléchargée — ${item.patient}`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Téléchargement de la facture impossible.");
+    }
+  }, []);
 
   const crOptions: { value: StatutCompteRendu; label: string }[] = [
     { value: "a_faire", label: "À dicter" },
@@ -245,7 +271,7 @@ function WorklistPage() {
               <SelectContent>
                 <SelectItem value="tous">Tous</SelectItem>
                 <SelectItem value="attendu">En attente</SelectItem>
-                <SelectItem value="arrive">En cours</SelectItem>
+                <SelectItem value="arrive">Terminé</SelectItem>
                 <SelectItem value="retard">En retard</SelectItem>
                 <SelectItem value="attente_longue">Trop attendu</SelectItem>
               </SelectContent>
@@ -375,48 +401,78 @@ function WorklistPage() {
                           className="pr-6 text-right"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              aria-label={`Voir l'imagerie — ${i.patient}`}
+                              title="Voir l'imagerie"
+                              onClick={() => openImagerie(i)}
+                            >
+                              <Eye className="size-4" />
+                            </Button>
+                            {i.etatPatient === "arrive" ? (
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                aria-label={`Actions pour ${i.patient}`}
+                                aria-label={`Facture PDF — ${i.patient}`}
+                                title="Facture PDF"
+                                onClick={() => void downloadFacture(i)}
                               >
-                                <MoreHorizontal className="size-4" />
+                                <FileDown className="size-4" />
                               </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-56">
-                              <DropdownMenuLabel>{i.patient}</DropdownMenuLabel>
-                              <DropdownMenuItem onClick={() => openSheet(i)}>
-                                <ClipboardList className="mr-2 size-4" /> Détails
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => window.print()}>
-                                <Receipt className="mr-2 size-4" /> Reçu / Facture
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => openSheet(i)}>
-                                <FileText className="mr-2 size-4" /> Ouvrir compte rendu
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuLabel className="text-xs text-muted-foreground">
-                                Modifier le statut
-                              </DropdownMenuLabel>
-                              <DropdownMenuItem
-                                onClick={() => changeStatut(i, { etatPatient: "arrive" })}
-                              >
-                                <SlidersHorizontal className="mr-2 size-4" /> Marquer arrivé
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => changeStatut(i, { statutCr: "signe" })}
-                              >
-                                <SlidersHorizontal className="mr-2 size-4" /> Compte rendu signé
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => changeStatut(i, { paiement: "paye" })}
-                              >
-                                <SlidersHorizontal className="mr-2 size-4" /> Marquer payé
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                            ) : null}
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  aria-label={`Actions pour ${i.patient}`}
+                                >
+                                  <MoreHorizontal className="size-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-56">
+                                <DropdownMenuLabel>{i.patient}</DropdownMenuLabel>
+                                <DropdownMenuItem onClick={() => openSheet(i)}>
+                                  <ClipboardList className="mr-2 size-4" /> Détails
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => openImagerie(i)}>
+                                  <Eye className="mr-2 size-4" /> Voir l&apos;imagerie
+                                </DropdownMenuItem>
+                                {i.etatPatient === "arrive" ? (
+                                  <DropdownMenuItem onClick={() => void downloadFacture(i)}>
+                                    <FileDown className="mr-2 size-4" /> Facture PDF
+                                  </DropdownMenuItem>
+                                ) : null}
+                                <DropdownMenuItem onClick={() => window.print()}>
+                                  <Receipt className="mr-2 size-4" /> Reçu / Facture
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => openSheet(i)}>
+                                  <FileText className="mr-2 size-4" /> Ouvrir compte rendu
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuLabel className="text-xs text-muted-foreground">
+                                  Modifier le statut
+                                </DropdownMenuLabel>
+                                <DropdownMenuItem
+                                  onClick={() => changeStatut(i, { etatPatient: "arrive" })}
+                                >
+                                  <SlidersHorizontal className="mr-2 size-4" /> Marquer terminé
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => changeStatut(i, { statutCr: "signe" })}
+                                >
+                                  <SlidersHorizontal className="mr-2 size-4" /> Compte rendu signé
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => changeStatut(i, { paiement: "paye" })}
+                                >
+                                  <SlidersHorizontal className="mr-2 size-4" /> Marquer payé
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -438,6 +494,15 @@ function WorklistPage() {
       </Card>
 
       <ExamenSheet item={selected} open={sheetOpen} onOpenChange={setSheetOpen} />
+      <DicomViewerModal
+        examenId={viewerExamenId}
+        patientLabel={viewerPatient}
+        open={viewerOpen}
+        onOpenChange={(open) => {
+          setViewerOpen(open);
+          if (!open) setViewerExamenId(null);
+        }}
+      />
     </div>
   );
 }

@@ -146,3 +146,65 @@ export const javaApi = <T>(path: string, options?: RequestOptions) =>
 
 export const mlApi = <T>(path: string, options?: RequestOptions) =>
   httpRequest<T>(ML_API_BASE, path, options);
+
+/**
+ * GET authentifié renvoyant un Blob (PDF, fichiers binaires).
+ * Ne parse pas le corps en JSON — pour les téléchargements.
+ */
+export async function javaApiBlob(
+  path: string,
+  { method = "GET", signal, headers }: Omit<RequestOptions, "body"> = {},
+): Promise<Blob> {
+  if (!JAVA_API_BASE) {
+    throw new ApiError("URL du service indisponible.", 0, "backend_not_configured");
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
+  signal?.addEventListener("abort", () => controller.abort());
+
+  const token = readToken();
+
+  try {
+    const res = await fetch(`${JAVA_API_BASE}${path}`, {
+      method,
+      signal: controller.signal,
+      headers: {
+        Accept: "application/pdf, application/octet-stream, */*",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...headers,
+      },
+    });
+
+    if (res.status === 401 || res.status === 403) {
+      clearSessionAndRedirectToLogin();
+      throw new ApiError(
+        await parseErrorMessage(
+          res,
+          res.status === 401 ? "Session expirée — reconnexion requise" : "Accès refusé",
+        ),
+        res.status,
+        "unauthorized",
+      );
+    }
+
+    if (!res.ok) {
+      throw new ApiError(
+        await parseErrorMessage(res, `Erreur ${res.status} sur ${path}`),
+        res.status,
+        "http_error",
+      );
+    }
+
+    return await res.blob();
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
+    throw new ApiError(
+      error instanceof Error ? error.message : "Téléchargement impossible",
+      0,
+      "network_error",
+    );
+  } finally {
+    clearTimeout(timeout);
+  }
+}
