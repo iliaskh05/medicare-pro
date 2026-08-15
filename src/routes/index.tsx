@@ -181,14 +181,14 @@ function LoginPage() {
                 </Label>
                 <div className="relative">
                   <Mail className="login-input-icon pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2" />
-                  <Input
+                    <Input
                     id="login-email"
                     type="email"
                     autoComplete="email"
                     placeholder="prenom.nom@centre-imagerie.ma"
                     value={loginEmail}
                     onChange={(e) => setLoginEmail(e.target.value)}
-                    className="login-input h-11 w-full pl-9 text-sm text-slate-900 focus-visible:ring-0 focus-visible:ring-offset-0"
+                    className="login-input h-11 w-full pl-9 text-sm focus-visible:ring-0 focus-visible:ring-offset-0"
                   />
                 </div>
               </div>
@@ -211,7 +211,7 @@ function LoginPage() {
                     placeholder="••••••••"
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
-                    className="login-input h-11 w-full pl-9 text-sm text-slate-900 focus-visible:ring-0 focus-visible:ring-offset-0"
+                    className="login-input h-11 w-full pl-9 text-sm focus-visible:ring-0 focus-visible:ring-offset-0"
                   />
                 </div>
               </div>
@@ -261,7 +261,7 @@ function LoginPage() {
                     placeholder="Prénom Nom"
                     value={registerName}
                     onChange={(e) => setRegisterName(e.target.value)}
-                    className="login-input h-11 w-full pl-9 text-sm text-slate-900 focus-visible:ring-0 focus-visible:ring-offset-0"
+                    className="login-input h-11 w-full pl-9 text-sm focus-visible:ring-0 focus-visible:ring-offset-0"
                   />
                 </div>
               </div>
@@ -279,7 +279,7 @@ function LoginPage() {
                     placeholder="prenom.nom@centre-imagerie.ma"
                     value={registerEmail}
                     onChange={(e) => setRegisterEmail(e.target.value)}
-                    className="login-input h-11 w-full pl-9 text-sm text-slate-900 focus-visible:ring-0 focus-visible:ring-offset-0"
+                    className="login-input h-11 w-full pl-9 text-sm focus-visible:ring-0 focus-visible:ring-offset-0"
                   />
                 </div>
               </div>
@@ -291,7 +291,7 @@ function LoginPage() {
                 <Select value={registerRole} onValueChange={setRegisterRole}>
                   <SelectTrigger
                     id="register-role"
-                    className="login-input h-11 w-full text-sm text-slate-900 focus:ring-0 focus:ring-offset-0"
+                    className="login-input h-11 w-full text-sm focus:ring-0 focus:ring-offset-0"
                   >
                     <div className="flex items-center gap-2">
                       <Building2 className="login-input-icon size-4" />
@@ -321,7 +321,7 @@ function LoginPage() {
                     placeholder="••••••••"
                     value={registerPassword}
                     onChange={(e) => setRegisterPassword(e.target.value)}
-                    className="login-input h-11 w-full pl-9 text-sm text-slate-900 focus-visible:ring-0 focus-visible:ring-offset-0"
+                    className="login-input h-11 w-full pl-9 text-sm focus-visible:ring-0 focus-visible:ring-offset-0"
                   />
                 </div>
               </div>
@@ -339,7 +339,7 @@ function LoginPage() {
                     placeholder="••••••••"
                     value={registerConfirmPassword}
                     onChange={(e) => setRegisterConfirmPassword(e.target.value)}
-                    className="login-input h-11 w-full pl-9 text-sm text-slate-900 focus-visible:ring-0 focus-visible:ring-offset-0"
+                    className="login-input h-11 w-full pl-9 text-sm focus-visible:ring-0 focus-visible:ring-offset-0"
                   />
                 </div>
                 {registerConfirmPassword && !passwordsMatch && (
