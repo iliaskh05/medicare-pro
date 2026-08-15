@@ -130,12 +130,12 @@ function LoginPage() {
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute -bottom-40 -left-40 z-0 size-[32rem] rounded-full bg-indigo-500/15 blur-[100px]"
+        className="pointer-events-none absolute -bottom-40 -left-40 z-0 size-[32rem] rounded-full bg-primary/15 blur-[100px]"
       />
 
       {/* En-tête marque */}
       <div className="relative z-10 mb-8 flex flex-col items-center gap-4">
-        <div className="flex size-16 items-center justify-center rounded-2xl bg-white/10 shadow-lg ring-1 ring-white/20 backdrop-blur-md">
+        <div className="glass-card flex size-16 items-center justify-center rounded-2xl bg-white/10">
           <img
             src={logoRadioCrm}
             alt="Logo RadioCRM"
@@ -166,21 +166,21 @@ function LoginPage() {
             </TabsTrigger>
           </TabsList>
 
-          <div className="mt-6 space-y-1">
-            <CardTitle className="login-text text-lg">Bienvenue sur RadioCRM</CardTitle>
-            <CardDescription className="login-muted text-sm">
-              Connectez-vous pour accéder à votre espace sécurisé.
-            </CardDescription>
-          </div>
-
           <TabsContent value="login" className="mt-5 space-y-5">
+            <div className="space-y-1">
+              <CardTitle className="login-text text-lg">Bienvenue sur RadioCRM</CardTitle>
+              <CardDescription className="login-muted text-sm">
+                Connectez-vous pour accéder à votre espace sécurisé.
+              </CardDescription>
+            </div>
+
             <form onSubmit={handleLoginSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="login-email" className="login-text text-sm font-medium">
                   Adresse e-mail professionnelle
                 </Label>
                 <div className="relative">
-                  <Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-500" />
+                  <Mail className="login-input-icon pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2" />
                   <Input
                     id="login-email"
                     type="email"
@@ -198,15 +198,12 @@ function LoginPage() {
                   <Label htmlFor="login-password" className="login-text text-sm font-medium">
                     Mot de passe
                   </Label>
-                  <button
-                    type="button"
-                    className="text-xs font-medium text-blue-300 hover:text-white hover:underline"
-                  >
+                  <button type="button" className="login-link text-xs font-medium">
                     Mot de passe oublié ?
                   </button>
                 </div>
                 <div className="relative">
-                  <Lock className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-500" />
+                  <Lock className="login-input-icon pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2" />
                   <Input
                     id="login-password"
                     type="password"
@@ -256,7 +253,7 @@ function LoginPage() {
                   Nom complet
                 </Label>
                 <div className="relative">
-                  <User className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-500" />
+                  <User className="login-input-icon pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2" />
                   <Input
                     id="register-name"
                     type="text"
@@ -274,7 +271,7 @@ function LoginPage() {
                   Adresse e-mail professionnelle
                 </Label>
                 <div className="relative">
-                  <Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-500" />
+                  <Mail className="login-input-icon pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2" />
                   <Input
                     id="register-email"
                     type="email"
@@ -297,7 +294,7 @@ function LoginPage() {
                     className="login-input h-11 w-full text-sm text-slate-900 focus:ring-0 focus:ring-offset-0"
                   >
                     <div className="flex items-center gap-2">
-                      <Building2 className="size-4 text-slate-500" />
+                      <Building2 className="login-input-icon size-4" />
                       <SelectValue placeholder="Sélectionner un rôle" />
                     </div>
                   </SelectTrigger>
@@ -316,7 +313,7 @@ function LoginPage() {
                   Mot de passe
                 </Label>
                 <div className="relative">
-                  <Lock className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-500" />
+                  <Lock className="login-input-icon pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2" />
                   <Input
                     id="register-password"
                     type="password"
@@ -334,7 +331,7 @@ function LoginPage() {
                   Confirmation du mot de passe
                 </Label>
                 <div className="relative">
-                  <Lock className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-500" />
+                  <Lock className="login-input-icon pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2" />
                   <Input
                     id="register-confirm-password"
                     type="password"
@@ -346,7 +343,7 @@ function LoginPage() {
                   />
                 </div>
                 {registerConfirmPassword && !passwordsMatch && (
-                  <p className="text-xs text-red-300">Les mots de passe ne correspondent pas.</p>
+                  <p className="login-error text-xs">Les mots de passe ne correspondent pas.</p>
                 )}
               </div>
 
@@ -362,14 +359,14 @@ function LoginPage() {
           </TabsContent>
 
           <CardDescription className="login-muted mt-6 flex items-center justify-center gap-1.5 px-2 text-center text-xs">
-            <Sparkles className="size-3.5 text-blue-300" />
+            <Sparkles className="login-link size-3.5" />
             Accès chiffré de bout en bout et réservé au personnel du centre
           </CardDescription>
         </Tabs>
       </div>
 
       {/* Footer légal */}
-      <p className="relative z-10 mt-8 flex items-center gap-1.5 text-xs text-slate-400">
+      <p className="login-muted relative z-10 mt-8 flex items-center gap-1.5 text-xs">
         <ShieldCheck className="size-3.5" />
         Hébergement conforme · Journalisation des accès · Données patients chiffrées
       </p>
