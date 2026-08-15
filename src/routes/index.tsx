@@ -183,7 +183,7 @@ function LoginPage() {
             className="mt-8 space-y-5"
             onSubmit={(e) => {
               e.preventDefault();
-              navigate({ to: "/dashboard" });
+              navigate({ to: "/worklist" });
             }}
           >
             <div className="space-y-2">
