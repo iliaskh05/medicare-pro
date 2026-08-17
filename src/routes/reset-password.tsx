@@ -13,7 +13,7 @@ const AUTH_API_BASE = "http://localhost:8080";
 
 export const Route = createFileRoute("/reset-password")({
   validateSearch: (search: Record<string, unknown>) => ({
-    token: typeof search.token === "string" ? search.token : "",
+    token: typeof search["token"] === "string" ? (search["token"] as string) : "",
   }),
   head: () => ({
     meta: [{ title: "Nouveau mot de passe — RadioCRM" }],

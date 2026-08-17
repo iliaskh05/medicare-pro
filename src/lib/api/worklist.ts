@@ -105,7 +105,7 @@ export function mapWorklistItem(row: WorklistApiRow): WorklistItem {
     statutCr: asStatutCr(row.statutCr),
     paiement: asPaiement(row.paiement),
     montant:
-      row.montant == null || row.montant === ""
+      row.montant == null || String(row.montant).trim() === ""
         ? undefined
         : typeof row.montant === "number"
           ? row.montant
@@ -121,7 +121,7 @@ export function mapWorklistItem(row: WorklistApiRow): WorklistItem {
 
 /** GET {JAVA_API_BASE}/api/worklist?date=&search=&status= */
 export async function fetchWorklist(
-  params: { date: string; search?: string; status?: string },
+  params: { date: string; search?: string | undefined; status?: string | undefined },
   signal?: AbortSignal,
 ): Promise<WorklistItem[]> {
   const qs = new URLSearchParams();
