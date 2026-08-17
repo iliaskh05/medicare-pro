@@ -1,5 +1,6 @@
 package com.crm.medicare.service;
 
+import com.crm.medicare.common.ApiException;
 import com.crm.medicare.dto.AuthResponse;
 import com.crm.medicare.dto.ForgotPasswordRequest;
 import com.crm.medicare.dto.LoginRequest;
@@ -10,19 +11,22 @@ import com.crm.medicare.entity.Utilisateur;
 import com.crm.medicare.repository.PasswordResetTokenRepository;
 import com.crm.medicare.repository.UtilisateurRepository;
 import com.crm.medicare.security.JwtUtils;
+import com.crm.medicare.security.LoginAttemptService;
+import com.crm.medicare.security.PermissionCatalog;
+import com.crm.medicare.security.SecurityUtils;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 @Service
 @RequiredArgsConstructor
@@ -36,17 +40,31 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final JwtUtils jwtUtils;
     private final EmailService emailService;
+    private final LoginAttemptService loginAttemptService;
+    private final AuditService auditService;
 
     @Value("${radiocrm.frontend-base-url:http://localhost:8081}")
     private String frontendBaseUrl;
+
+    @Value("${radiocrm.auth.public-register:false}")
+    private boolean publicRegister;
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
         validateRegister(request);
 
+        if (utilisateurRepository.count() > 0 && !publicRegister) {
+            Utilisateur current = SecurityUtils.currentUserOrNull();
+            if (current == null
+                    || !PermissionCatalog.forRole(current.getRole())
+                            .contains(PermissionCatalog.USER_MANAGE)) {
+                throw ApiException.forbidden("L'inscription est réservée aux administrateurs");
+            }
+        }
+
         String email = request.getEmail().trim().toLowerCase();
         if (utilisateurRepository.existsByEmail(email)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Cet email est déjà utilisé");
+            throw ApiException.conflict("email_taken", "Cet email est déjà utilisé");
         }
 
         Utilisateur utilisateur =
@@ -55,6 +73,8 @@ public class AuthService {
                         .email(email)
                         .motDePasse(passwordEncoder.encode(request.getMotDePasse()))
                         .role(request.getRole())
+                        .enabled(true)
+                        .createdAt(LocalDateTime.now(ZONE))
                         .build();
 
         Utilisateur saved = utilisateurRepository.save(utilisateur);
@@ -65,30 +85,44 @@ public class AuthService {
         return toAuthResponse(saved);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public AuthResponse login(LoginRequest request) {
         if (request == null || isBlank(request.getEmail()) || isBlank(request.getMotDePasse())) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Identifiants invalides");
+            throw ApiException.unauthorized("Identifiants invalides");
         }
 
         String email = request.getEmail().trim().toLowerCase();
+        if (loginAttemptService.isLocked(email)) {
+            auditService.securityEvent(AuditService.LOGIN_FAILED, email, false, "compte verrouillé");
+            throw ApiException.unauthorized("Compte temporairement verrouillé après trop d'échecs");
+        }
 
         try {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(email, request.getMotDePasse()));
+        } catch (LockedException ex) {
+            auditService.securityEvent(AuditService.LOGIN_FAILED, email, false, "compte verrouillé");
+            throw ApiException.unauthorized("Compte verrouillé");
         } catch (BadCredentialsException ex) {
-            throw new ResponseStatusException(
-                    HttpStatus.UNAUTHORIZED, "Email ou mot de passe incorrect");
+            loginAttemptService.onFailure(email);
+            auditService.securityEvent(AuditService.LOGIN_FAILED, email, false, "identifiants invalides");
+            auditService.record(AuditService.LOGIN_FAILED, "Utilisateur", email, Map.of());
+            throw ApiException.unauthorized("Email ou mot de passe incorrect");
         }
 
         Utilisateur utilisateur =
                 utilisateurRepository
                         .findByEmail(email)
-                        .orElseThrow(
-                                () ->
-                                        new ResponseStatusException(
-                                                HttpStatus.UNAUTHORIZED,
-                                                "Email ou mot de passe incorrect"));
+                        .orElseThrow(() -> ApiException.unauthorized("Email ou mot de passe incorrect"));
+
+        loginAttemptService.onSuccess(email);
+        utilisateur.setLastLoginAt(LocalDateTime.now(ZONE));
+        utilisateur.setFailedLoginAttempts(0);
+        utilisateur.setLockedUntil(null);
+        utilisateurRepository.save(utilisateur);
+
+        auditService.securityEvent(AuditService.LOGIN, email, true, null);
+        auditService.record(AuditService.LOGIN, "Utilisateur", String.valueOf(utilisateur.getId()), Map.of());
 
         return toAuthResponse(utilisateur);
     }
@@ -127,25 +161,20 @@ public class AuthService {
     @Transactional
     public void resetPassword(ResetPasswordRequest request) {
         if (request == null || isBlank(request.getToken()) || isBlank(request.getNouveauMotDePasse())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "token et nouveauMotDePasse obligatoires");
+            throw ApiException.badRequest("token et nouveauMotDePasse obligatoires");
         }
         if (request.getNouveauMotDePasse().length() < 8) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST, "Le mot de passe doit contenir au moins 8 caractères");
+            throw ApiException.badRequest("Le mot de passe doit contenir au moins 8 caractères");
         }
 
         PasswordResetToken resetToken =
                 passwordResetTokenRepository
                         .findByToken(request.getToken().trim())
-                        .orElseThrow(
-                                () ->
-                                        new ResponseStatusException(
-                                                HttpStatus.BAD_REQUEST, "Lien de réinitialisation invalide"));
+                        .orElseThrow(() -> ApiException.badRequest("Lien de réinitialisation invalide"));
 
         if (resetToken.getDateExpiration().isBefore(LocalDateTime.now(ZONE))) {
             passwordResetTokenRepository.delete(resetToken);
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST, "Lien de réinitialisation expiré");
+            throw ApiException.badRequest("Lien de réinitialisation expiré");
         }
 
         Utilisateur utilisateur = resetToken.getUtilisateur();
@@ -169,20 +198,19 @@ public class AuthService {
 
     private void validateRegister(RegisterRequest request) {
         if (request == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Corps de requête manquant");
+            throw ApiException.badRequest("Corps de requête manquant");
         }
         if (isBlank(request.getNomComplet())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "nomComplet obligatoire");
+            throw ApiException.badRequest("nomComplet obligatoire");
         }
         if (isBlank(request.getEmail())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "email obligatoire");
+            throw ApiException.badRequest("email obligatoire");
         }
         if (isBlank(request.getMotDePasse()) || request.getMotDePasse().length() < 8) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST, "motDePasse obligatoire (8 caractères minimum)");
+            throw ApiException.badRequest("motDePasse obligatoire (8 caractères minimum)");
         }
         if (request.getRole() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "role obligatoire");
+            throw ApiException.badRequest("role obligatoire");
         }
     }
 

@@ -1,5 +1,6 @@
 package com.crm.medicare.entity;
 
+import com.crm.medicare.security.PermissionCatalog;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -7,7 +8,11 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import lombok.AllArgsConstructor;
@@ -43,9 +48,50 @@ public class Utilisateur implements UserDetails {
     @Column(nullable = false, length = 32)
     private RoleUtilisateur role;
 
+    @Builder.Default
+    @Column(nullable = false)
+    private boolean enabled = true;
+
+    @Builder.Default
+    @Column(name = "failed_login_attempts", nullable = false)
+    private int failedLoginAttempts = 0;
+
+    @Column(name = "locked_until")
+    private LocalDateTime lockedUntil;
+
+    @Column(name = "last_login_at")
+    private LocalDateTime lastLoginAt;
+
+    @Column(name = "created_at", nullable = false)
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
+    @PrePersist
+    void prePersist() {
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now();
+        }
+    }
+
+    @PreUpdate
+    void preUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));
+        List<GrantedAuthority> authorities = new ArrayList<>();
+        if (role != null) {
+            authorities.add(new SimpleGrantedAuthority("ROLE_" + role.name()));
+            PermissionCatalog.forRole(role)
+                    .forEach(code -> authorities.add(new SimpleGrantedAuthority(code)));
+        }
+        return authorities;
     }
 
     @Override
@@ -60,12 +106,12 @@ public class Utilisateur implements UserDetails {
 
     @Override
     public boolean isAccountNonExpired() {
-        return true;
+        return deletedAt == null;
     }
 
     @Override
     public boolean isAccountNonLocked() {
-        return true;
+        return lockedUntil == null || lockedUntil.isBefore(LocalDateTime.now());
     }
 
     @Override
@@ -75,6 +121,6 @@ public class Utilisateur implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return true;
+        return enabled && deletedAt == null;
     }
 }

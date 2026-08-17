@@ -688,7 +688,7 @@ function Dashboard() {
                 </TableHeader>
                 <TableBody>
                   {salleAttente.map((r) => (
-                    <TableRow key={r.heure}>
+                    <TableRow key={`${r.heure}-${r.patient}-${r.examen}`}>
                       <TableCell className="pl-6 font-mono text-xs">{r.heure}</TableCell>
                       <TableCell>
                         <p className="font-medium">{r.patient}</p>

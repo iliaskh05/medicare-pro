@@ -1,6 +1,5 @@
 package com.crm.medicare.controller;
 
-import com.crm.medicare.dto.ApiErrorResponse;
 import com.crm.medicare.dto.AuthResponse;
 import com.crm.medicare.dto.ForgotPasswordRequest;
 import com.crm.medicare.dto.LoginRequest;
@@ -11,18 +10,13 @@ import com.crm.medicare.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.AuthenticationException;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
 
 @RestController
-@RequestMapping("/api/auth")
-@CrossOrigin(origins = "*")
+@RequestMapping({"/api/auth", "/api/v1/auth"})
 @RequiredArgsConstructor
 public class AuthController {
 
@@ -51,21 +45,5 @@ public class AuthController {
     public ResponseEntity<MessageResponse> resetPassword(@RequestBody ResetPasswordRequest request) {
         authService.resetPassword(request);
         return ResponseEntity.ok(new MessageResponse("Mot de passe mis à jour avec succès."));
-    }
-
-    @ExceptionHandler(ResponseStatusException.class)
-    public ResponseEntity<ApiErrorResponse> handleStatus(ResponseStatusException ex) {
-        String message = ex.getReason() != null ? ex.getReason() : ex.getMessage();
-        String code =
-                ex.getStatusCode().value() == HttpStatus.UNAUTHORIZED.value()
-                        ? "unauthorized"
-                        : "auth_error";
-        return ResponseEntity.status(ex.getStatusCode()).body(new ApiErrorResponse(message, code));
-    }
-
-    @ExceptionHandler(AuthenticationException.class)
-    public ResponseEntity<ApiErrorResponse> handleAuth(AuthenticationException ex) {
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(new ApiErrorResponse("Email ou mot de passe incorrect", "unauthorized"));
     }
 }

@@ -1,0 +1,9 @@
+com\crm\medicare\security\LoginAttemptServiceTest.class
+com\crm\medicare\workflow\WorkflowEngineTest.class
+com\crm\medicare\common\GlobalExceptionHandlerTest$BoomController.class
+com\crm\medicare\db\FlywayMigrationConventionTest.class
+com\crm\medicare\dashboard\DashboardMetricsTest.class
+com\crm\medicare\common\GlobalExceptionHandlerTest.class
+com\crm\medicare\common\GlobalExceptionHandlerTest$IntegrityBoomController.class
+com\crm\medicare\service\WorklistExamPersistenceTest.class
+com\crm\medicare\security\PermissionCatalogTest.class

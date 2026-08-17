@@ -88,7 +88,17 @@ export function describeApiError(error: unknown): FriendlyError {
     }
 
     const known = BY_STATUS[error.status];
-    if (known) return { ...known, status: error.status };
+    if (known) {
+      const fromServer =
+        error.message &&
+        error.message.trim().length > 0 &&
+        !/^Erreur \d+ /.test(error.message);
+      return {
+        ...known,
+        status: error.status,
+        message: fromServer ? error.message : known.message,
+      };
+    }
 
     if (error.status >= 500) {
       return {

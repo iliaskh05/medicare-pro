@@ -7,6 +7,7 @@ import type {
   UrgenceFraude,
 } from "@/types/domain";
 
+import { api } from "./client";
 import { javaApi } from "./config";
 
 export type DashboardKpis = {
@@ -14,6 +15,32 @@ export type DashboardKpis = {
   actesRealises: number;
   chiffreAffaires: number;
   tauxOccupation: number;
+};
+
+export type DashboardRepartitionStatuts = {
+  "En attente": number;
+  "En cours": number;
+  Terminé: number;
+  [key: string]: number;
+};
+
+/** Réponse de GET /api/dashboard/stats */
+export type DashboardStats = {
+  totalExamens: number;
+  examensAujourdhui: number;
+  repartitionStatuts: DashboardRepartitionStatuts;
+  revenusEstimes: number;
+};
+
+export const EMPTY_DASHBOARD_STATS: DashboardStats = {
+  totalExamens: 0,
+  examensAujourdhui: 0,
+  repartitionStatuts: {
+    "En attente": 0,
+    "En cours": 0,
+    Terminé: 0,
+  },
+  revenusEstimes: 0,
 };
 
 export const EMPTY_DASHBOARD_KPIS: DashboardKpis = {
@@ -28,6 +55,28 @@ export const EMPTY_COMPTABILITE: SyntheseComptable = {
   pending: 0,
   lastExport: null,
 };
+
+/** GET {JAVA_API_BASE}/api/dashboard/stats — métriques réelles (JWT). */
+export async function fetchDashboardStats(signal?: AbortSignal): Promise<DashboardStats> {
+  const raw = await api.get<
+    Partial<DashboardStats> & {
+      revenusEstimes?: number | string;
+      repartitionStatuts?: Record<string, number>;
+    }
+  >("/api/dashboard/stats", signal ? { signal } : {});
+
+  const repartition = raw?.repartitionStatuts ?? {};
+  return {
+    totalExamens: Number(raw?.totalExamens ?? 0),
+    examensAujourdhui: Number(raw?.examensAujourdhui ?? 0),
+    repartitionStatuts: {
+      "En attente": Number(repartition["En attente"] ?? 0),
+      "En cours": Number(repartition["En cours"] ?? 0),
+      Terminé: Number(repartition["Terminé"] ?? 0),
+    },
+    revenusEstimes: Number(raw?.revenusEstimes ?? 0),
+  };
+}
 
 /** GET {JAVA_API_BASE}/api/dashboard/kpis */
 export async function fetchDashboardKpis(signal?: AbortSignal): Promise<DashboardKpis> {

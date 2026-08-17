@@ -17,6 +17,7 @@ public class CustomUserDetailsService implements UserDetailsService {
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         return utilisateurRepository
                 .findByEmail(email)
+                .filter(user -> user.getDeletedAt() == null)
                 .orElseThrow(
                         () ->
                                 new UsernameNotFoundException(

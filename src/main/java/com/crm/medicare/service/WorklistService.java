@@ -4,6 +4,7 @@ import com.crm.medicare.dto.HistoriqueItemDto;
 import com.crm.medicare.dto.WorklistCreateRequest;
 import com.crm.medicare.dto.WorklistItemDto;
 import com.crm.medicare.entity.EtatPatient;
+import com.crm.medicare.entity.ExamStatusHistory;
 import com.crm.medicare.entity.Examen;
 import com.crm.medicare.entity.HistoriqueExamen;
 import com.crm.medicare.entity.MedecinReferent;
@@ -11,9 +12,13 @@ import com.crm.medicare.entity.Modalite;
 import com.crm.medicare.entity.Paiement;
 import com.crm.medicare.entity.Patient;
 import com.crm.medicare.entity.StatutCr;
+import com.crm.medicare.entity.Utilisateur;
 import com.crm.medicare.repository.ExamenRepository;
 import com.crm.medicare.repository.MedecinReferentRepository;
-import com.crm.medicare.repository.PatientRepository;
+import com.crm.medicare.repository.UtilisateurRepository;
+import com.crm.medicare.security.SecurityUtils;
+import com.crm.medicare.workflow.EncounterStatus;
+import com.crm.medicare.workflow.WorkflowEngine;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -39,8 +44,11 @@ public class WorklistService {
             DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
 
     private final ExamenRepository examenRepository;
-    private final PatientRepository patientRepository;
     private final MedecinReferentRepository medecinReferentRepository;
+    private final PatientService patientService;
+    private final WorkflowEngine workflowEngine;
+    private final AuditService auditService;
+    private final UtilisateurRepository utilisateurRepository;
 
     @Transactional(readOnly = true)
     public List<WorklistItemDto> listByDate(LocalDate date, String search, String status) {
@@ -73,16 +81,43 @@ public class WorklistService {
                     "nouveauStatut invalide (attendu: attendu, arrive, retard, attente_longue)");
         }
 
-        examen.setEtatPatient(etat);
+        EncounterStatus from =
+                examen.getWorkflowStatus() != null
+                        ? examen.getWorkflowStatus()
+                        : workflowEngine.fromEtatPatient(examen.getEtatPatient());
+        EncounterStatus to = workflowEngine.fromEtatPatient(etat);
+        workflowEngine.transitionEncounter(from, to);
 
+        examen.setEtatPatient(etat);
+        examen.setWorkflowStatus(to);
+        if (to == EncounterStatus.CANCELLED || to == EncounterStatus.NO_SHOW) {
+            examen.setCancelledAt(LocalDateTime.now(ZONE));
+        }
+
+        Utilisateur actor = SecurityUtils.currentUserOrNull();
         HistoriqueExamen hist = new HistoriqueExamen();
         hist.setExamen(examen);
         hist.setDate(LocalDateTime.now(ZONE));
-        hist.setAuteur("Worklist");
+        hist.setAuteur(actor != null ? actor.getNomComplet() : "Worklist");
         hist.setAction("Statut patient → " + etat.name());
         examen.getHistorique().add(hist);
 
-        return toDto(examenRepository.save(examen));
+        ExamStatusHistory trail = new ExamStatusHistory();
+        trail.setExamen(examen);
+        trail.setFromStatus(from.name());
+        trail.setToStatus(to.name());
+        trail.setActorId(actor != null ? actor.getId() : null);
+        trail.setActorName(actor != null ? actor.getNomComplet() : "Worklist");
+        trail.setCreatedAt(LocalDateTime.now(ZONE));
+        examen.getStatusHistory().add(trail);
+
+        Examen saved = examenRepository.save(examen);
+        auditService.record(
+                AuditService.EXAM_STATUS_CHANGED,
+                "Examen",
+                String.valueOf(id),
+                java.util.Map.of("from", from.name(), "to", to.name(), "etatPatient", etat.name()));
+        return toDto(saved);
     }
 
     private static EtatPatient parseStatusFilter(String status) {
@@ -111,7 +146,13 @@ public class WorklistService {
     public WorklistItemDto create(WorklistCreateRequest request) {
         validateCreate(request);
 
-        Patient patient = resolvePatient(request);
+        Patient patient = patientService.upsertFromWorklist(
+                request.getNom(),
+                request.getPrenom(),
+                request.getCin(),
+                request.getSexe(),
+                request.getTelephone(),
+                request.getNaissance());
         MedecinReferent prescripteur = resolvePrescripteur(request.getPrescripteurId());
         LocalDateTime dateExamen = parseDateHeure(request.getDateHeure());
         Modalite modalite = parseModalite(request.getModalite());
@@ -129,9 +170,13 @@ public class WorklistService {
         examen.setDescription(blankToNull(request.getTypeExamen()));
         examen.setModalite(modalite);
         examen.setEtatPatient(EtatPatient.attendu);
+        examen.setWorkflowStatus(EncounterStatus.SCHEDULED);
+        examen.setPriorite("ROUTINE");
+        examen.setExamTypeCode(blankToNull(request.getTypeExamen()));
         examen.setStatutCr(StatutCr.a_faire);
         examen.setPaiement(Paiement.impaye);
         examen.setMontant(BigDecimal.ZERO);
+        examen.setCreatedBy(SecurityUtils.currentUserOrNull());
 
         HistoriqueExamen creation = new HistoriqueExamen();
         creation.setExamen(examen);
@@ -141,33 +186,87 @@ public class WorklistService {
         examen.getHistorique().add(creation);
 
         Examen saved = examenRepository.save(examen);
+        auditService.record(
+                AuditService.EXAM_CREATE,
+                "Examen",
+                String.valueOf(saved.getId()),
+                java.util.Map.of("numSejour", saved.getNumSejour()));
         return toDto(saved);
     }
 
-    private Patient resolvePatient(WorklistCreateRequest request) {
-        String cin = request.getCin().trim();
-        return patientRepository
-                .findByCin(cin)
-                .map(existing -> {
-                    existing.setNomComplet(buildNomComplet(request.getNom(), request.getPrenom()));
-                    existing.setSexe(blankToNull(request.getSexe()));
-                    existing.setTelephone(blankToNull(request.getTelephone()));
-                    if (request.getNaissance() != null && !request.getNaissance().isBlank()) {
-                        existing.setDateNaissance(LocalDate.parse(request.getNaissance().trim()));
-                    }
-                    return patientRepository.save(existing);
-                })
-                .orElseGet(() -> {
-                    Patient created = new Patient();
-                    created.setNomComplet(buildNomComplet(request.getNom(), request.getPrenom()));
-                    created.setCin(cin);
-                    created.setSexe(blankToNull(request.getSexe()));
-                    created.setTelephone(blankToNull(request.getTelephone()));
-                    if (request.getNaissance() != null && !request.getNaissance().isBlank()) {
-                        created.setDateNaissance(LocalDate.parse(request.getNaissance().trim()));
-                    }
-                    return patientRepository.save(created);
-                });
+    @Transactional
+    public WorklistItemDto patch(Long id, String etatPatient, String statutCr, String paiement) {
+        if (etatPatient != null && !etatPatient.isBlank()) {
+            return updateStatus(id, etatPatient);
+        }
+        Examen examen =
+                examenRepository
+                        .findById(id)
+                        .orElseThrow(
+                                () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Examen introuvable"));
+        if (statutCr != null && !statutCr.isBlank()) {
+            try {
+                examen.setStatutCr(StatutCr.valueOf(statutCr.trim()));
+            } catch (IllegalArgumentException ex) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "statutCr invalide");
+            }
+        }
+        if (paiement != null && !paiement.isBlank()) {
+            try {
+                examen.setPaiement(Paiement.valueOf(paiement.trim()));
+            } catch (IllegalArgumentException ex) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "paiement invalide");
+            }
+        }
+        auditService.record(AuditService.EXAM_UPDATE, "Examen", String.valueOf(id), java.util.Map.of());
+        return toDto(examenRepository.save(examen));
+    }
+
+    @Transactional
+    public WorklistItemDto saveCompteRendu(Long id, String texte) {
+        Examen examen =
+                examenRepository
+                        .findById(id)
+                        .orElseThrow(
+                                () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Examen introuvable"));
+        examen.setCompteRendu(texte);
+        if (examen.getStatutCr() == StatutCr.a_faire) {
+            examen.setStatutCr(StatutCr.en_redaction);
+        }
+        auditService.record(
+                AuditService.EXAM_UPDATE,
+                "Examen",
+                String.valueOf(id),
+                java.util.Map.of("field", "compteRendu"));
+        return toDto(examenRepository.save(examen));
+    }
+
+    @Transactional
+    public WorklistItemDto assign(Long id, Long radiologueId) {
+        Examen examen =
+                examenRepository
+                        .findById(id)
+                        .orElseThrow(
+                                () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Examen introuvable"));
+        if (radiologueId == null) {
+            examen.setAssignedRadiologue(null);
+        } else {
+            Utilisateur radiologue =
+                    utilisateurRepository
+                            .findById(radiologueId)
+                            .orElseThrow(
+                                    () ->
+                                            new ResponseStatusException(
+                                                    HttpStatus.BAD_REQUEST, "Radiologue introuvable"));
+            examen.setAssignedRadiologue(radiologue);
+            examen.setMedecin(radiologue.getNomComplet());
+        }
+        auditService.record(
+                AuditService.EXAM_UPDATE,
+                "Examen",
+                String.valueOf(id),
+                java.util.Map.of("assigned", String.valueOf(radiologueId)));
+        return toDto(examenRepository.save(examen));
     }
 
     private MedecinReferent resolvePrescripteur(String prescripteurId) {
@@ -203,15 +302,13 @@ public class WorklistService {
             prescripteurLabel = examen.getPrescripteur().getNom();
         }
 
-        List<HistoriqueItemDto> historique =
-                examen.getHistorique() == null
-                        ? List.of()
-                        : examen.getHistorique().stream()
-                                .map(
-                                        h ->
-                                                new HistoriqueItemDto(
-                                                        h.getDate(), h.getAuteur(), h.getAction()))
-                                .toList();
+        List<HistoriqueItemDto> historique = List.of();
+        if (examen.getHistorique() != null) {
+            historique =
+                    examen.getHistorique().stream()
+                            .map(h -> new HistoriqueItemDto(h.getDate(), h.getAuteur(), h.getAction()))
+                            .toList();
+        }
 
         return WorklistItemDto.builder()
                 .id(String.valueOf(examen.getId()))

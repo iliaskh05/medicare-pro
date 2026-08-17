@@ -7,9 +7,10 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class ApiErrorResponse {
+public class WorklistPatchRequest {
 
-    private String message;
-
-    private String code;
+    private String etatPatient;
+    private String nouveauStatut;
+    private String statutCr;
+    private String paiement;
 }

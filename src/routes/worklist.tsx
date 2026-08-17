@@ -52,6 +52,7 @@ import { NouvelExamenDialog } from "@/components/worklist/nouvel-examen-dialog";
 import { ExamenSheet } from "@/components/worklist/examen-sheet";
 import { DicomViewerModal } from "@/components/worklist/dicom-viewer-modal";
 import { downloadFactureExamen } from "@/lib/api/factures";
+import { ApiError } from "@/lib/api/config";
 import {
   MODALITES,
   fetchWorklist,
@@ -130,6 +131,7 @@ function WorklistPage() {
       .then((rows) => setItems(rows))
       .catch((e: unknown) => {
         if (controller.signal.aborted) return;
+        if (e instanceof ApiError && e.code === "aborted") return;
         setItems([]);
         setError(e instanceof Error ? e.message : "Service worklist indisponible");
       })

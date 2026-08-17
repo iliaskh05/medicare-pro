@@ -7,6 +7,7 @@ import {
   useRouterState,
   HeadContent,
   Scripts,
+  redirect,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 import { ShieldCheck } from "lucide-react";
@@ -21,6 +22,8 @@ import { MessagerieDock } from "@/components/messagerie-dock";
 import { PlatformAssistant } from "@/components/assistant/platform-assistant";
 import { RoleProvider } from "@/hooks/use-role";
 import { ThemeProvider } from "@/hooks/use-theme";
+import { AuthProvider, useAuth } from "@/hooks/use-auth";
+import { hasAuthToken, isPublicAuthPath } from "@/lib/auth-session";
 
 function NotFoundComponent() {
   return (
@@ -51,7 +54,6 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
   const router = useRouter();
   useEffect(() => {
-    // A new deployment removes the old JS chunks: reload once to fetch the fresh build.
     if (typeof window !== "undefined" && STALE_CHUNK_RE.test(error?.message ?? "")) {
       const key = "radiocrm:stale-chunk-reload";
       if (!sessionStorage.getItem(key)) {
@@ -82,12 +84,12 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
           >
             Réessayer
           </button>
-          <a
-            href="/"
+          <Link
+            to="/"
             className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
           >
             Accueil
-          </a>
+          </Link>
         </div>
       </div>
     </div>
@@ -95,6 +97,32 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 }
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
+  beforeLoad: ({ location }) => {
+    /**
+     * Garde synchrone (client uniquement) :
+     * - Token présent + route login → /worklist
+     * - Token présent + route protégée → JAMAIS de redirect vers login
+     * - Pas de token + route protégée → /
+     */
+    if (typeof window === "undefined") return;
+
+    const path = location.pathname;
+    const token = window.localStorage.getItem("radiocrm:token");
+    const hasToken = Boolean(token && token.trim());
+
+    if (isPublicAuthPath(path)) {
+      if (hasToken && (path === "/" || path === "/login")) {
+        throw redirect({ to: "/worklist" });
+      }
+      return;
+    }
+
+    // Route protégée (ex: /worklist, /dashboard) : token obligatoire, sinon login.
+    // Si token présent → on laisse passer sans condition.
+    if (hasToken) return;
+
+    throw redirect({ to: "/" });
+  },
   head: () => ({
     meta: [
       { charSet: "utf-8" },
@@ -153,20 +181,38 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const isAuthScreen = pathname === "/";
-
-  if (isAuthScreen) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        <Outlet />
-        <Toaster />
-      </QueryClientProvider>
-    );
-  }
 
   return (
     <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <AppShell />
+        <Toaster />
+      </AuthProvider>
+    </QueryClientProvider>
+  );
+}
+
+/**
+ * Shell applicatif : si un token existe dans localStorage, on affiche l'app
+ * immédiatement (même pendant l'hydratation React).
+ */
+function AppShell() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { ready } = useAuth();
+  const isAuthScreen = isPublicAuthPath(pathname);
+
+  // Preuve storage directe — clé unique radiocrm:token.
+  const storageHasToken =
+    typeof window !== "undefined" &&
+    Boolean(window.localStorage.getItem("radiocrm:token")?.trim());
+
+  if (isAuthScreen) {
+    return <Outlet />;
+  }
+
+  // Token présent → toujours afficher l'app (jamais de rebond login).
+  if (storageHasToken || hasAuthToken()) {
+    return (
       <ThemeProvider>
         <RoleProvider>
           <SidebarProvider>
@@ -175,7 +221,6 @@ function RootComponent() {
               <div className="flex min-w-0 flex-1 flex-col">
                 <AppHeader />
                 <main className="flex-1 px-3 py-5 sm:px-6 sm:py-7">
-                  {/* Required: nested routes render here. */}
                   <Outlet />
                 </main>
                 <footer className="border-t border-border px-3 py-4 sm:px-6">
@@ -192,7 +237,12 @@ function RootComponent() {
           <PlatformAssistant />
         </RoleProvider>
       </ThemeProvider>
-      <Toaster />
-    </QueryClientProvider>
-  );
+    );
+  }
+
+  // Pas encore hydraté → attendre sans clear ni redirect.
+  if (!ready) return null;
+
+  // Hydraté sans token → beforeLoad redirige ; filet UI.
+  return null;
 }

@@ -30,7 +30,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (path == null || path.isBlank()) {
             path = request.getRequestURI();
         }
-        return path != null && path.startsWith("/api/auth/");
+        return path != null
+                && (path.startsWith("/api/auth/login")
+                        || path.startsWith("/api/auth/forgot-password")
+                        || path.startsWith("/api/auth/reset-password")
+                        || path.startsWith("/api/v1/auth/login")
+                        || path.startsWith("/actuator/"));
     }
 
     @Override

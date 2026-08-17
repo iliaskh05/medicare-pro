@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { clearAuthStorage } from "@/lib/auth-session";
 
 import {
   canAccess as rbacCanAccess,
@@ -135,12 +136,19 @@ export function mapBackendRole(role: string | null | undefined): AppRole {
   if (!role) return "directeur";
   switch (role.toUpperCase()) {
     case "DIRECTEUR":
+    case "DIRECTION":
+    case "SUPER_ADMIN":
+    case "ADMIN":
       return "directeur";
     case "RADIOLOGUE":
       return "medecin";
     case "MANIPULATEUR":
+    case "TECHNICIEN":
       return "technicien";
     case "SECRETARIAT":
+    case "ACCUEIL":
+    case "SECRETAIRE":
+    case "CAISSIER":
       return "accueil";
     default:
       return isRole(role.toLowerCase()) ? (role.toLowerCase() as AppRole) : "directeur";
@@ -195,9 +203,25 @@ function toUser(profile: RoleProfile): AppUser {
 const RoleContext = createContext<RoleContextValue | null>(null);
 
 export function RoleProvider({ children }: { children: ReactNode }) {
-  const [role, setRole] = useState<AppRole>("directeur");
-  const [backendRole, setBackendRole] = useState<BackendRole>("DIRECTEUR");
-  const [displayName, setDisplayName] = useState<string | null>(null);
+  const [role, setRole] = useState<AppRole>(() => {
+    if (typeof window === "undefined") return "directeur";
+    const storedUser = readStoredUser();
+    if (storedUser?.role) return mapBackendRole(storedUser.role);
+    const storedRole = window.sessionStorage.getItem(ROLE_STORAGE_KEY);
+    return isRole(storedRole) ? storedRole : "directeur";
+  });
+  const [backendRole, setBackendRole] = useState<BackendRole>(() => {
+    if (typeof window === "undefined") return "DIRECTEUR";
+    const storedUser = readStoredUser();
+    if (storedUser?.role) return normalizeRole(storedUser.role);
+    const storedRole = window.sessionStorage.getItem(ROLE_STORAGE_KEY);
+    return isRole(storedRole) ? uiRoleToBackendRole(storedRole) : "DIRECTEUR";
+  });
+  const [displayName, setDisplayName] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    const storedUser = readStoredUser();
+    return storedUser?.nomComplet || storedUser?.nom || null;
+  });
 
   useEffect(() => {
     const storedUser = readStoredUser();
@@ -283,9 +307,5 @@ export function useUser(): AppUser {
 
 /** Efface la session locale (token + profil). */
 export function clearAuthSession() {
-  if (typeof window === "undefined") return;
-  window.localStorage.removeItem("radiocrm:token");
-  window.localStorage.removeItem("radiocrm:user");
-  window.sessionStorage.removeItem("radiocrm:token");
-  window.sessionStorage.removeItem(ROLE_STORAGE_KEY);
+  clearAuthStorage();
 }

@@ -1,6 +1,8 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Building2, Lock, Mail, ShieldCheck, Sparkles, User } from "lucide-react";
+import { AUTH_TOKEN_KEY, AUTH_USER_KEY, persistAuthToken } from "@/lib/auth-session";
+import { useAuth } from "@/hooks/use-auth";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,6 +51,15 @@ const roles = [
 
 function LoginPage() {
   const navigate = useNavigate();
+  const { setToken } = useAuth();
+
+  /* Déjà connecté → worklist (évite le rebond login). */
+  useEffect(() => {
+    const existing = window.localStorage.getItem(AUTH_TOKEN_KEY);
+    if (existing?.trim()) {
+      void navigate({ to: "/worklist" });
+    }
+  }, [navigate]);
 
   /* ---------- Connexion ---------- */
   const [loginEmail, setLoginEmail] = useState("");
@@ -110,17 +121,27 @@ function LoginPage() {
         utilisateur?: { id?: number; nom?: string; role?: string };
       };
 
-      if (data.token) {
-        window.localStorage.setItem("radiocrm:token", data.token);
-        window.sessionStorage.setItem("radiocrm:token", data.token);
+      if (!data.token) {
+        throw new Error("Token manquant dans la réponse serveur");
       }
+
+      // 1) Persistance synchrone — clé exacte radiocrm:token
+      window.localStorage.setItem(AUTH_TOKEN_KEY, data.token);
+      window.sessionStorage.setItem(AUTH_TOKEN_KEY, data.token);
+      persistAuthToken(data.token);
+      setToken(data.token);
 
       if (data.utilisateur) {
         const utilisateur = {
           ...data.utilisateur,
           nomComplet: data.utilisateur.nom ?? "",
         };
-        window.localStorage.setItem("radiocrm:user", JSON.stringify(utilisateur));
+        window.localStorage.setItem(AUTH_USER_KEY, JSON.stringify(utilisateur));
+      }
+
+      // 2) Navigation uniquement après stockage confirmé
+      if (!window.localStorage.getItem(AUTH_TOKEN_KEY)) {
+        throw new Error("Impossible d'enregistrer la session locale");
       }
 
       void navigate({ to: "/worklist" });
@@ -160,13 +181,19 @@ function LoginPage() {
         token?: string;
         utilisateur?: { id?: number; nom?: string; role?: string };
       };
-      if (data.token) {
-        window.sessionStorage.setItem("radiocrm:token", data.token);
-        window.localStorage.setItem("radiocrm:token", data.token);
+
+      if (!data.token) {
+        throw new Error("Token manquant dans la réponse serveur");
       }
+
+      window.localStorage.setItem(AUTH_TOKEN_KEY, data.token);
+      window.sessionStorage.setItem(AUTH_TOKEN_KEY, data.token);
+      persistAuthToken(data.token);
+      setToken(data.token);
+
       if (data.utilisateur) {
         window.localStorage.setItem(
-          "radiocrm:user",
+          AUTH_USER_KEY,
           JSON.stringify({
             ...data.utilisateur,
             nomComplet: data.utilisateur.nom ?? "",

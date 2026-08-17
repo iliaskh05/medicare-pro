@@ -1,9 +1,12 @@
 package com.crm.medicare.security;
 
+import com.crm.medicare.common.ApiErrorResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.crm.medicare.dto.ApiErrorResponse;
+import java.time.Instant;
+import java.util.Arrays;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -24,6 +27,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -39,6 +43,9 @@ public class SecurityConfig {
     private final UserDetailsService userDetailsService;
     private final ObjectMapper objectMapper;
 
+    @Value("${radiocrm.cors.allowed-origins:http://localhost:8081,http://localhost:5173}")
+    private String allowedOrigins;
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http.csrf(AbstractHttpConfigurer::disable)
@@ -46,27 +53,29 @@ public class SecurityConfig {
                 .sessionManagement(
                         session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(
-                        exceptions -> exceptions.authenticationEntryPoint(authenticationEntryPoint()))
+                        exceptions ->
+                                exceptions
+                                        .authenticationEntryPoint(authenticationEntryPoint())
+                                        .accessDeniedHandler(accessDeniedHandler()))
                 .authorizeHttpRequests(
                         auth ->
-                                auth
-                                        // Auth publique (login / register / reset) — sans JWT.
-                                        .requestMatchers(
+                                auth.requestMatchers(
                                                 HttpMethod.POST,
                                                 "/api/auth/login",
                                                 "/api/auth/register",
+                                                "/api/v1/auth/login",
+                                                "/api/v1/auth/register",
                                                 "/api/auth/forgot-password",
                                                 "/api/auth/reset-password")
                                         .permitAll()
-                                        .requestMatchers("/api/auth/**")
+                                        .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info")
                                         .permitAll()
                                         .requestMatchers(HttpMethod.OPTIONS, "/**")
                                         .permitAll()
                                         .anyRequest()
                                         .authenticated())
                 .authenticationProvider(authenticationProvider())
-                .addFilterBefore(
-                        jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
@@ -74,11 +83,12 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(List.of("*"));
-        configuration.setAllowedMethods(
-                List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        List<String> origins =
+                Arrays.stream(allowedOrigins.split(",")).map(String::trim).filter(s -> !s.isBlank()).toList();
+        configuration.setAllowedOrigins(origins);
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
-        configuration.setExposedHeaders(List.of("Authorization"));
+        configuration.setExposedHeaders(List.of("Authorization", "X-Correlation-Id"));
         configuration.setAllowCredentials(false);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
@@ -112,7 +122,32 @@ public class SecurityConfig {
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
             objectMapper.writeValue(
                     response.getOutputStream(),
-                    new ApiErrorResponse("Authentification requise", "unauthorized"));
+                    ApiErrorResponse.builder()
+                            .timestamp(Instant.now().toString())
+                            .status(401)
+                            .code("unauthorized")
+                            .message("Authentification requise")
+                            .path(request.getRequestURI())
+                            .correlationId(com.crm.medicare.common.CorrelationIdFilter.currentOrUnknown())
+                            .build());
+        };
+    }
+
+    @Bean
+    public AccessDeniedHandler accessDeniedHandler() {
+        return (request, response, accessDeniedException) -> {
+            response.setStatus(HttpStatus.FORBIDDEN.value());
+            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            objectMapper.writeValue(
+                    response.getOutputStream(),
+                    ApiErrorResponse.builder()
+                            .timestamp(Instant.now().toString())
+                            .status(403)
+                            .code("forbidden")
+                            .message("Accès refusé")
+                            .path(request.getRequestURI())
+                            .correlationId(com.crm.medicare.common.CorrelationIdFilter.currentOrUnknown())
+                            .build());
         };
     }
 }

@@ -25,6 +25,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ActionButton } from "@/components/action-button";
 import { roleProfiles, useRole, clearAuthSession, type AppRole } from "@/hooks/use-role";
+import { useAuth } from "@/hooks/use-auth";
 import { useTheme } from "@/hooks/use-theme";
 
 const roleIcons: Record<AppRole, typeof ShieldCheck> = {
@@ -36,12 +37,14 @@ const roleIcons: Record<AppRole, typeof ShieldCheck> = {
 
 export function AppHeader() {
   const { role, profile, setRole } = useRole();
+  const { logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
   const RoleIcon = roleIcons[role];
 
   function handleLogout() {
+    logout();
     clearAuthSession();
     toast.success("Session fermée en toute sécurité.");
     void navigate({ to: "/" });

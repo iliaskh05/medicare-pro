@@ -1,5 +1,6 @@
 package com.crm.medicare.entity;
 
+import com.crm.medicare.workflow.EncounterStatus;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -13,7 +14,10 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -29,8 +33,8 @@ import lombok.ToString;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@EqualsAndHashCode(exclude = {"patient", "prescripteur", "historique"})
-@ToString(exclude = {"patient", "prescripteur", "historique"})
+@EqualsAndHashCode(exclude = {"patient", "prescripteur", "historique", "statusHistory", "createdBy"})
+@ToString(exclude = {"patient", "prescripteur", "historique", "statusHistory", "createdBy"})
 public class Examen {
 
     @Id
@@ -70,6 +74,16 @@ public class Examen {
     private EtatPatient etatPatient;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "workflow_status", nullable = false, length = 32)
+    private EncounterStatus workflowStatus;
+
+    @Column(nullable = false, length = 16)
+    private String priorite;
+
+    @Column(name = "exam_type_code", length = 64)
+    private String examTypeCode;
+
+    @Enumerated(EnumType.STRING)
     @Column(name = "statut_cr", nullable = false)
     private StatutCr statutCr;
 
@@ -83,7 +97,53 @@ public class Examen {
     @Column(name = "compte_rendu", columnDefinition = "TEXT")
     private String compteRendu;
 
+    @Column(name = "created_at", nullable = false)
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by_id")
+    private Utilisateur createdBy;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "assigned_radiologue_id")
+    private Utilisateur assignedRadiologue;
+
+    @Column(name = "cancelled_at")
+    private LocalDateTime cancelledAt;
+
+    @Version
+    @Column(nullable = false)
+    private Integer version;
+
     @OneToMany(mappedBy = "examen", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("date ASC")
     private List<HistoriqueExamen> historique = new ArrayList<>();
+
+    @OneToMany(mappedBy = "examen", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("createdAt ASC")
+    private List<ExamStatusHistory> statusHistory = new ArrayList<>();
+
+    @PrePersist
+    void prePersist() {
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now();
+        }
+        if (workflowStatus == null) {
+            workflowStatus = EncounterStatus.SCHEDULED;
+        }
+        if (priorite == null) {
+            priorite = "ROUTINE";
+        }
+        if (version == null) {
+            version = 0;
+        }
+    }
+
+    @PreUpdate
+    void preUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
 }

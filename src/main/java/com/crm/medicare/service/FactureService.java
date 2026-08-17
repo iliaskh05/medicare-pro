@@ -151,7 +151,7 @@ public class FactureService {
     /**
      * Montants fictifs par modalité (fallback si aucun montant en base).
      */
-    static BigDecimal montantFictif(Modalite modalite) {
+    public static BigDecimal montantFictif(Modalite modalite) {
         if (modalite == null) {
             return BigDecimal.valueOf(200);
         }

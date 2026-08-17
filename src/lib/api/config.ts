@@ -4,10 +4,14 @@
  * Deux backends sont adressés depuis le serveur local du centre :
  *  - `JAVA_API` : API métier (patients, factures, correspondants, messagerie).
  *  - `ML_API`   : microservice Python (clustering fraude caisse, analyse d'images).
- *
- * Les URLs sont injectées au build via les variables d'environnement Vite,
- * ce qui permet de basculer sans toucher au code applicatif.
  */
+import {
+  clearAuthStorage,
+  isPublicAuthPath,
+  readAuthToken,
+  scheduleLogoutRedirect,
+} from "@/lib/auth-session";
+
 function readBase(key: string): string | undefined {
   const raw = import.meta.env?.[key] as string | undefined;
   const value = raw?.trim().replace(/\/$/, "");
@@ -44,40 +48,45 @@ type RequestOptions = {
   signal?: AbortSignal;
 };
 
-function readToken(): string | null {
-  if (typeof window === "undefined") return null;
-  return (
-    window.localStorage.getItem("radiocrm:token") ??
-    window.sessionStorage.getItem("radiocrm:token")
-  );
-}
-
 function clearSessionAndRedirectToLogin() {
   if (typeof window === "undefined") return;
-  window.localStorage.removeItem("radiocrm:token");
-  window.localStorage.removeItem("radiocrm:user");
-  window.sessionStorage.removeItem("radiocrm:token");
-  window.sessionStorage.removeItem("radiocrm:role");
-
+  clearAuthStorage();
+  if (!scheduleLogoutRedirect()) return;
   const path = window.location.pathname;
-  if (path !== "/" && path !== "") {
+  if (!isPublicAuthPath(path)) {
     window.location.assign("/");
   }
 }
 
-async function parseErrorMessage(res: Response, fallback: string): Promise<string> {
+async function parseErrorPayload(
+  res: Response,
+  fallback: string,
+): Promise<{ message: string; code: string }> {
   try {
-    const data = (await res.json()) as { message?: string };
-    if (data?.message) return data.message;
+    const data = (await res.json()) as { message?: string; code?: string };
+    return {
+      message: data?.message || fallback,
+      code:
+        data?.code ||
+        (res.status === 401 ? "unauthorized" : res.status === 403 ? "forbidden" : "http_error"),
+    };
   } catch {
-    /* ignore */
+    return {
+      message: fallback,
+      code: res.status === 401 ? "unauthorized" : res.status === 403 ? "forbidden" : "http_error",
+    };
   }
-  return fallback;
+}
+
+function isAbortError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const name = "name" in error ? String((error as { name?: string }).name) : "";
+  return name === "AbortError";
 }
 
 /**
- * Point d'entrée HTTP unique. Attache le JWT Bearer et gère 401/403
- * (session expirée → nettoyage + redirection login).
+ * Point d'entrée HTTP unique. Attache le JWT Bearer.
+ * 401/403 Java : nettoyage de session + redirection login (contrat frontend).
  */
 export async function httpRequest<T>(
   base: string | undefined,
@@ -90,13 +99,15 @@ export async function httpRequest<T>(
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
-  signal?.addEventListener("abort", () => controller.abort());
+  const onParentAbort = () => controller.abort();
+  signal?.addEventListener("abort", onParentAbort);
 
-  const token = readToken();
+  const token = readAuthToken();
   const isJavaApi = base === JAVA_API_BASE;
+  const url = `${base}${path}`;
 
   try {
-    const res = await fetch(`${base}${path}`, {
+    const res = await fetch(url, {
       method,
       signal: controller.signal,
       headers: {
@@ -108,29 +119,30 @@ export async function httpRequest<T>(
       ...(body ? { body: JSON.stringify(body) } : {}),
     });
 
+    if (signal?.aborted || controller.signal.aborted) {
+      throw new ApiError("Requête annulée", 0, "aborted");
+    }
+
     if (isJavaApi && (res.status === 401 || res.status === 403)) {
-      clearSessionAndRedirectToLogin();
-      throw new ApiError(
-        await parseErrorMessage(
-          res,
-          res.status === 401 ? "Session expirée — reconnexion requise" : "Accès refusé",
-        ),
-        res.status,
-        "unauthorized",
+      const payload = await parseErrorPayload(
+        res,
+        res.status === 401 ? "Session expirée — reconnexion requise" : "Accès refusé",
       );
+      clearSessionAndRedirectToLogin();
+      throw new ApiError(payload.message, res.status, payload.code);
     }
 
     if (!res.ok) {
-      throw new ApiError(
-        await parseErrorMessage(res, `Erreur ${res.status} sur ${path}`),
-        res.status,
-        "http_error",
-      );
+      const payload = await parseErrorPayload(res, `Erreur ${res.status} sur ${path}`);
+      throw new ApiError(payload.message, res.status, payload.code);
     }
     if (res.status === 204) return undefined as T;
     return (await res.json()) as T;
   } catch (error) {
     if (error instanceof ApiError) throw error;
+    if (isAbortError(error) || signal?.aborted) {
+      throw new ApiError("Requête annulée", 0, "aborted");
+    }
     throw new ApiError(
       error instanceof Error ? error.message : "Requête réseau impossible",
       0,
@@ -138,6 +150,7 @@ export async function httpRequest<T>(
     );
   } finally {
     clearTimeout(timeout);
+    signal?.removeEventListener("abort", onParentAbort);
   }
 }
 
@@ -149,7 +162,6 @@ export const mlApi = <T>(path: string, options?: RequestOptions) =>
 
 /**
  * GET authentifié renvoyant un Blob (PDF, fichiers binaires).
- * Ne parse pas le corps en JSON — pour les téléchargements.
  */
 export async function javaApiBlob(
   path: string,
@@ -161,12 +173,14 @@ export async function javaApiBlob(
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
-  signal?.addEventListener("abort", () => controller.abort());
+  const onParentAbort = () => controller.abort();
+  signal?.addEventListener("abort", onParentAbort);
 
-  const token = readToken();
+  const token = readAuthToken();
+  const url = `${JAVA_API_BASE}${path}`;
 
   try {
-    const res = await fetch(`${JAVA_API_BASE}${path}`, {
+    const res = await fetch(url, {
       method,
       signal: controller.signal,
       headers: {
@@ -176,29 +190,30 @@ export async function javaApiBlob(
       },
     });
 
+    if (signal?.aborted || controller.signal.aborted) {
+      throw new ApiError("Requête annulée", 0, "aborted");
+    }
+
     if (res.status === 401 || res.status === 403) {
-      clearSessionAndRedirectToLogin();
-      throw new ApiError(
-        await parseErrorMessage(
-          res,
-          res.status === 401 ? "Session expirée — reconnexion requise" : "Accès refusé",
-        ),
-        res.status,
-        "unauthorized",
+      const payload = await parseErrorPayload(
+        res,
+        res.status === 401 ? "Session expirée — reconnexion requise" : "Accès refusé",
       );
+      clearSessionAndRedirectToLogin();
+      throw new ApiError(payload.message, res.status, payload.code);
     }
 
     if (!res.ok) {
-      throw new ApiError(
-        await parseErrorMessage(res, `Erreur ${res.status} sur ${path}`),
-        res.status,
-        "http_error",
-      );
+      const payload = await parseErrorPayload(res, `Erreur ${res.status} sur ${path}`);
+      throw new ApiError(payload.message, res.status, payload.code);
     }
 
     return await res.blob();
   } catch (error) {
     if (error instanceof ApiError) throw error;
+    if (isAbortError(error) || signal?.aborted) {
+      throw new ApiError("Requête annulée", 0, "aborted");
+    }
     throw new ApiError(
       error instanceof Error ? error.message : "Téléchargement impossible",
       0,
@@ -206,5 +221,6 @@ export async function javaApiBlob(
     );
   } finally {
     clearTimeout(timeout);
+    signal?.removeEventListener("abort", onParentAbort);
   }
 }
