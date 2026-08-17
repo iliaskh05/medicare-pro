@@ -1,5 +1,18 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
+import {
+  canAccess as rbacCanAccess,
+  canCreate as rbacCanCreate,
+  canEdit as rbacCanEdit,
+  canExport as rbacCanExport,
+  canValidate as rbacCanValidate,
+  hasPermission as rbacHasPermission,
+  normalizeRole,
+  type BackendRole,
+  type Permission,
+  type Resource,
+} from "@/lib/rbac";
+
 /** Rôles applicatifs du Centre d'Imagerie Médicale. */
 export type AppRole = "directeur" | "accueil" | "technicien" | "medecin";
 
@@ -95,6 +108,15 @@ const roleLabels: Record<AppRole, string> = {
 
 type RoleContextValue = {
   role: AppRole;
+  /** Rôle brut renvoyé par le backend, source des permissions RBAC. */
+  backendRole: BackendRole;
+  /** `can("billing:export")` — voir src/lib/rbac.ts. */
+  can: (permission: Permission) => boolean;
+  canAccess: (resource: Resource) => boolean;
+  canCreate: (resource: Resource) => boolean;
+  canEdit: (resource: Resource) => boolean;
+  canValidate: (resource: Resource) => boolean;
+  canExport: (resource: Resource) => boolean;
   profile: RoleProfile;
   user: AppUser;
   setRole: (role: AppRole) => void;
@@ -122,6 +144,20 @@ export function mapBackendRole(role: string | null | undefined): AppRole {
       return "accueil";
     default:
       return isRole(role.toLowerCase()) ? (role.toLowerCase() as AppRole) : "directeur";
+  }
+}
+
+/** Rôle UI → rôle backend par défaut (simulateur de rôle / session locale). */
+export function uiRoleToBackendRole(role: AppRole): BackendRole {
+  switch (role) {
+    case "directeur":
+      return "DIRECTEUR";
+    case "accueil":
+      return "ACCUEIL";
+    case "technicien":
+      return "MANIPULATEUR";
+    case "medecin":
+      return "RADIOLOGUE";
   }
 }
 
@@ -160,6 +196,7 @@ const RoleContext = createContext<RoleContextValue | null>(null);
 
 export function RoleProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<AppRole>("directeur");
+  const [backendRole, setBackendRole] = useState<BackendRole>("DIRECTEUR");
   const [displayName, setDisplayName] = useState<string | null>(null);
 
   useEffect(() => {
@@ -167,15 +204,22 @@ export function RoleProvider({ children }: { children: ReactNode }) {
     if (storedUser) {
       const mapped = mapBackendRole(storedUser.role);
       setRole(mapped);
+      setBackendRole(normalizeRole(storedUser.role));
       setDisplayName(storedUser.nomComplet || storedUser.nom || null);
       return;
     }
 
     const storedRole = window.sessionStorage.getItem(ROLE_STORAGE_KEY);
-    if (isRole(storedRole)) setRole(storedRole);
+    if (isRole(storedRole)) {
+      setRole(storedRole);
+      setBackendRole(uiRoleToBackendRole(storedRole));
+    }
   }, []);
 
   useEffect(() => {
+    setBackendRole((current) =>
+      mapBackendRole(current) === role ? current : uiRoleToBackendRole(role),
+    );
     try {
       window.sessionStorage.setItem(ROLE_STORAGE_KEY, role);
     } catch {
@@ -194,12 +238,19 @@ export function RoleProvider({ children }: { children: ReactNode }) {
     };
     return {
       role,
+      backendRole,
       profile,
       user: toUser(profile),
       setRole,
+      can: (permission) => rbacHasPermission(backendRole, permission),
+      canAccess: (resource) => rbacCanAccess(backendRole, resource),
+      canCreate: (resource) => rbacCanCreate(backendRole, resource),
+      canEdit: (resource) => rbacCanEdit(backendRole, resource),
+      canValidate: (resource) => rbacCanValidate(backendRole, resource),
+      canExport: (resource) => rbacCanExport(backendRole, resource),
       hasPermission: (permission) => profile[permission],
     };
-  }, [role, displayName]);
+  }, [role, backendRole, displayName]);
 
   return <RoleContext.Provider value={value}>{children}</RoleContext.Provider>;
 }
@@ -209,9 +260,16 @@ export function useRole(): RoleContextValue {
   if (!ctx) {
     return {
       role: "directeur",
+      backendRole: "DIRECTEUR",
       profile: roleProfiles.directeur,
       user: toUser(roleProfiles.directeur),
       setRole: () => {},
+      can: (permission) => rbacHasPermission("DIRECTEUR", permission),
+      canAccess: (resource) => rbacCanAccess("DIRECTEUR", resource),
+      canCreate: (resource) => rbacCanCreate("DIRECTEUR", resource),
+      canEdit: (resource) => rbacCanEdit("DIRECTEUR", resource),
+      canValidate: (resource) => rbacCanValidate("DIRECTEUR", resource),
+      canExport: (resource) => rbacCanExport("DIRECTEUR", resource),
       hasPermission: (permission) => roleProfiles.directeur[permission],
     };
   }
