@@ -146,6 +146,8 @@ function PatientsPage() {
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const current = Math.min(page, pageCount);
   const rows = filtered.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE);
+  const viewStatus =
+    patientsResource.status === "ready" && filtered.length === 0 ? "empty" : patientsResource.status;
 
   return (
     <div className="space-y-6">
@@ -277,89 +279,84 @@ function PatientsPage() {
       </Card>
 
       <Card data-tour="patients-table">
-        <CardContent className="px-0 py-0" aria-busy={isLoading}>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="pl-6">Nom complet</TableHead>
-                  <TableHead>CIN</TableHead>
-                  <TableHead>Âge</TableHead>
-                  <TableHead className="hidden md:table-cell">Téléphone</TableHead>
-                  <TableHead>Mutuelle</TableHead>
-                  <TableHead className="pr-6 text-right">Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading
-                  ? Array.from({ length: 5 }).map((_, i) => (
-                      <TableRow key={`sk-${i}`}>
-                        <TableCell colSpan={6} className="px-6">
-                          <Skeleton className="h-8 w-full" />
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  : rows.map((p) => (
-                      <TableRow key={p.id}>
-                        <TableCell className="pl-6">
-                          <p className="font-medium">{p.nomComplet}</p>
-                          <p className="text-xs text-muted-foreground">{p.id}</p>
-                        </TableCell>
-                        <TableCell className="font-mono text-xs">{p.cin}</TableCell>
-                        <TableCell className="text-sm">{p.age} ans</TableCell>
-                        <TableCell className="hidden text-sm md:table-cell">
-                          {p.telephone}
-                        </TableCell>
-                        <TableCell>
-                          <Pill tone={mutuelleTones[p.mutuelle] ?? "neutral"}>{p.mutuelle}</Pill>
-                        </TableCell>
-                        <TableCell className="pr-6 text-right">
-                          <Button variant="outline" size="sm" asChild>
-                            <Link to="/patient/$patientId" params={{ patientId: p.id }}>
-                              <FileText className="mr-1.5 size-4" /> Voir dossier
-                            </Link>
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                {!isLoading && rows.length === 0 ? (
-                  <TableRow className="hover:bg-transparent">
-                    <TableCell colSpan={6} className="p-0">
-                      <EmptyState
-                        icon={SearchX}
-                        title="Aucune donnée"
-                        description="Aucun dossier patient n'est disponible pour ces critères."
-                      />
-                    </TableCell>
+        <CardContent className="px-0 py-0" aria-busy={patientsResource.isLoading}>
+          <DataState
+            status={viewStatus}
+            error={patientsResource.error}
+            onRetry={patientsResource.reload}
+            skeletonRows={6}
+            emptyTitle="Aucun dossier patient"
+            emptyDescription={
+              patients.length === 0
+                ? "Aucun dossier n'a encore été enregistré côté serveur."
+                : "Aucun dossier ne correspond à cette recherche ou à ce filtre mutuelle."
+            }
+          >
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="pl-6">Nom complet</TableHead>
+                    <TableHead>CIN</TableHead>
+                    <TableHead>Âge</TableHead>
+                    <TableHead className="hidden md:table-cell">Téléphone</TableHead>
+                    <TableHead>Mutuelle</TableHead>
+                    <TableHead className="pr-6 text-right">Action</TableHead>
                   </TableRow>
-                ) : null}
-              </TableBody>
-            </Table>
-          </div>
-
-          <div className="flex flex-col items-center justify-between gap-3 border-t border-border px-6 py-4 sm:flex-row">
-            <p className="text-sm text-muted-foreground">
-              {filtered.length} patient(s) · page {current} / {pageCount}
-            </p>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={current === 1}
-                onClick={() => setPage(current - 1)}
-              >
-                <ChevronLeft className="mr-1 size-4" /> Précédent
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={current === pageCount}
-                onClick={() => setPage(current + 1)}
-              >
-                Suivant <ChevronRight className="ml-1 size-4" />
-              </Button>
+                </TableHeader>
+                <TableBody>
+                  {rows.map((p) => (
+                    <TableRow key={p.id}>
+                      <TableCell className="pl-6">
+                        <p className="font-medium">{p.nomComplet}</p>
+                        <p className="text-xs text-muted-foreground">{p.id}</p>
+                      </TableCell>
+                      <TableCell className="font-mono text-xs">{p.cin}</TableCell>
+                      <TableCell className="text-sm">{p.age} ans</TableCell>
+                      <TableCell className="hidden text-sm md:table-cell">{p.telephone}</TableCell>
+                      <TableCell>
+                        <Pill tone={mutuelleTones[p.mutuelle] ?? "neutral"}>{p.mutuelle}</Pill>
+                      </TableCell>
+                      <TableCell className="pr-6 text-right">
+                        <Button variant="outline" size="sm" asChild>
+                          <Link to="/patient/$patientId" params={{ patientId: p.id }}>
+                            <FileText className="mr-1.5 size-4" /> Voir dossier
+                          </Link>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
-          </div>
+
+            <div className="flex flex-col items-center justify-between gap-3 border-t border-border px-6 py-4 sm:flex-row">
+              <div className="space-y-1 text-center sm:text-left">
+                <p className="text-sm text-muted-foreground">
+                  {filtered.length} patient(s) · page {current} / {pageCount}
+                </p>
+                <LastUpdated at={patientsResource.lastUpdated} />
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={current === 1}
+                  onClick={() => setPage(current - 1)}
+                >
+                  <ChevronLeft className="mr-1 size-4" aria-hidden /> Précédent
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={current === pageCount}
+                  onClick={() => setPage(current + 1)}
+                >
+                  Suivant <ChevronRight className="ml-1 size-4" aria-hidden />
+                </Button>
+              </div>
+            </div>
+          </DataState>
         </CardContent>
       </Card>
     </div>
