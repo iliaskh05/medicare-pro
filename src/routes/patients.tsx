@@ -42,7 +42,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { PageHeader, Pill, EmptyState, ServiceNotice } from "@/components/ui-kit";
+import { PageHeader, Pill } from "@/components/ui-kit";
+import { DataState, LastUpdated } from "@/components/data-state";
+import { useApiResource } from "@/hooks/use-api-resource";
+import { useRole } from "@/hooks/use-role";
+import { toastMessage } from "@/lib/api/errors";
 import { createPatient, fetchPatients, type PatientRow } from "@/lib/api/patients";
 
 export const Route = createFileRoute("/patients")({
@@ -91,10 +95,9 @@ function ageFromBirthDate(value: string): number {
 }
 
 function PatientsPage() {
-  const [patients, setPatients] = useState<PatientRow[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [reloadKey, setReloadKey] = useState(0);
+  const { canCreate } = useRole();
+  const patientsResource = useApiResource<PatientRow[]>((signal) => fetchPatients(signal));
+  const patients = patientsResource.data ?? [];
 
   const [query, setQuery] = useState("");
   const [mutuelle, setMutuelle] = useState<string>("toutes");
@@ -102,25 +105,6 @@ function PatientsPage() {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(emptyDraft);
   const [isSaving, setIsSaving] = useState(false);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    setIsLoading(true);
-    setError(null);
-
-    fetchPatients(controller.signal)
-      .then((rows) => setPatients(rows))
-      .catch((e: unknown) => {
-        if (controller.signal.aborted) return;
-        setPatients([]);
-        setError(e instanceof Error ? e.message : "Service patients indisponible");
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setIsLoading(false);
-      });
-
-    return () => controller.abort();
-  }, [reloadKey]);
 
   const canSubmit = draft.nomComplet.trim() !== "" && draft.cin.trim() !== "";
 
@@ -134,17 +118,17 @@ function PatientsPage() {
         telephone: draft.telephone.trim(),
         mutuelle: draft.mutuelle,
       });
-      setPatients((prev) => [created, ...prev]);
+      patientsResource.setData((prev) => [created, ...(prev ?? [])]);
       setDraft(emptyDraft);
       setOpen(false);
       setPage(1);
       toast.success(`Dossier ${created.id} créé pour ${created.nomComplet}`);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Création du dossier impossible");
+      toast.error(toastMessage(e));
     } finally {
       setIsSaving(false);
     }
-  }, [draft]);
+  }, [draft, patientsResource]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -168,11 +152,12 @@ function PatientsPage() {
       <PageHeader
         title="Gestion des patients"
         subtitle={
-          isLoading
+          patientsResource.isLoading
             ? "Chargement des dossiers…"
             : `${patients.length} dossier(s) — Centre d'Imagerie Médicale`
         }
         actions={
+          canCreate("patients") ? (
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button>
@@ -250,6 +235,7 @@ function PatientsPage() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          ) : null
         }
       />
 
@@ -289,13 +275,6 @@ function PatientsPage() {
           </Select>
         </CardContent>
       </Card>
-
-      {error ? (
-        <ServiceNotice
-          message="Dossiers patients en attente de connexion au serveur du centre."
-          onRetry={() => setReloadKey((k) => k + 1)}
-        />
-      ) : null}
 
       <Card data-tour="patients-table">
         <CardContent className="px-0 py-0" aria-busy={isLoading}>
