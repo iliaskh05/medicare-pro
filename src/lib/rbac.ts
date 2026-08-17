@@ -103,12 +103,18 @@ const MATRIX: Record<BackendRole, Permission[]> = {
     ...grant(["imaging"], ["edit"]),
   ],
   MANIPULATEUR: [
-    ...grant(["patients", "worklist", "waiting-room", "imaging", "messaging", "settings"], ["view"]),
+    ...grant(
+      ["patients", "worklist", "waiting-room", "imaging", "messaging", "settings"],
+      ["view"],
+    ),
     ...grant(["worklist", "waiting-room"], ["edit"]),
     ...grant(["imaging"], ["create", "edit"]),
   ],
   TECHNICIEN: [
-    ...grant(["patients", "worklist", "waiting-room", "imaging", "messaging", "settings"], ["view"]),
+    ...grant(
+      ["patients", "worklist", "waiting-room", "imaging", "messaging", "settings"],
+      ["view"],
+    ),
     ...grant(["worklist", "waiting-room"], ["edit"]),
     ...grant(["imaging"], ["create", "edit"]),
   ],

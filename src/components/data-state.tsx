@@ -7,7 +7,13 @@ import type { FriendlyError } from "@/lib/api/errors";
 import type { ResourceStatus } from "@/hooks/use-api-resource";
 
 /** Squelette de chargement homogène (listes, tableaux, cartes). */
-export function LoadingState({ rows = 4, label = "Chargement…" }: { rows?: number; label?: string }) {
+export function LoadingState({
+  rows = 4,
+  label = "Chargement…",
+}: {
+  rows?: number;
+  label?: string;
+}) {
   return (
     <div className="space-y-2 p-6" role="status" aria-live="polite" aria-busy>
       <span className="sr-only">{label}</span>
@@ -90,7 +96,8 @@ export function DataState({
   emptyAction?: ReactNode;
   skeletonRows?: number;
 }) {
-  if (status === "loading") return <LoadingState {...(skeletonRows ? { rows: skeletonRows } : {})} />;
+  if (status === "loading")
+    return <LoadingState {...(skeletonRows ? { rows: skeletonRows } : {})} />;
   if (status === "error" && error)
     return <ErrorState error={error} {...(onRetry ? { onRetry } : {})} />;
   if (status === "empty")

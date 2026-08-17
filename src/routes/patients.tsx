@@ -136,7 +136,9 @@ function PatientsPage() {
   const current = Math.min(page, pageCount);
   const rows = filtered.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE);
   const viewStatus =
-    patientsResource.status === "ready" && filtered.length === 0 ? "empty" : patientsResource.status;
+    patientsResource.status === "ready" && filtered.length === 0
+      ? "empty"
+      : patientsResource.status;
 
   return (
     <div className="space-y-6">
@@ -149,83 +151,83 @@ function PatientsPage() {
         }
         actions={
           canCreate("patients") ? (
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <UserPlus className="mr-2 size-4" /> Nouveau patient
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-lg">
-              <DialogHeader>
-                <DialogTitle>Nouveau dossier patient</DialogTitle>
-                <DialogDescription>
-                  Renseignez les informations d&apos;identité et de couverture médicale.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2 sm:col-span-2">
-                  <Label htmlFor="nom">Nom complet</Label>
-                  <Input
-                    id="nom"
-                    value={draft.nomComplet}
-                    onChange={(e) => setDraft((d) => ({ ...d, nomComplet: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="cin">CIN</Label>
-                  <Input
-                    id="cin"
-                    value={draft.cin}
-                    onChange={(e) => setDraft((d) => ({ ...d, cin: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="tel">Téléphone</Label>
-                  <Input
-                    id="tel"
-                    value={draft.telephone}
-                    onChange={(e) => setDraft((d) => ({ ...d, telephone: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="naissance">Date de naissance</Label>
-                  <Input
-                    id="naissance"
-                    type="date"
-                    value={draft.naissance}
-                    onChange={(e) => setDraft((d) => ({ ...d, naissance: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Mutuelle</Label>
-                  <Select
-                    value={draft.mutuelle}
-                    onValueChange={(v) => setDraft((d) => ({ ...d, mutuelle: v }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {MUTUELLES.map((m) => (
-                        <SelectItem key={m} value={m}>
-                          {m}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setOpen(false)}>
-                  Annuler
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <UserPlus className="mr-2 size-4" /> Nouveau patient
                 </Button>
-                <Button disabled={!canSubmit || isSaving} onClick={submitDraft}>
-                  {isSaving ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
-                  Enregistrer le dossier
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-lg">
+                <DialogHeader>
+                  <DialogTitle>Nouveau dossier patient</DialogTitle>
+                  <DialogDescription>
+                    Renseignez les informations d&apos;identité et de couverture médicale.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label htmlFor="nom">Nom complet</Label>
+                    <Input
+                      id="nom"
+                      value={draft.nomComplet}
+                      onChange={(e) => setDraft((d) => ({ ...d, nomComplet: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="cin">CIN</Label>
+                    <Input
+                      id="cin"
+                      value={draft.cin}
+                      onChange={(e) => setDraft((d) => ({ ...d, cin: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="tel">Téléphone</Label>
+                    <Input
+                      id="tel"
+                      value={draft.telephone}
+                      onChange={(e) => setDraft((d) => ({ ...d, telephone: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="naissance">Date de naissance</Label>
+                    <Input
+                      id="naissance"
+                      type="date"
+                      value={draft.naissance}
+                      onChange={(e) => setDraft((d) => ({ ...d, naissance: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Mutuelle</Label>
+                    <Select
+                      value={draft.mutuelle}
+                      onValueChange={(v) => setDraft((d) => ({ ...d, mutuelle: v }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {MUTUELLES.map((m) => (
+                          <SelectItem key={m} value={m}>
+                            {m}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setOpen(false)}>
+                    Annuler
+                  </Button>
+                  <Button disabled={!canSubmit || isSaving} onClick={submitDraft}>
+                    {isSaving ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
+                    Enregistrer le dossier
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           ) : null
         }
       />

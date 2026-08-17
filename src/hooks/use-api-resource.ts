@@ -70,9 +70,7 @@ export function useApiResource<T>(
   const setData = useCallback((updater: (current: T | null) => T | null) => {
     setDataState((current) => {
       const next = updater(current);
-      setStatus(
-        next == null || (Array.isArray(next) && next.length === 0) ? "empty" : "ready",
-      );
+      setStatus(next == null || (Array.isArray(next) && next.length === 0) ? "empty" : "ready");
       return next;
     });
   }, []);
