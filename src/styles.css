@@ -167,10 +167,84 @@
   }
 }
 
+/* ============ Échelle typographique produit ============ */
+
 @utility page-title {
   font-family: var(--font-display);
   font-weight: 700;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.021em;
+}
+
+/* Sur-titre de section : contexte discret au-dessus d'un titre. */
+@utility eyebrow {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--color-muted-foreground);
+}
+
+/* Titre de section (h2) dans une page dense. */
+@utility section-title {
+  font-family: var(--font-display);
+  font-size: 0.9375rem;
+  font-weight: 700;
+  letter-spacing: -0.008em;
+}
+
+/* Métadonnée : ligne secondaire d'une cellule ou d'une carte. */
+@utility meta-text {
+  font-size: 0.75rem;
+  line-height: 1.15rem;
+  color: var(--color-muted-foreground);
+}
+
+/* Valeurs numériques (KPI, montants, heures) — chiffres alignés. */
+@utility numeric {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+  letter-spacing: -0.015em;
+}
+
+@utility kpi-value {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+}
+
+/* ============ Surfaces ============ */
+
+/* Panneau de contenu : profondeur par la bordure et l'espacement, pas par l'ombre. */
+@utility panel {
+  background-color: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}
+
+/* En-tête de tableau collant pour les longues listes opérationnelles. */
+@utility table-sticky-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background-color: color-mix(in oklab, var(--color-muted) 65%, var(--color-card));
+  backdrop-filter: blur(6px);
+}
+
+/* Barre d'outils de liste (recherche + filtres). */
+@utility toolbar-surface {
+  background-color: color-mix(in oklab, var(--color-muted) 45%, var(--color-card));
+  border-bottom: 1px solid var(--color-border);
+}
+
+/* Focus visible homogène et accessible sur toute l'application. */
+@layer base {
+  :where(a, button, [role="button"], input, select, textarea, [tabindex]):focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+  }
 }
 
 /* Zéro clic mort : tout élément interactif affiche le curseur « main ». */
