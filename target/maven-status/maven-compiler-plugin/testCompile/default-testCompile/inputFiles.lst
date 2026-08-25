@@ -1,7 +1,12 @@
 C:\Users\acer\crm.radio\medicare-pro\src\test\java\com\crm\medicare\common\GlobalExceptionHandlerTest.java
+C:\Users\acer\crm.radio\medicare-pro\src\test\java\com\crm\medicare\controller\MedecinReferentControllerStatsTest.java
 C:\Users\acer\crm.radio\medicare-pro\src\test\java\com\crm\medicare\dashboard\DashboardMetricsTest.java
+C:\Users\acer\crm.radio\medicare-pro\src\test\java\com\crm\medicare\data\MoroccanCatalogueDefinitionsTest.java
 C:\Users\acer\crm.radio\medicare-pro\src\test\java\com\crm\medicare\db\FlywayMigrationConventionTest.java
 C:\Users\acer\crm.radio\medicare-pro\src\test\java\com\crm\medicare\security\LoginAttemptServiceTest.java
 C:\Users\acer\crm.radio\medicare-pro\src\test\java\com\crm\medicare\security\PermissionCatalogTest.java
+C:\Users\acer\crm.radio\medicare-pro\src\test\java\com\crm\medicare\service\DemoDatasetServiceTest.java
+C:\Users\acer\crm.radio\medicare-pro\src\test\java\com\crm\medicare\service\ExcelImportServiceTest.java
+C:\Users\acer\crm.radio\medicare-pro\src\test\java\com\crm\medicare\service\InvoiceBillingServiceTest.java
 C:\Users\acer\crm.radio\medicare-pro\src\test\java\com\crm\medicare\service\WorklistExamPersistenceTest.java
 C:\Users\acer\crm.radio\medicare-pro\src\test\java\com\crm\medicare\workflow\WorkflowEngineTest.java
