@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Loader2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
@@ -23,7 +23,8 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { ReferentCombobox } from "@/components/worklist/referent-combobox";
-import { MODALITES, SALLES, createExamen, type WorklistItem } from "@/lib/api/worklist";
+import { fetchResources, type ResourceDto } from "@/lib/api/appointments";
+import { MODALITES, createExamen, type WorklistItem } from "@/lib/api/worklist";
 import { typesExamen } from "@/types/domain";
 import { cn } from "@/lib/utils";
 
@@ -36,13 +37,17 @@ const emptyDraft = {
   telephone: "",
   typeExamen: typesExamen[0] ?? "",
   modalite: MODALITES[0] as string,
-  salle: SALLES[0] as string,
+  resourceId: "",
+  salle: "",
   dateHeure: "",
 };
 
 export function NouvelExamenDialog({ onCreated }: { onCreated?: (item?: WorklistItem) => void }) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(emptyDraft);
+  const [resources, setResources] = useState<ResourceDto[]>([]);
+  const [resourcesLoading, setResourcesLoading] = useState(false);
+  const [resourcesError, setResourcesError] = useState<string | null>(null);
   const [prescripteur, setPrescripteur] = useState<{ id: string | null; nom: string }>({
     id: null,
     nom: "",
@@ -50,30 +55,66 @@ export function NouvelExamenDialog({ onCreated }: { onCreated?: (item?: Worklist
   const [touched, setTouched] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
+  useEffect(() => {
+    if (!open) return;
+    const controller = new AbortController();
+    setResourcesLoading(true);
+    setResourcesError(null);
+    fetchResources(controller.signal)
+      .then((rows) => {
+        const active = rows.filter((r) => r.actif !== false);
+        setResources(active);
+        setDraft((d) => {
+          if (d.resourceId) return d;
+          const first = active[0];
+          if (!first) return d;
+          return { ...d, resourceId: first.id, salle: first.libelle };
+        });
+      })
+      .catch((e: unknown) => {
+        setResources([]);
+        setResourcesError(
+          e instanceof Error ? e.message : "Impossible de charger les salles / machines",
+        );
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setResourcesLoading(false);
+      });
+    return () => controller.abort();
+  }, [open]);
+
   const errors = {
     nom: draft.nom.trim() === "",
     prenom: draft.prenom.trim() === "",
     cin: draft.cin.trim() === "",
     dateHeure: draft.dateHeure === "",
+    resourceId: draft.resourceId.trim() === "",
     prescripteur: prescripteur.nom.trim() === "",
   };
-  const isValid = !Object.values(errors).some(Boolean);
+  const isValid = !Object.values(errors).some(Boolean) && !resourcesError && resources.length > 0;
   const invalid = (key: keyof typeof errors) =>
     touched && errors[key] ? "border-destructive focus-visible:ring-destructive/40" : "";
 
   const submit = useCallback(async () => {
     setTouched(true);
     if (!isValid) {
-      toast.error("Complétez les champs obligatoires du formulaire.");
+      toast.error(
+        resourcesError || resources.length === 0
+          ? "Sélectionnez une salle / machine valide (ressources indisponibles)."
+          : "Complétez les champs obligatoires du formulaire.",
+      );
       return;
     }
     setIsSaving(true);
     try {
+      const selected = resources.find((r) => r.id === draft.resourceId);
       const created = await createExamen({
         ...draft,
         nom: draft.nom.trim().toUpperCase(),
         prenom: draft.prenom.trim(),
         cin: draft.cin.trim().toUpperCase(),
+        salle: selected?.libelle ?? draft.salle,
+        resourceId: draft.resourceId,
         prescripteurId: prescripteur.id,
         prescripteurNom: prescripteur.nom.trim(),
       });
@@ -90,7 +131,7 @@ export function NouvelExamenDialog({ onCreated }: { onCreated?: (item?: Worklist
     } finally {
       setIsSaving(false);
     }
-  }, [draft, isValid, onCreated, prescripteur]);
+  }, [draft, isValid, onCreated, prescripteur, resources, resourcesError]);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -218,22 +259,40 @@ export function NouvelExamenDialog({ onCreated }: { onCreated?: (item?: Worklist
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Salle</Label>
-              <Select
-                value={draft.salle}
-                onValueChange={(v) => setDraft((d) => ({ ...d, salle: v }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {SALLES.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {s}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>Salle / machine *</Label>
+              {resourcesLoading ? (
+                <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="size-4 animate-spin" /> Chargement des ressources…
+                </p>
+              ) : resourcesError ? (
+                <p className="text-sm text-destructive">{resourcesError}</p>
+              ) : resources.length === 0 ? (
+                <p className="text-sm text-destructive">Aucune salle / machine active.</p>
+              ) : (
+                <Select
+                  value={draft.resourceId || undefined}
+                  onValueChange={(v) => {
+                    const selected = resources.find((r) => r.id === v);
+                    setDraft((d) => ({
+                      ...d,
+                      resourceId: v,
+                      salle: selected?.libelle ?? d.salle,
+                      modalite: selected?.modalite || d.modalite,
+                    }));
+                  }}
+                >
+                  <SelectTrigger className={cn(invalid("resourceId"))}>
+                    <SelectValue placeholder="Choisir une salle" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {resources.map((r) => (
+                      <SelectItem key={r.id} value={r.id}>
+                        {r.libelle}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="ne-date">Date & heure *</Label>
@@ -250,25 +309,22 @@ export function NouvelExamenDialog({ onCreated }: { onCreated?: (item?: Worklist
 
         <Separator />
 
-        <section className="space-y-2">
+        <section className="space-y-4">
           <h3 className="text-xs font-bold tracking-wide text-muted-foreground uppercase">
             Médecin prescripteur *
           </h3>
-          <ReferentCombobox value={prescripteur} onChange={setPrescripteur} />
-          {touched && errors.prescripteur ? (
-            <p className="text-xs font-medium text-destructive">
-              Le médecin correspondant est obligatoire.
-            </p>
-          ) : null}
+          <div className={cn(touched && errors.prescripteur && "rounded-md ring-1 ring-destructive/40")}>
+            <ReferentCombobox value={prescripteur} onChange={setPrescripteur} />
+          </div>
         </section>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>
+          <Button variant="outline" onClick={() => setOpen(false)} disabled={isSaving}>
             Annuler
           </Button>
-          <Button onClick={submit} disabled={isSaving}>
+          <Button onClick={() => void submit()} disabled={isSaving || resourcesLoading}>
             {isSaving ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
-            Enregistrer l&apos;examen
+            Enregistrer
           </Button>
         </DialogFooter>
       </DialogContent>

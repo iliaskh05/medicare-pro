@@ -21,11 +21,37 @@ export async function downloadFactureExamen(
   patientNom: string,
 ): Promise<void> {
   const blob = await javaApiBlob(`/api/factures/examen/${encodeURIComponent(examenId)}`);
+  triggerDownload(blob, `facture_${slugPatient(patientNom)}.pdf`);
+}
+
+export async function previewFactureExamen(examenId: string): Promise<void> {
+  const blob = await javaApiBlob(`/api/factures/examen/${encodeURIComponent(examenId)}`);
+  openBlob(blob);
+}
+
+export async function downloadCompteRenduExamen(
+  examenId: string,
+  patientNom: string,
+): Promise<void> {
+  const blob = await javaApiBlob(
+    `/api/worklist/${encodeURIComponent(examenId)}/compte-rendu.pdf`,
+  );
+  triggerDownload(blob, `compte_rendu_${slugPatient(patientNom)}.pdf`);
+}
+
+export async function previewCompteRenduExamen(examenId: string): Promise<void> {
+  const blob = await javaApiBlob(
+    `/api/worklist/${encodeURIComponent(examenId)}/compte-rendu.pdf`,
+  );
+  openBlob(blob);
+}
+
+function triggerDownload(blob: Blob, filename: string) {
   const url = window.URL.createObjectURL(blob);
   try {
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = `facture_${slugPatient(patientNom)}.pdf`;
+    anchor.download = filename;
     anchor.rel = "noopener";
     document.body.appendChild(anchor);
     anchor.click();
@@ -33,4 +59,9 @@ export async function downloadFactureExamen(
   } finally {
     window.URL.revokeObjectURL(url);
   }
+}
+
+function openBlob(blob: Blob) {
+  const url = window.URL.createObjectURL(blob);
+  window.open(url, "_blank", "noopener");
 }

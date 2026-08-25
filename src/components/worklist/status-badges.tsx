@@ -30,65 +30,65 @@ type BadgeDef = {
 
 const etatMap: Record<EtatPatient, BadgeDef> = {
   attendu: {
-    label: "Attendu",
+    label: "En attente",
     icon: CircleDot,
     className: "border-border bg-muted text-muted-foreground",
   },
   arrive: {
-    label: "Terminé",
+    label: "Arrivé",
     icon: UserCheck,
-    className: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+    className: "border-info/25 bg-info/10 text-info",
   },
   retard: {
     label: "En retard",
     icon: Clock,
-    className: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300",
+    className: "border-warning/30 bg-warning/10 text-warning",
   },
   attente_longue: {
-    label: "Trop attendu",
+    label: "Attente longue",
     icon: AlertTriangle,
-    className: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300",
+    className: "border-destructive/25 bg-destructive/10 text-destructive",
   },
 };
 
 const crMap: Record<StatutCompteRendu, BadgeDef> = {
   a_faire: {
-    label: "À dicter",
+    label: "Brouillon",
     icon: FileText,
     className: "border-border bg-muted text-muted-foreground",
   },
   en_redaction: {
     label: "En rédaction",
     icon: PenLine,
-    className: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300",
+    className: "border-warning/30 bg-warning/10 text-warning",
   },
   signe: {
     label: "Signé",
     icon: FileSignature,
-    className: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+    className: "border-success/25 bg-success/10 text-success",
   },
   imprime: {
-    label: "Imprimé",
+    label: "Validé",
     icon: Printer,
-    className: "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300",
+    className: "border-info/25 bg-info/10 text-info",
   },
 };
 
 const paiementMap: Record<StatutPaiement, BadgeDef> = {
   impaye: {
-    label: "Impayé",
+    label: "Impayée",
     icon: Wallet,
-    className: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300",
+    className: "border-destructive/25 bg-destructive/10 text-destructive",
   },
   cote: {
-    label: "Coté",
+    label: "Partiellement payé",
     icon: CreditCard,
-    className: "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300",
+    className: "border-warning/30 bg-warning/10 text-warning",
   },
   paye: {
-    label: "Payé",
+    label: "Payée",
     icon: CreditCard,
-    className: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+    className: "border-success/25 bg-success/10 text-success",
   },
 };
 
@@ -97,7 +97,7 @@ function Badge({ def }: { def: BadgeDef }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap",
+        "inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-medium whitespace-nowrap",
         def.className,
       )}
     >
@@ -130,7 +130,7 @@ export function EtatPatientStatusMenu({
         <button
           type="button"
           className={cn(
-            "inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            "inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-medium whitespace-nowrap transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
             current.className,
             disabled && "pointer-events-none opacity-60",
           )}
@@ -169,3 +169,38 @@ export function PaiementBadge({ statut }: { statut: StatutPaiement }) {
 export const ETAT_LABELS = etatMap;
 export const CR_LABELS = crMap;
 export const PAIEMENT_LABELS = paiementMap;
+
+const dossierMap: Record<string, BadgeDef> = {
+  a_preparer: {
+    label: "À préparer",
+    icon: FileText,
+    className: "border-border bg-muted text-muted-foreground",
+  },
+  pret: {
+    label: "Dossier prêt",
+    icon: FileSignature,
+    className: "border-info/25 bg-info/10 text-info",
+  },
+  remis: {
+    label: "Remis",
+    icon: UserCheck,
+    className: "border-success/25 bg-success/10 text-success",
+  },
+  non_remis: {
+    label: "Non remis",
+    icon: AlertTriangle,
+    className: "border-warning/30 bg-warning/10 text-warning",
+  },
+  envoye: {
+    label: "Envoyé",
+    icon: Printer,
+    className: "border-primary/20 bg-primary/10 text-primary",
+  },
+};
+
+export function DossierBadge({ statut }: { statut?: string }) {
+  const def = dossierMap[statut ?? "a_preparer"] ?? dossierMap.a_preparer;
+  return <Badge def={def} />;
+}
+
+export const DOSSIER_LABELS = dossierMap;

@@ -23,6 +23,8 @@ public class WorklistItemDto {
 
     private String numSejour;
 
+    private String patientId;
+
     private String patient;
 
     private String cin;
@@ -34,6 +36,11 @@ public class WorklistItemDto {
     private String sexe;
 
     private String medecin;
+
+    /** Stable radiologist user id (filter by this, not display name). */
+    private String radiologueId;
+
+    private String resourceId;
 
     private String prescripteur;
 
@@ -53,6 +60,31 @@ public class WorklistItemDto {
     private String paiement;
 
     private BigDecimal montant;
+
+    private BigDecimal acompte;
+
+    private BigDecimal reste;
+
+    private Long catalogueId;
+
+    private String dossierStatut;
+
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime dossierRemisAt;
+
+    private String dossierRemisPar;
+
+    private String priorite;
+
+    private String indication;
+
+    private String technique;
+
+    private String resultats;
+
+    private String conclusion;
+
+    private Boolean passageSansRdv;
 
     private String compteRendu;
 

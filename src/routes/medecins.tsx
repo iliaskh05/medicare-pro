@@ -89,8 +89,9 @@ function MedecinsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Réseau des médecins prescripteurs"
-        subtitle={`${medecins.length} praticiens partenaires · ${totalReferes} patients référés`}
+        eyebrow="Médecins"
+        title="Réseau de prescripteurs"
+        subtitle={`${medecins.length} praticien(s) · ${totalReferes} patients référés`}
         actions={
           <ActionButton
             toastKind="info"

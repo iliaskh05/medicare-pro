@@ -45,8 +45,9 @@ function NumerisationPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        title="Numérisation & étiquettes"
-        subtitle="Poste d'accueil — documents patients et impression d'étiquettes de séjour"
+        eyebrow="Documents"
+        title="Numérisation"
+        subtitle="Import de documents patients et impression d'étiquettes de séjour"
       />
 
       <div className="grid gap-4 lg:grid-cols-2">

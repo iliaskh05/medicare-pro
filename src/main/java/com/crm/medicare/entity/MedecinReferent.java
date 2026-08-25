@@ -40,4 +40,9 @@ public class MedecinReferent {
     private String ville;
 
     private String quartier;
+
+    private String etablissement;
+
+    @Column(nullable = false)
+    private boolean actif = true;
 }

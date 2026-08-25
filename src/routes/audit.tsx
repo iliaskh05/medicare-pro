@@ -378,8 +378,9 @@ function FraudAuditModule() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Audit & Conformité — Détection d'anomalies"
-        subtitle="Clustering non supervisé + validation humaine · Centre d'Imagerie Médicale, Casablanca"
+        eyebrow="Administration"
+        title="Audit"
+        subtitle="Anomalies de facturation et validation humaine"
         actions={
           profile.canExportCompta ? (
             <DropdownMenu>
@@ -736,7 +737,7 @@ function FraudAuditModule() {
                             variant="outline"
                             size="sm"
                             className="gap-1.5 border-primary/25 bg-primary/5 font-semibold text-primary shadow-sm transition-shadow hover:bg-primary/10 hover:shadow-md"
-                            onClick={() => telechargerDossierPdf(dossierAnomalie(a))}
+                            onClick={() => void telechargerDossierPdf(dossierAnomalie(a))}
                           >
                             <FileDown className="size-4" />
                             Télécharger (PDF)

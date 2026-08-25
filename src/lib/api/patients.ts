@@ -12,6 +12,10 @@ export type PatientDto = {
   numAffiliation?: string | undefined;
   medecinTraitant?: string | undefined;
   ville?: string | undefined;
+  quartier?: string | undefined;
+  adresse?: string | undefined;
+  dateNaissance?: string | undefined;
+  numeroDossier?: string | undefined;
   prochainRdv?: string | undefined;
 };
 
@@ -27,6 +31,10 @@ export type PatientRow = {
   numAffiliation?: string | undefined;
   medecinTraitant?: string | undefined;
   ville?: string | undefined;
+  quartier?: string | undefined;
+  adresse?: string | undefined;
+  dateNaissance?: string | undefined;
+  numeroDossier?: string | undefined;
   prochainRdv?: string | undefined;
 };
 
@@ -88,6 +96,10 @@ function mapPatient(dto: PatientDto): PatientRow {
     numAffiliation: dto.numAffiliation,
     medecinTraitant: dto.medecinTraitant,
     ville: dto.ville,
+    quartier: dto.quartier,
+    adresse: dto.adresse,
+    dateNaissance: dto.dateNaissance,
+    numeroDossier: dto.numeroDossier,
     prochainRdv: dto.prochainRdv,
   };
 }
@@ -160,6 +172,28 @@ export async function fetchPatientFinancialStatus(
     `/api/patients/${encodeURIComponent(patientId)}/dossier-financier`,
     signal ? { signal } : {},
   );
+}
+
+export type PatientTimelineEvent = {
+  id: string;
+  source: string;
+  type: string;
+  title: string;
+  detail?: string | null;
+  at?: string | null;
+  actor?: string | null;
+  action?: string | null;
+};
+
+export async function fetchPatientTimeline(
+  patientId: string,
+  signal?: AbortSignal,
+): Promise<PatientTimelineEvent[]> {
+  const rows = await javaApi<PatientTimelineEvent[]>(
+    `/api/patients/${encodeURIComponent(patientId)}/timeline`,
+    signal ? { signal } : {},
+  );
+  return rows ?? [];
 }
 
 export async function createPatient(payload: Omit<PatientRow, "id">): Promise<PatientRow> {

@@ -97,6 +97,18 @@ public final class DashboardMetrics {
 
     public static DashboardKpisDto kpis(
             List<Examen> todayExams, BigDecimal chiffreAffairesMensuel) {
+        return kpis(todayExams, chiffreAffairesMensuel, null, null);
+    }
+
+    /**
+     * @param tempsAttenteMoyenMinutes {@code null} si pas de données arrived_at
+     * @param occupationOverride si non-null, remplace le calcul examens (ex. RDV/resources)
+     */
+    public static DashboardKpisDto kpis(
+            List<Examen> todayExams,
+            BigDecimal chiffreAffairesMensuel,
+            Double tempsAttenteMoyenMinutes,
+            Integer occupationOverride) {
         List<Examen> active = todayExams.stream().filter(e -> !isCancelled(e)).toList();
         long patients =
                 active.stream()
@@ -108,7 +120,9 @@ public final class DashboardMetrics {
                         .count();
         long actes = active.stream().filter(DashboardMetrics::isPerformed).count();
         int occupation = 0;
-        if (!active.isEmpty()) {
+        if (occupationOverride != null) {
+            occupation = Math.max(0, Math.min(100, occupationOverride));
+        } else if (!active.isEmpty()) {
             long started = active.stream().filter(DashboardMetrics::hasStarted).count();
             occupation = (int) Math.round(100.0 * started / active.size());
         }
@@ -118,7 +132,36 @@ public final class DashboardMetrics {
                 .actesRealises(actes)
                 .chiffreAffaires(ca)
                 .tauxOccupation(occupation)
+                .tempsAttenteMoyenMinutes(tempsAttenteMoyenMinutes)
                 .build();
+    }
+
+    /**
+     * Moyenne (début examen − arrived_at) en minutes pour les examens avec arrived_at.
+     * Retourne {@code null} si aucun échantillon.
+     */
+    public static Double averageWaitMinutes(List<Examen> exams) {
+        if (exams == null || exams.isEmpty()) {
+            return null;
+        }
+        List<Long> waits = new ArrayList<>();
+        for (Examen e : exams) {
+            if (isCancelled(e) || e.getArrivedAt() == null || e.getDateExamen() == null) {
+                continue;
+            }
+            long minutes =
+                    java.time.Duration.between(e.getArrivedAt(), e.getDateExamen()).toMinutes();
+            if (minutes < 0) {
+                // arrivé après l'heure prévue : attente = 0 jusqu'à démarrage réel inconnu
+                minutes = 0;
+            }
+            waits.add(minutes);
+        }
+        if (waits.isEmpty()) {
+            return null;
+        }
+        double avg = waits.stream().mapToLong(Long::longValue).average().orElse(0);
+        return Math.round(avg * 10.0) / 10.0;
     }
 
     public static List<SalleAttenteDto> waitingRoom(List<Examen> todayExams) {

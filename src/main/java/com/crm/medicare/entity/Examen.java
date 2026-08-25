@@ -33,8 +33,8 @@ import lombok.ToString;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@EqualsAndHashCode(exclude = {"patient", "prescripteur", "historique", "statusHistory", "createdBy"})
-@ToString(exclude = {"patient", "prescripteur", "historique", "statusHistory", "createdBy"})
+@EqualsAndHashCode(exclude = {"patient", "prescripteur", "historique", "statusHistory", "createdBy", "resource", "assignedRadiologue", "catalogue"})
+@ToString(exclude = {"patient", "prescripteur", "historique", "statusHistory", "createdBy", "resource", "assignedRadiologue", "catalogue"})
 public class Examen {
 
     @Id
@@ -62,6 +62,11 @@ public class Examen {
     private LocalDateTime dateExamen;
 
     private String salle;
+
+    /** Canonical room/machine link — prefer over free-text {@link #salle}. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "resource_id")
+    private ResourceRoom resource;
 
     private String description;
 
@@ -93,6 +98,40 @@ public class Examen {
 
     @Column(precision = 10, scale = 2)
     private BigDecimal montant;
+
+    @Column(precision = 10, scale = 2, nullable = false)
+    private BigDecimal acompte = BigDecimal.ZERO;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "catalogue_id")
+    private CatalogueExamen catalogue;
+
+    @Column(name = "dossier_statut", nullable = false, length = 32)
+    private String dossierStatut = "a_preparer";
+
+    @Column(name = "dossier_remis_at")
+    private LocalDateTime dossierRemisAt;
+
+    @Column(name = "dossier_remis_par")
+    private String dossierRemisPar;
+
+    @Column(columnDefinition = "TEXT")
+    private String indication;
+
+    @Column(columnDefinition = "TEXT")
+    private String technique;
+
+    @Column(columnDefinition = "TEXT")
+    private String resultats;
+
+    @Column(columnDefinition = "TEXT")
+    private String conclusion;
+
+    @Column(name = "passage_sans_rdv", nullable = false)
+    private boolean passageSansRdv = false;
+
+    @Column(name = "arrived_at")
+    private LocalDateTime arrivedAt;
 
     @Column(name = "compte_rendu", columnDefinition = "TEXT")
     private String compteRendu;
@@ -136,6 +175,12 @@ public class Examen {
         }
         if (priorite == null) {
             priorite = "ROUTINE";
+        }
+        if (acompte == null) {
+            acompte = BigDecimal.ZERO;
+        }
+        if (dossierStatut == null || dossierStatut.isBlank()) {
+            dossierStatut = "a_preparer";
         }
         if (version == null) {
             version = 0;

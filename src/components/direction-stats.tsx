@@ -4,6 +4,7 @@ import { AlertTriangle, Banknote, CalendarCheck } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { IconTile } from "@/components/ui-kit";
 import { fetchWorklist } from "@/lib/api/worklist";
+import { toLocalDateKey } from "@/lib/date";
 import { formatMAD } from "@/types/domain";
 
 /**
@@ -22,7 +23,7 @@ export function DirectionStats({
 
   useEffect(() => {
     const controller = new AbortController();
-    fetchWorklist({ date: new Date().toISOString().slice(0, 10) }, controller.signal)
+    fetchWorklist({ date: toLocalDateKey() }, controller.signal)
       .then((rows) => {
         setExamens(rows.length);
         setCa(

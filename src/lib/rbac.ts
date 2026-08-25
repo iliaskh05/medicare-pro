@@ -71,12 +71,12 @@ const MATRIX: Record<BackendRole, Permission[]> = {
   DIRECTION: [
     ...grant(ALL, ["view", "export"]),
     ...grant(["fraud"], ["validate", "edit"]),
-    ...grant(["doctors"], ["create", "edit"]),
+    ...grant(["doctors", "settings"], ["create", "edit"]),
   ],
   DIRECTEUR: [
     ...grant(ALL, ["view", "export"]),
     ...grant(["fraud"], ["validate", "edit"]),
-    ...grant(["doctors"], ["create", "edit"]),
+    ...grant(["doctors", "settings"], ["create", "edit"]),
   ],
   ACCUEIL: [
     ...grant(

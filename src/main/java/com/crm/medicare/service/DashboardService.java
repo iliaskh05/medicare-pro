@@ -5,14 +5,19 @@ import com.crm.medicare.dto.AlerteDto;
 import com.crm.medicare.dto.DashboardKpisDto;
 import com.crm.medicare.dto.DashboardStatsDto;
 import com.crm.medicare.dto.SalleAttenteDto;
+import com.crm.medicare.entity.AppointmentStatus;
 import com.crm.medicare.entity.EtatPatient;
 import com.crm.medicare.entity.Examen;
 import com.crm.medicare.entity.StatutCr;
 import com.crm.medicare.entity.Utilisateur;
+import com.crm.medicare.repository.AppointmentRepository;
 import com.crm.medicare.repository.ExamenRepository;
+import com.crm.medicare.repository.InvoiceRepository;
+import com.crm.medicare.repository.ResourceRoomRepository;
 import com.crm.medicare.security.PermissionCatalog;
 import com.crm.medicare.security.SecurityUtils;
 import com.crm.medicare.workflow.EncounterStatus;
+import com.crm.medicare.workflow.InvoiceStatus;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -30,8 +35,13 @@ import org.springframework.transaction.annotation.Transactional;
 public class DashboardService {
 
     private static final ZoneId ZONE = ZoneId.of("Africa/Casablanca");
+    /** Capacité journalière approximative : minutes ouvrables × salles actives. */
+    private static final int OPEN_MINUTES_PER_RESOURCE = 8 * 60;
 
     private final ExamenRepository examenRepository;
+    private final InvoiceRepository invoiceRepository;
+    private final AppointmentRepository appointmentRepository;
+    private final ResourceRoomRepository resourceRoomRepository;
 
     @Transactional(readOnly = true)
     public DashboardStatsDto getStats() {
@@ -67,7 +77,9 @@ public class DashboardService {
         LocalDate today = LocalDate.now(ZONE);
         List<Examen> todayExams = examsOfDay(today);
         BigDecimal ca = canReadInvoice() ? monthRecordedRevenue(today) : BigDecimal.ZERO;
-        return DashboardMetrics.kpis(todayExams, ca);
+        Double wait = DashboardMetrics.averageWaitMinutes(todayExams);
+        Integer occupationOverride = resourceOccupationPercent(today);
+        return DashboardMetrics.kpis(todayExams, ca, wait, occupationOverride);
     }
 
     @Transactional(readOnly = true)
@@ -95,18 +107,58 @@ public class DashboardService {
     }
 
     /**
-     * Somme des {@code examens.montant} du mois civil, hors annulés.
-     * Les lignes sans montant ne sont pas estimées.
+     * CA mensuel : somme {@code amount_paid} des factures ISSUED / PARTIALLY_PAID / PAID.
+     * Si aucune facture dans la période → 0 (jamais inventé).
      */
     private BigDecimal monthRecordedRevenue(LocalDate today) {
         LocalDateTime debut = today.withDayOfMonth(1).atStartOfDay();
         LocalDateTime fin = today.plusMonths(1).withDayOfMonth(1).atStartOfDay();
-        BigDecimal sum =
-                examenRepository.sumRecordedMontantBetween(
+        BigDecimal fromInvoices =
+                invoiceRepository.sumAmountPaidBetween(
                         debut,
                         fin,
-                        EnumSet.of(EncounterStatus.CANCELLED, EncounterStatus.NO_SHOW));
-        return sum != null ? sum : BigDecimal.ZERO;
+                        EnumSet.of(
+                                InvoiceStatus.ISSUED,
+                                InvoiceStatus.PARTIALLY_PAID,
+                                InvoiceStatus.PAID));
+        if (fromInvoices != null && fromInvoices.compareTo(BigDecimal.ZERO) > 0) {
+            return fromInvoices;
+        }
+        // fallback examens.montant uniquement si aucune encaissement facture
+        if (fromInvoices != null && invoiceRepository.count() == 0) {
+            BigDecimal sum =
+                    examenRepository.sumRecordedMontantBetween(
+                            debut,
+                            fin,
+                            EnumSet.of(EncounterStatus.CANCELLED, EncounterStatus.NO_SHOW));
+            return sum != null ? sum : BigDecimal.ZERO;
+        }
+        return fromInvoices != null ? fromInvoices : BigDecimal.ZERO;
+    }
+
+    /**
+     * Occupation machines : minutes RDV bookées / (salles actives × journée).
+     * {@code null} si pas de resources → fallback métrique examens.
+     */
+    private Integer resourceOccupationPercent(LocalDate day) {
+        long activeResources = resourceRoomRepository.findByActifTrueOrderByLibelleAsc().size();
+        if (activeResources <= 0) {
+            return null;
+        }
+        LocalDateTime debut = day.atStartOfDay();
+        LocalDateTime fin = day.plusDays(1).atStartOfDay();
+        EnumSet<AppointmentStatus> excluded =
+                EnumSet.of(AppointmentStatus.CANCELLED, AppointmentStatus.NO_SHOW);
+        long booked = appointmentRepository.sumBookedMinutesInRange(debut, fin, excluded);
+        if (booked <= 0
+                && appointmentRepository.countInRangeExcluding(debut, fin, excluded) == 0) {
+            return null;
+        }
+        long capacity = activeResources * (long) OPEN_MINUTES_PER_RESOURCE;
+        if (capacity <= 0) {
+            return 0;
+        }
+        return (int) Math.min(100, Math.round(100.0 * booked / capacity));
     }
 
     private static boolean canReadInvoice() {

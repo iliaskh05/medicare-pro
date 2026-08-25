@@ -65,7 +65,7 @@ export async function fetchDashboardStats(signal?: AbortSignal): Promise<Dashboa
     }
   >("/api/dashboard/stats", signal ? { signal } : {});
 
-  const repartition = raw?.repartitionStatuts ?? {};
+  const repartition: Record<string, number> = raw?.repartitionStatuts ?? {};
   return {
     totalExamens: Number(raw?.totalExamens ?? 0),
     examensAujourdhui: Number(raw?.examensAujourdhui ?? 0),

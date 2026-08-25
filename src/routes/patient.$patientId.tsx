@@ -9,15 +9,13 @@ import {
   Brain,
   CalendarClock,
   CheckCircle,
-  Download,
-  FileText,
   Layers,
   Mail,
   Phone,
   Pill as PillIcon,
   Printer,
+  QrCode,
   ReceiptText,
-  RefreshCw,
   ScanLine,
   ShieldAlert,
   ShieldCheck,
@@ -25,7 +23,6 @@ import {
   Stethoscope,
   Wallet,
   User,
-  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -66,14 +63,19 @@ import {
   fetchPatientPrescriptions,
   fetchPatientBilling,
   fetchPatientFinancialStatus,
+  fetchPatientTimeline,
   type PatientRow,
   type HistoryItem,
   type PatientImaging,
   type PatientPrescription,
   type PatientBilling,
   type FinancialStatus,
+  type PatientTimelineEvent,
 } from "@/lib/api/patients";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PatientDocumentsPanel } from "@/components/patients/documents-panel";
+import { formatCentreDateTime } from "@/lib/date";
+import { qrImageUrl, qrPayload } from "@/lib/qr";
 
 export const Route = createFileRoute("/patient/$patientId")({
   head: () => ({
@@ -212,12 +214,13 @@ function PatientRecordPage() {
   const [ordonnances, setOrdonnances] = useState<PatientPrescription[]>([]);
   const [factures, setFactures] = useState<PatientBilling[]>([]);
   const [financier, setFinancier] = useState<FinancialStatus | null>(null);
+  const [timeline, setTimeline] = useState<PatientTimelineEvent[]>([]);
   const [alertes, setAlertes] = useState<Anomalie[]>([]);
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [blocked, setBlocked] = useState(false);
-  const [soldeOverride, setSoldeOverride] = useState<number | null>(null);
+  const [showQr, setShowQr] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -226,13 +229,14 @@ function PatientRecordPage() {
 
     async function loadData() {
       try {
-        const [p, h, i, o, f, fin, al] = await Promise.all([
+        const [p, h, i, o, f, fin, tl, al] = await Promise.all([
           fetchPatientData(patientId, controller.signal),
           fetchPatientHistory(patientId, controller.signal),
           fetchPatientImaging(patientId, controller.signal),
           fetchPatientPrescriptions(patientId, controller.signal),
           fetchPatientBilling(patientId, controller.signal),
           fetchPatientFinancialStatus(patientId, controller.signal),
+          fetchPatientTimeline(patientId, controller.signal).catch(() => []),
           role === "directeur"
             ? fetchPatientAnomalies(patientId, controller.signal)
             : Promise.resolve([]),
@@ -243,6 +247,7 @@ function PatientRecordPage() {
         setOrdonnances(o);
         setFactures(f);
         setFinancier(fin);
+        setTimeline(tl);
         setAlertes(al.filter((a) => a.statut === "pending"));
       } catch (err: unknown) {
         if (controller.signal.aborted) return;
@@ -257,7 +262,7 @@ function PatientRecordPage() {
     return () => controller.abort();
   }, [patientId, role]);
 
-  const solde = soldeOverride ?? financier?.reste ?? 0;
+  const solde = financier?.reste ?? 0;
   const scoreMax = alertes.reduce((max, a) => Math.max(max, a.score), 0);
   const score = blocked ? 0 : scoreMax / 100;
 
@@ -311,39 +316,79 @@ function PatientRecordPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="page-shell">
       <PageHeader
-        title="Dossier patient"
-        subtitle={`${patient.nomComplet} · ${patient.id} · Centre d'Imagerie Médicale`}
+        eyebrow="Dossier patient"
+        title={patient.nomComplet}
+        subtitle={[
+          patient.numeroDossier ?? `ID ${patient.id}`,
+          `${patient.age} ans`,
+          patient.sexe,
+          patient.cin,
+        ]
+          .filter(Boolean)
+          .join(" · ")}
         actions={
           <>
+            <Button
+              variant="outline"
+              size="icon"
+              aria-label="QR dossier (référence opaque)"
+              title="QR référence dossier"
+              onClick={() => setShowQr((v) => !v)}
+            >
+              <QrCode className="size-4" />
+            </Button>
             <Button variant="outline" asChild>
               <Link to="/patients">
-                <ArrowLeft className="mr-2 size-4" /> Retour aux patients
+                <ArrowLeft className="mr-2 size-4" /> Patients
+              </Link>
+            </Button>
+            <Button asChild>
+              <Link to="/accueil" search={{ mode: "rdv", patientId: patient.id }}>
+                Rendez-vous
+              </Link>
+            </Button>
+            <Button asChild>
+              <Link to="/accueil" search={{ mode: "walkin", patientId: patient.id }}>
+                Passage
               </Link>
             </Button>
             {financier && (
               <DocumentMenu
                 context={{
                   patient: patient.nomComplet,
-                  reference: patient.id,
+                  reference: patient.numeroDossier ?? patient.id,
                   examen: financier.examen,
                   total: financier.total,
                   acompte: financier.acompte,
                 }}
               />
             )}
-            <ActionButton
-              variant="outline"
-              toastKind="success"
-              toastMessage="Dossier exporté en PDF"
-              toastDescription={`${patient.nomComplet} · ${patient.id} — PDF généré`}
-            >
-              <Download className="mr-2 size-4" /> Exporter le dossier (PDF)
-            </ActionButton>
           </>
         }
       />
+
+      {showQr ? (
+        <div className="app-surface flex flex-wrap items-center gap-4 p-4">
+          <img
+            src={qrImageUrl(qrPayload("patient", patient.id), 128)}
+            alt="QR référence patient"
+            width={128}
+            height={128}
+            className="rounded-md border border-border bg-white p-1"
+          />
+          <div className="min-w-0 text-sm">
+            <p className="font-semibold">Référence opaque</p>
+            <p className="font-mono text-xs text-muted-foreground break-all">
+              {qrPayload("patient", patient.id)}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Aucune donnée médicale dans le QR — identifiant uniquement.
+            </p>
+          </div>
+        </div>
+      ) : null}
 
       <div className="grid gap-6 xl:grid-cols-10">
         <div className="space-y-6 xl:col-span-7">
@@ -351,12 +396,12 @@ function PatientRecordPage() {
             <CardContent className="p-5">
               <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4 sm:flex sm:flex-wrap sm:justify-between">
                 <div className="flex min-w-0 items-center gap-4">
-                  <div className="grid size-14 shrink-0 place-items-center rounded-2xl bg-primary/10 text-primary ring-1 ring-inset ring-primary/20">
-                    <User className="size-7" />
+                  <div className="grid size-11 shrink-0 place-items-center rounded-lg bg-primary-soft text-primary">
+                    <User className="size-5" />
                   </div>
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="truncate text-xl font-bold tracking-tight sm:text-2xl">
+                      <h2 className="section-title truncate">
                         {patient.nomComplet}
                       </h2>
                       <Pill tone="primary">{patient.mutuelle}</Pill>
@@ -367,8 +412,8 @@ function PatientRecordPage() {
                       ) : null}
                     </div>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      {patient.age} ans · {patient.sexe ?? "Non précisé"} · ID {patient.id} · CIN{" "}
-                      {patient.cin}
+                      {patient.age} ans · {patient.sexe ?? "Non précisé"} ·{" "}
+                      {patient.numeroDossier ?? patient.id} · CIN {patient.cin}
                     </p>
                   </div>
                 </div>
@@ -382,17 +427,13 @@ function PatientRecordPage() {
                   >
                     <Phone className="mr-1.5 size-4" /> Appeler
                   </ActionButton>
-                  {patient.email && (
-                    <ActionButton
-                      size="sm"
-                      variant="outline"
-                      toastKind="success"
-                      toastMessage="Compte rendu envoyé"
-                      toastDescription={`Email transmis à ${patient.email}`}
-                    >
-                      <Mail className="mr-1.5 size-4" /> Envoyer le CR
-                    </ActionButton>
-                  )}
+                  {patient.email ? (
+                    <Button size="sm" variant="outline" asChild>
+                      <a href={`mailto:${patient.email}`}>
+                        <Mail className="mr-1.5 size-4" /> Écrire
+                      </a>
+                    </Button>
+                  ) : null}
                 </div>
               </div>
 
@@ -401,16 +442,22 @@ function PatientRecordPage() {
               <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 {[
                   {
-                    label: "N° affiliation",
-                    value: patient.numAffiliation ?? "N/A",
-                    icon: BadgeCheck,
+                    label: "Téléphone",
+                    value: patient.telephone || "—",
+                    icon: Phone,
                   },
                   {
                     label: "Médecin traitant",
                     value: patient.medecinTraitant ?? "Non renseigné",
                     icon: Stethoscope,
                   },
-                  { label: "Téléphone", value: patient.telephone, icon: Phone },
+                  {
+                    label: "Adresse",
+                    value:
+                      [patient.adresse, patient.quartier, patient.ville].filter(Boolean).join(", ") ||
+                      "—",
+                    icon: BadgeCheck,
+                  },
                   {
                     label: "Prochain rendez-vous",
                     value: patient.prochainRdv ?? "Aucun",
@@ -432,7 +479,7 @@ function PatientRecordPage() {
           </Card>
 
           {profile.canSeeFinance && financier ? (
-            <Card className="shadow-sm">
+            <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Wallet className="size-4 text-muted-foreground" />
@@ -485,23 +532,102 @@ function PatientRecordPage() {
             </Card>
           ) : null}
 
-          <Tabs defaultValue="historique">
-            <TabsList>
+          <Tabs defaultValue="apercu">
+            <TabsList className="h-auto w-full flex-wrap justify-start">
+              <TabsTrigger value="apercu">Vue d&apos;ensemble</TabsTrigger>
               <TabsTrigger value="historique">
-                <Activity className="mr-2 size-4" /> Historique
+                <Activity className="mr-2 size-4" /> Examens
               </TabsTrigger>
               <TabsTrigger value="imagerie">
-                <ScanLine className="mr-2 size-4" /> Imagerie
+                <ScanLine className="mr-2 size-4" /> Images
               </TabsTrigger>
               <TabsTrigger value="ordonnances">
-                <PillIcon className="mr-2 size-4" /> Ordonnances
+                <PillIcon className="mr-2 size-4" /> Documents
               </TabsTrigger>
               {profile.canSeeFinance ? (
                 <TabsTrigger value="facturation">
-                  <ReceiptText className="mr-2 size-4" /> Facturation
+                  <ReceiptText className="mr-2 size-4" /> Factures
                 </TabsTrigger>
               ) : null}
             </TabsList>
+
+            <TabsContent value="apercu" className="mt-4 space-y-4">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="app-surface p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Dernier examen
+                  </p>
+                  <p className="mt-1 text-sm font-semibold">
+                    {imagerie[0]?.examen ?? historique[0]?.intitule ?? "Aucun"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {imagerie[0]?.date ?? historique[0]?.date ?? "—"}
+                  </p>
+                </div>
+                <div className="app-surface p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Compte rendu
+                  </p>
+                  <p className="mt-1 text-sm font-semibold">{imagerie[0]?.statut ?? "—"}</p>
+                  <p className="text-xs text-muted-foreground">{imagerie[0]?.radiologue ?? ""}</p>
+                </div>
+                {profile.canSeeFinance ? (
+                  <div className="app-surface p-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      Dernière facture
+                    </p>
+                    <p className="mt-1 text-sm font-semibold">
+                      {factures[0] ? mad(factures[0].total) : "Aucune"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{factures[0]?.statut ?? "—"}</p>
+                  </div>
+                ) : null}
+                <div className="app-surface p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Prochain RDV
+                  </p>
+                  <p className="mt-1 text-sm font-semibold">{patient.prochainRdv ?? "Aucun"}</p>
+                </div>
+              </div>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Timeline</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  {timeline.length > 0 ? (
+                    <ol className="relative border-l border-border pl-6">
+                      {timeline.slice(0, 8).map((ev) => (
+                        <li key={ev.id} className="relative pb-5 last:pb-0">
+                          <span className="absolute -left-[31px] top-1.5 grid size-4 place-items-center rounded-full bg-card ring-2 ring-inset ring-primary/40">
+                            <span className="size-1.5 rounded-full bg-primary" />
+                          </span>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Pill tone="primary">{ev.action || ev.type}</Pill>
+                            <span className="text-xs text-muted-foreground">
+                              {formatCentreDateTime(ev.at)}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-sm font-semibold">{ev.title}</p>
+                          {ev.detail ? (
+                            <p className="text-xs text-muted-foreground">{ev.detail}</p>
+                          ) : null}
+                          {ev.actor ? (
+                            <p className="text-xs text-muted-foreground">Par {ev.actor}</p>
+                          ) : null}
+                        </li>
+                      ))}
+                    </ol>
+                  ) : (
+                    <EmptyState
+                      compact
+                      icon={Activity}
+                      title="Aucun événement"
+                      description="La timeline patient se remplit au fil des examens, RDV et paiements."
+                    />
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
 
             <TabsContent value="historique">
               <Card>
@@ -575,8 +701,8 @@ function PatientRecordPage() {
                         <p className="mt-2 text-xs text-muted-foreground">{e.radiologue}</p>
                         <div className="mt-4 flex flex-wrap gap-2">
                           <Button size="sm" variant="outline" asChild>
-                            <Link to="/viewer">
-                              <ScanLine className="mr-1.5 size-4" /> Visionneuse
+                            <Link to="/worklist">
+                              <ScanLine className="mr-1.5 size-4" /> Ouvrir la visionneuse
                             </Link>
                           </Button>
                         </div>
@@ -594,6 +720,9 @@ function PatientRecordPage() {
             </TabsContent>
 
             <TabsContent value="ordonnances">
+              <div className="mb-6">
+                <PatientDocumentsPanel patientId={patient.id} />
+              </div>
               {ordonnances.length > 0 ? (
                 <div className="space-y-4">
                   {ordonnances.map((o) => (
@@ -774,14 +903,12 @@ function PatientRecordPage() {
                           className="w-full"
                           variant="outline"
                           size="sm"
-                          toastKind="success"
-                          toastMessage="Solde régularisé"
-                          onDone={() => {
-                            setSoldeOverride(0);
-                            setAlertes([]);
-                          }}
+                          toastKind="info"
+                          toastMessage="Encaissement via facturation"
+                          toastDescription="Le solde affiché reste celui du serveur — régularisez dans Facturation."
+                          onDone={() => setAlertes([])}
                         >
-                          <Wallet className="mr-1.5 size-4" /> Régulariser le solde
+                          <Wallet className="mr-1.5 size-4" /> Voir facturation
                         </ActionButton>
                       </div>
                     </div>
@@ -831,7 +958,7 @@ function PatientRecordPage() {
                         <div
                           key={a.id}
                           className={cn(
-                            "rounded-xl p-3.5 ring-1 ring-inset shadow-sm transition-shadow hover:shadow-md",
+                            "rounded-xl p-3.5 ring-1 ring-inset",
                             m.bg,
                             m.ring,
                           )}

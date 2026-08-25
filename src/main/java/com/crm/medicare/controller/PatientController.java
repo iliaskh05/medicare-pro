@@ -146,4 +146,22 @@ public class PatientController {
     public Patient360Dtos.FinancialStatus financial(@PathVariable Long id) {
         return patientService.financialStatus(id);
     }
+
+    @GetMapping({"/api/patients/{id}/timeline", "/api/v1/patients/{id}/timeline"})
+    @PreAuthorize("hasAuthority('" + PermissionCatalog.PATIENT_READ + "')")
+    public List<Patient360Dtos.TimelineEvent> timeline(@PathVariable Long id) {
+        return patientService.timeline(id);
+    }
+
+    @GetMapping({"/api/patients/{id}/appointments", "/api/v1/patients/{id}/appointments"})
+    @PreAuthorize("hasAuthority('" + PermissionCatalog.PATIENT_READ + "')")
+    public List<com.crm.medicare.dto.AppointmentDto> appointments(@PathVariable Long id) {
+        return patientService.appointments(id);
+    }
+
+    @GetMapping({"/api/patients/{id}/reports", "/api/v1/patients/{id}/reports"})
+    @PreAuthorize("hasAuthority('" + PermissionCatalog.PATIENT_READ + "')")
+    public List<com.crm.medicare.dto.ReportDto> reports(@PathVariable Long id) {
+        return patientService.reports(id);
+    }
 }

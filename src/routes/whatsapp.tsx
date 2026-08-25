@@ -175,8 +175,9 @@ function WhatsAppPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Chatbot WhatsApp patients"
-        subtitle="Console de supervision des conversations WhatsApp : prise de rendez-vous, préparation d'examen, mutuelle, rappels et transfert au secrétariat."
+        eyebrow="Communication"
+        title="WhatsApp patients"
+        subtitle="Conversations, préparation d'examen et transfert au secrétariat."
         actions={
           <Button variant="outline" className="gap-2" onClick={() => setReloadToken((t) => t + 1)}>
             <RotateCcw className="size-4" aria-hidden="true" />

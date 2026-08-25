@@ -1,18 +1,38 @@
 /**
- * Génère un dossier PDF imprimable   : ouvre un aperçu propre
+ * Génère un dossier PDF imprimable : ouvre un aperçu propre
  * dans une nouvelle fenêtre puis déclenche l'impression / export PDF.
  */
+import { fetchSettings } from "@/lib/api/settings";
+
 export type DossierPdf = {
   titre: string;
   reference: string;
   lignes: { label: string; valeur: string }[];
   blocs?: { titre: string; contenu: string }[];
   mention?: string;
+  /** Si omis, chargé depuis /api/settings (centre.nom). */
+  centreNom?: string;
 };
 
 const escape = (v: string) => v.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-export function telechargerDossierPdf(dossier: DossierPdf) {
+const FALLBACK_CENTRE = "Centre d'Imagerie Médicale";
+let cachedCentreNom: string | null = null;
+
+async function resolveCentreNom(override?: string): Promise<string> {
+  if (override?.trim()) return override.trim();
+  if (cachedCentreNom) return cachedCentreNom;
+  try {
+    const settings = await fetchSettings("centre.");
+    cachedCentreNom = settings["centre.nom"]?.trim() || FALLBACK_CENTRE;
+  } catch {
+    cachedCentreNom = FALLBACK_CENTRE;
+  }
+  return cachedCentreNom;
+}
+
+export async function telechargerDossierPdf(dossier: DossierPdf): Promise<boolean> {
+  const brand = await resolveCentreNom(dossier.centreNom);
   const win = window.open("", "_blank", "width=900,height=1200");
   if (!win) return false;
 
@@ -45,7 +65,7 @@ export function telechargerDossierPdf(dossier: DossierPdf) {
 </style></head>
 <body>
   <header>
-    <div class="brand">Centre d'Imagerie Médicale<small>Casablanca · Maroc</small></div>
+    <div class="brand">${escape(brand)}<small>Imagerie médicale</small></div>
     <div class="ref">Édité le ${new Date().toLocaleString("fr-MA")}</div>
   </header>
   <h1>${escape(dossier.titre)}</h1>

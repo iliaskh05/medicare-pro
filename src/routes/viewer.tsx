@@ -146,8 +146,9 @@ function ViewerPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Visionneuse radiologique"
-        subtitle="Pipeline d'analyse d'images et comptes rendus du centre"
+        eyebrow="Activité médicale"
+        title="Imagerie"
+        subtitle="Visionneuse et comptes rendus du centre"
         actions={
           <Button
             variant="outline"

@@ -1,62 +1,44 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
 import {
-  Users,
-  Wallet,
-  Clock,
+  Activity,
   AlertTriangle,
-  TrendingUp,
-  TrendingDown,
   ArrowRight,
   CalendarDays,
+  CalendarPlus,
+  Clock,
   FileSpreadsheet,
-  ShieldAlert,
-  MessageCircle,
-  Bot,
+  FileText,
+  FolderOpen,
+  Footprints,
   RefreshCw,
+  ScanLine,
+  ShieldAlert,
+  UserPlus,
+  Users,
+  Wallet,
 } from "lucide-react";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { useRole } from "@/hooks/use-role";
 import { CaisseFraudAlert } from "@/components/fraude/caisse-alert";
-import { DocumentMenu } from "@/components/document-menu";
 import { ActionButton } from "@/components/action-button";
-import { PageHeader, Pill, IconTile, EmptyState } from "@/components/ui-kit";
-import { ProbabilityBar } from "@/components/probability-gauge";
+import { EmptyState, KpiCard, Pill, SectionHeader } from "@/components/ui-kit";
 import { javaApi } from "@/lib/api/config";
 import {
   fetchDashboardKpis,
+  fetchDashboardStats,
   fetchSalleAttente,
   fetchPlanningTension,
   fetchUrgencesFraude,
   fetchAlertes,
   fetchSyntheseComptable,
   EMPTY_DASHBOARD_KPIS,
+  EMPTY_DASHBOARD_STATS,
   EMPTY_COMPTABILITE,
   type DashboardKpis,
+  type DashboardStats,
 } from "@/lib/api/dashboard";
 import {
   formatMAD,
@@ -66,6 +48,7 @@ import {
   type SyntheseComptable,
   type UrgenceFraude,
 } from "@/types/domain";
+import scannerHero from "@/assets/ct-scanner.jpg";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -74,12 +57,7 @@ export const Route = createFileRoute("/dashboard")({
       {
         name: "description",
         content:
-          "Activité du jour du Centre d'Imagerie Médicale : patients, chiffre d'affaires en MAD, examens en attente et alertes de facturation.",
-      },
-      { property: "og:title", content: "Tableau de bord — RadioCRM" },
-      {
-        property: "og:description",
-        content: "Suivi temps réel des actes, recettes et alertes du Centre d'Imagerie Médicale.",
+          "Cockpit du centre d'imagerie : patients du jour, examens, comptes rendus et alertes opérationnelles.",
       },
     ],
   }),
@@ -97,10 +75,10 @@ const niveauLabel = { critique: "Critique", eleve: "Élevé", moyen: "Moyen" } a
 
 const slotOrder: ("Matin" | "Midi" | "Après-midi")[] = ["Matin", "Midi", "Après-midi"];
 const levelClass: Record<PlanningSlot["level"], string> = {
-  libre: "bg-success/40 hover:bg-success/60",
-  occupé: "bg-primary/50 hover:bg-primary/70",
-  saturé: "bg-warning hover:bg-warning/90",
-  critique: "bg-destructive hover:bg-destructive/90",
+  libre: "bg-muted hover:bg-muted",
+  occupé: "bg-primary/35 hover:bg-primary/45",
+  saturé: "bg-warning/70 hover:bg-warning/80",
+  critique: "bg-destructive/80 hover:bg-destructive",
 };
 
 function PlanningHeatmap({ data }: { data: PlanningSlot[] }) {
@@ -113,10 +91,7 @@ function PlanningHeatmap({ data }: { data: PlanningSlot[] }) {
       >
         <div />
         {days.map((d) => (
-          <div
-            key={d.dayLabel}
-            className="text-center text-[11px] font-medium text-muted-foreground"
-          >
+          <div key={d.dayLabel} className="text-center text-[11px] font-medium text-muted-foreground">
             {d.dayLabel}
           </div>
         ))}
@@ -124,18 +99,18 @@ function PlanningHeatmap({ data }: { data: PlanningSlot[] }) {
       {slotOrder.map((slot) => (
         <div
           key={slot}
-          className="grid items-center gap-2"
+          className="grid items-center gap-1.5"
           style={{ gridTemplateColumns: `3.5rem repeat(${days.length}, minmax(0, 1fr))` }}
         >
-          <span className="text-[11px] font-medium text-muted-foreground">{slot}</span>
+          <span className="text-[11px] text-muted-foreground">{slot}</span>
           {days.map((d) => {
             const cell = data.find((item) => item.dayLabel === d.dayLabel && item.slot === slot);
-            if (!cell) return <div key={`${d.dayLabel}-${slot}`} className="aspect-square" />;
+            if (!cell) return <div key={`${d.dayLabel}-${slot}`} className="h-6" />;
             return (
               <div
                 key={`${d.dayLabel}-${slot}`}
                 title={`${d.dayLabel} · ${slot} · ${cell.level}`}
-                className={`aspect-square rounded-md transition-colors ${levelClass[cell.level]}`}
+                className={`h-6 rounded-md transition-colors ${levelClass[cell.level]}`}
               />
             );
           })}
@@ -145,13 +120,14 @@ function PlanningHeatmap({ data }: { data: PlanningSlot[] }) {
   );
 }
 
-/** Section avec état de chargement / erreur / vide générique. */
-function AsyncSection<T>({
+function AsyncSection({
   isLoading,
   error,
   onRetry,
   isEmpty,
   emptyMessage = "Aucune donnée disponible",
+  emptyIcon: EmptyIcon = AlertTriangle,
+  emptyAction,
   skeleton,
   children,
 }: {
@@ -160,54 +136,62 @@ function AsyncSection<T>({
   onRetry: () => void;
   isEmpty: boolean;
   emptyMessage?: string;
+  emptyIcon?: typeof AlertTriangle;
+  emptyAction?: React.ReactNode;
   skeleton: React.ReactNode;
   children: React.ReactNode;
 }) {
   if (isLoading) return <>{skeleton}</>;
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-muted/30 px-6 py-8 text-center">
-        <p className="text-sm font-medium text-muted-foreground">Aucune donnée disponible</p>
+      <div className="flex flex-col items-center justify-center gap-2 px-6 py-8 text-center">
+        <p className="text-sm text-muted-foreground">Impossible de charger les données.</p>
         <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={onRetry}>
           <RefreshCw className="mr-2 size-3.5" /> Réessayer
         </Button>
       </div>
     );
   }
-  if (isEmpty) return <EmptyState icon={AlertTriangle} title={emptyMessage} compact />;
+  if (isEmpty) {
+    return (
+      <EmptyState icon={EmptyIcon} title={emptyMessage} action={emptyAction} compact />
+    );
+  }
   return <>{children}</>;
 }
 
 function Dashboard() {
-  const [botOpen, setBotOpen] = useState(false);
   const { profile, role } = useRole();
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Bonjour" : hour < 18 ? "Bon après-midi" : "Bonsoir";
+  const todayLabel = new Date().toLocaleDateString("fr-FR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
 
-  // KPIs
   const [kpis, setKpis] = useState<DashboardKpis>(EMPTY_DASHBOARD_KPIS);
+  const [stats, setStats] = useState<DashboardStats>(EMPTY_DASHBOARD_STATS);
   const [kpisLoading, setKpisLoading] = useState(true);
   const [kpisError, setKpisError] = useState<string | null>(null);
 
-  // Salle d'attente
   const [salleAttente, setSalleAttente] = useState<SalleAttente[]>([]);
   const [salleLoading, setSalleLoading] = useState(true);
   const [salleError, setSalleError] = useState<string | null>(null);
 
-  // Planning
   const [planningTension, setPlanningTension] = useState<PlanningSlot[]>([]);
   const [planningLoading, setPlanningLoading] = useState(true);
   const [planningError, setPlanningError] = useState<string | null>(null);
 
-  // Urgences fraude
   const [urgencesFraude, setUrgencesFraude] = useState<UrgenceFraude[]>([]);
   const [urgencesLoading, setUrgencesLoading] = useState(true);
   const [urgencesError, setUrgencesError] = useState<string | null>(null);
 
-  // Alertes
   const [alertes, setAlertes] = useState<Alerte[]>([]);
   const [alertesLoading, setAlertesLoading] = useState(true);
   const [alertesError, setAlertesError] = useState<string | null>(null);
 
-  // Synthèse comptable
   const [comptabilite, setComptabilite] = useState<SyntheseComptable>(EMPTY_COMPTABILITE);
   const [comptaLoading, setComptaLoading] = useState(true);
   const [comptaError, setComptaError] = useState<string | null>(null);
@@ -219,11 +203,15 @@ function Dashboard() {
     const controller = new AbortController();
     setKpisLoading(true);
     setKpisError(null);
-    fetchDashboardKpis(controller.signal)
-      .then(setKpis)
-      .catch((e: unknown) => {
+    Promise.allSettled([
+      fetchDashboardKpis(controller.signal),
+      fetchDashboardStats(controller.signal),
+    ])
+      .then(([k, s]) => {
         if (controller.signal.aborted) return;
-        setKpisError(e instanceof Error ? e.message : "Impossible de charger les indicateurs");
+        if (k.status === "fulfilled") setKpis(k.value);
+        else setKpisError(k.reason instanceof Error ? k.reason.message : "Indicateurs indisponibles");
+        if (s.status === "fulfilled") setStats(s.value);
       })
       .finally(() => {
         if (!controller.signal.aborted) setKpisLoading(false);
@@ -272,9 +260,7 @@ function Dashboard() {
       .then(setUrgencesFraude)
       .catch((e: unknown) => {
         if (controller.signal.aborted) return;
-        setUrgencesError(
-          e instanceof Error ? e.message : "Impossible de charger les urgences fraude",
-        );
+        setUrgencesError(e instanceof Error ? e.message : "Impossible de charger les urgences");
       })
       .finally(() => {
         if (!controller.signal.aborted) setUrgencesLoading(false);
@@ -283,7 +269,6 @@ function Dashboard() {
   }, [role, reloadKey]);
 
   useEffect(() => {
-    if (!profile.canSeeFinance) return;
     const controller = new AbortController();
     setAlertesLoading(true);
     setAlertesError(null);
@@ -297,7 +282,7 @@ function Dashboard() {
         if (!controller.signal.aborted) setAlertesLoading(false);
       });
     return () => controller.abort();
-  }, [profile.canSeeFinance, reloadKey]);
+  }, [reloadKey]);
 
   useEffect(() => {
     if (!profile.canSeeFinance) return;
@@ -308,9 +293,7 @@ function Dashboard() {
       .then(setComptabilite)
       .catch((e: unknown) => {
         if (controller.signal.aborted) return;
-        setComptaError(
-          e instanceof Error ? e.message : "Impossible de charger la synthèse comptable",
-        );
+        setComptaError(e instanceof Error ? e.message : "Impossible de charger la synthèse");
       })
       .finally(() => {
         if (!controller.signal.aborted) setComptaLoading(false);
@@ -318,439 +301,435 @@ function Dashboard() {
     return () => controller.abort();
   }, [profile.canSeeFinance, reloadKey]);
 
-  /* En cas d'indisponibilité du backend, la carte reste affichée avec une valeur neutre. */
   const kpiValue = (value: string) => (kpisError ? "—" : value);
-  const kpiCards = [
-    {
-      label: "Patients du jour",
-      value: kpiValue(String(kpis.patientsDuJour)),
-      icon: Users,
-      tone: "primary" as const,
-      finance: false,
-    },
-    {
-      label: "Chiffre d'affaires mensuel",
-      value: kpiValue(formatMAD(kpis.chiffreAffaires)),
-      icon: Wallet,
-      tone: "success" as const,
-      finance: true,
-    },
-    {
-      label: "Taux d'occupation",
-      value: kpiValue(`${kpis.tauxOccupation}%`),
-      icon: Clock,
-      tone: "warning" as const,
-      finance: false,
-    },
-    {
-      label: "Actes réalisés",
-      value: kpiValue(String(kpis.actesRealises)),
-      icon: AlertTriangle,
-      tone: "destructive" as const,
-      finance: true,
-    },
-  ];
-
-  const visibleKpis = kpiCards.filter((k) => !k.finance || profile.canSeeFinance);
-
-  const comptaTotal = comptabilite.validated + comptabilite.pending;
-  const comptaPct = comptaTotal > 0 ? Math.round((comptabilite.validated / comptaTotal) * 100) : 0;
+  const crPending = stats.repartitionStatuts["En attente"] ?? 0;
+  const enCours = stats.repartitionStatuts["En cours"] ?? 0;
+  const termines = stats.repartitionStatuts["Terminé"] ?? 0;
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Tableau de bord"
-        subtitle="Centre d'Imagerie Médicale"
-        actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <DocumentMenu />
-            <Dialog open={botOpen} onOpenChange={setBotOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline">
-                  <MessageCircle className="mr-2 size-4" /> WhatsApp
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2">
-                    <Bot className="size-4 text-primary" /> Configuration du Bot Patient
-                  </DialogTitle>
-                  <DialogDescription>Paramètres du chatbot WhatsApp du centre.</DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="bot-numero">Numéro WhatsApp Business</Label>
-                    <Input id="bot-numero" defaultValue="+212 6 61 45 87 20" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="bot-delai">Délai de réponse automatique (secondes)</Label>
-                    <Input id="bot-delai" type="number" defaultValue={3} />
-                  </div>
-                  {[
-                    ["bot-rdv", "Prise de rendez-vous automatique"],
-                    ["bot-cr", "Envoi des comptes rendus PDF"],
-                    ["bot-rappel", "Rappels de rendez-vous J-1"],
-                  ].map(([id, label]) => (
-                    <div
-                      key={id}
-                      className="flex items-center justify-between rounded-xl border border-border bg-background px-3 py-2.5"
-                    >
-                      <Label htmlFor={id} className="text-sm font-normal">
-                        {label}
-                      </Label>
-                      <Switch id={id} defaultChecked />
-                    </div>
-                  ))}
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setBotOpen(false)}>
-                    Annuler
-                  </Button>
-                  <ActionButton
-                    action={() => javaApi("/api/bot/configuration", { method: "PUT" })}
-                    toastMessage="Configuration du bot enregistrée"
-                    toastDescription="Les patients recevront les réponses automatiques."
-                    onDone={() => setBotOpen(false)}
-                  >
-                    Enregistrer
-                  </ActionButton>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-            <Button variant="outline" asChild>
-              <Link to="/patients">Salle d'attente</Link>
-            </Button>
-            <Button asChild>
-              <Link to="/facturation">Nouvel acte</Link>
-            </Button>
-            {role === "directeur" ? (
-              <ActionButton
-                variant="secondary"
-                action={() => javaApi("/api/comptabilite/export", { method: "POST" })}
-                toastMessage="Export comptable généré"
-                toastDescription="Le fichier a été transmis au service comptable."
-                errorMessage="Export impossible"
-              >
-                <FileSpreadsheet className="mr-2 size-4" />
-                Export comptable
-              </ActionButton>
-            ) : null}
-          </div>
-        }
-      />
-
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {kpisLoading
-          ? Array.from({ length: 4 }).map((_, i) => (
-              <Card key={i}>
-                <CardContent className="flex items-start gap-4 p-5">
-                  <Skeleton className="size-10 rounded-xl" />
-                  <div className="min-w-0 flex-1 space-y-2">
-                    <Skeleton className="h-3 w-24" />
-                    <Skeleton className="h-6 w-16" />
-                    <Skeleton className="h-3 w-20" />
-                  </div>
-                </CardContent>
-              </Card>
-            ))
-          : visibleKpis.map((kpi) => (
-              <Card key={kpi.label}>
-                <CardContent className="flex items-start gap-4 p-5">
-                  <IconTile tone={kpi.tone}>
-                    <kpi.icon className="size-5" />
-                  </IconTile>
-                  <div className="min-w-0">
-                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                      {kpi.label}
-                    </p>
-                    <p className="mt-1 text-xl font-bold tracking-tight sm:text-2xl">{kpi.value}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+    <div className="page-shell">
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-primary">Accueil</p>
+          <p className="mt-1 text-sm capitalize text-muted-foreground">{todayLabel}</p>
+        </div>
+        <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={reload}>
+          <RefreshCw className="mr-1.5 size-3.5" /> Actualiser
+        </Button>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        {/* Widget 1 — Tension du planning */}
-        <Card className="lg:col-span-1">
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-3">
-              <IconTile tone="primary">
-                <CalendarDays className="size-5" />
-              </IconTile>
-              <div>
-                <CardTitle className="text-base">Tension du planning</CardTitle>
-                <p className="text-xs text-muted-foreground">5 prochains jours · 3 créneaux</p>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <AsyncSection
-              isLoading={planningLoading}
-              error={planningError}
-              onRetry={reload}
-              isEmpty={planningTension.length === 0}
-              skeleton={<Skeleton className="h-40 w-full rounded-xl" />}
-            >
-              <PlanningHeatmap data={planningTension} />
-              <div className="mt-4 flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
-                <span className="inline-flex items-center gap-1.5">
-                  <span className="size-2.5 rounded-sm bg-success/80" />
-                  Libre
-                </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <span className="size-2.5 rounded-sm bg-primary/70" />
-                  Occupé
-                </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <span className="size-2.5 rounded-sm bg-warning" />
-                  Saturé
-                </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <span className="size-2.5 rounded-sm bg-destructive" />
-                  Critique
-                </span>
-              </div>
-            </AsyncSection>
-          </CardContent>
-        </Card>
-
-        {/* Widget 2 — Urgences Fraude & Anomalies (Directeur uniquement) */}
-        {role === "directeur" ? (
-          <Card className="lg:col-span-1">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <IconTile tone="destructive">
-                    <ShieldAlert className="size-5" />
-                  </IconTile>
-                  <div>
-                    <CardTitle className="text-base">Urgences Fraude</CardTitle>
-                    <p className="text-xs text-muted-foreground">Dernières alertes critiques IA</p>
-                  </div>
-                </div>
-                <Button variant="ghost" size="sm" className="h-8 text-xs" asChild>
-                  <Link to="/audit">Voir tout</Link>
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <AsyncSection
-                isLoading={urgencesLoading}
-                error={urgencesError}
-                onRetry={reload}
-                isEmpty={urgencesFraude.length === 0}
-                skeleton={
-                  <div className="space-y-3">
-                    <Skeleton className="h-16 w-full rounded-xl" />
-                    <Skeleton className="h-16 w-full rounded-xl" />
-                  </div>
-                }
-              >
-                {urgencesFraude.map((u) => (
-                  <div
-                    key={u.id}
-                    className="flex items-center justify-between gap-3 rounded-xl border border-border bg-background p-3"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold">{u.patient}</p>
-                      <p className="text-xs text-muted-foreground">{u.anomalie}</p>
-                      <div className="mt-2">
-                        <ProbabilityBar value={u.score / 100} />
-                      </div>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8 whitespace-nowrap text-xs"
-                      asChild
-                    >
-                      <Link to="/audit">Traiter</Link>
-                    </Button>
-                  </div>
-                ))}
-              </AsyncSection>
-            </CardContent>
-          </Card>
-        ) : null}
-
-        {/* Widget 3 — Synchronisation Comptable */}
-        {profile.canSeeFinance ? (
-          <Card className="lg:col-span-1">
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-3">
-                <IconTile tone="success">
-                  <FileSpreadsheet className="size-5" />
-                </IconTile>
-                <div>
-                  <CardTitle className="text-base">Synchronisation comptable</CardTitle>
-                  <p className="text-xs text-muted-foreground">Export comptable validé</p>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              {comptaLoading ? (
-                <div className="space-y-3">
-                  <Skeleton className="h-8 w-16" />
-                  <Skeleton className="h-2 w-full rounded-full" />
-                  <Skeleton className="h-9 w-full rounded-lg" />
-                </div>
-              ) : comptaError ? (
-                <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-muted/30 px-4 py-6 text-center">
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Aucune donnée disponible
-                  </p>
-                  <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={reload}>
-                    <RefreshCw className="mr-2 size-3.5" /> Réessayer
-                  </Button>
-                </div>
-              ) : (
-                <>
-                  <div>
-                    <p className="text-3xl font-bold tracking-tight">{comptabilite.validated}</p>
-                    <p className="text-sm text-muted-foreground">
-                      actes validés prêts pour l'export
-                    </p>
-                  </div>
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <span>Progression vers clôture</span>
-                      <span className="font-medium text-foreground">{comptaPct}%</span>
-                    </div>
-                    <div className="h-2 overflow-hidden rounded-full bg-muted">
-                      <div
-                        className="h-full rounded-full bg-success transition-all duration-700"
-                        style={{ width: `${comptaPct}%` }}
-                      />
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {comptabilite.pending} actes en attente · Dernier export{" "}
-                      {comptabilite.lastExport ?? "jamais"}
-                    </p>
-                  </div>
-                  {profile.canExportCompta ? (
-                    <ActionButton
-                      className="w-full shadow-sm"
-                      action={() => javaApi("/api/comptabilite/export", { method: "POST" })}
-                      toastMessage="Export comptable généré"
-                      toastDescription="Le fichier a été transmis au service comptable."
-                      errorMessage="Export impossible"
-                    >
-                      <FileSpreadsheet className="mr-2 size-4" /> Export comptable (CSV)
-                    </ActionButton>
-                  ) : (
-                    <p className="rounded-lg border border-dashed border-border bg-muted/40 px-3 py-2.5 text-center text-xs text-muted-foreground">
-                      Export comptable réservé au profil Directeur
-                    </p>
-                  )}
-                </>
-              )}
-            </CardContent>
-          </Card>
-        ) : null}
-      </div>
-
-      {/* Analyse de Conformité IA (Fraude caisse) — rendu strictement Directeur */}
-      {role === "directeur" ? <CaisseFraudAlert /> : null}
-
-      <div className="grid gap-4 lg:grid-cols-5">
-        <Card className="lg:col-span-3">
-          <CardHeader className="flex-row items-center justify-between">
-            <CardTitle>Prochains patients en salle d'attente</CardTitle>
-            <Button variant="ghost" size="sm" asChild>
-              <Link to="/patients">
-                Tout voir <ArrowRight className="ml-1 size-4" />
+      <section className="grid items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(240px,38%)]">
+        <div className="flex flex-col justify-center py-1">
+          <h1 className="page-title">
+            {greeting}, {profile.nom}
+          </h1>
+          <p className="mt-2 max-w-lg text-sm text-muted-foreground">
+            Activité du centre aujourd&apos;hui — patients, examens et files à traiter.
+          </p>
+          <div className="mt-5 flex flex-wrap gap-2">
+            <Button size="sm" asChild>
+              <Link to="/patients" search={{ nouveau: "1" } as never}>
+                <UserPlus className="size-4" /> Nouveau patient
               </Link>
             </Button>
-          </CardHeader>
-          <CardContent className="px-0 pb-2">
+            <Button size="sm" variant="outline" asChild>
+              <Link to="/accueil" search={{ mode: "rdv" }}>
+                <CalendarPlus className="size-4" /> Prendre rendez-vous
+              </Link>
+            </Button>
+            <Button size="sm" variant="outline" asChild>
+              <Link to="/accueil" search={{ mode: "walkin" }}>
+                <Footprints className="size-4" /> Passage sans rendez-vous
+              </Link>
+            </Button>
+          </div>
+        </div>
+        <div className="relative hidden overflow-hidden rounded-2xl border border-border lg:block">
+          <img
+            src={scannerHero}
+            alt="Scanner d'imagerie médicale"
+            className="h-full min-h-[196px] max-h-[228px] w-full object-cover object-center"
+          />
+          <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-foreground/25 to-transparent" />
+          <p className="absolute bottom-3 left-3 text-[10px] font-medium uppercase tracking-[0.16em] text-white/85">
+            Imagerie médicale
+          </p>
+        </div>
+        <div className="relative overflow-hidden rounded-2xl border border-border lg:hidden">
+          <img
+            src={scannerHero}
+            alt="Scanner d'imagerie médicale"
+            className="h-32 w-full object-cover object-center"
+          />
+        </div>
+      </section>
+
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {kpisLoading ? (
+          Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="app-surface px-5 py-4">
+              <Skeleton className="h-3 w-24" />
+              <Skeleton className="mt-3 h-7 w-16" />
+            </div>
+          ))
+        ) : (
+          <>
+            <KpiCard
+              label="Patients aujourd'hui"
+              value={kpiValue(String(kpis.patientsDuJour))}
+              hint={`${stats.examensAujourdhui} examen(s) planifié(s)`}
+              icon={Users}
+            />
+            <KpiCard
+              label="Examens aujourd'hui"
+              value={kpiValue(String(stats.examensAujourdhui))}
+              hint={`${kpiValue(String(kpis.actesRealises))} acte(s) réalisés`}
+              icon={ScanLine}
+            />
+            {profile.canSeeFinance ? (
+              <KpiCard
+                label="Encaissements"
+                value={kpiValue(formatMAD(kpis.chiffreAffaires))}
+                hint="Montants enregistrés ce mois"
+                icon={Wallet}
+              />
+            ) : (
+              <KpiCard
+                label="Occupation"
+                value={kpiValue(`${kpis.tauxOccupation}%`)}
+                hint="Part des examens déjà commencés"
+                icon={Clock}
+              />
+            )}
+            <KpiCard
+              label="À traiter"
+              value={String(alertes.length || crPending)}
+              hint="Alertes et files d'attente"
+              icon={FileText}
+            />
+          </>
+        )}
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="app-surface overflow-hidden">
+          <SectionHeader
+            title="File d'attente"
+            description="Patients présents aujourd'hui"
+            action={
+              <Button variant="ghost" size="sm" className="h-8 text-xs text-muted-foreground" asChild>
+                <Link to="/file-attente">
+                  Ouvrir <ArrowRight className="ml-1 size-3.5" />
+                </Link>
+              </Button>
+            }
+          />
+          <div className="border-t border-border">
             <AsyncSection
               isLoading={salleLoading}
               error={salleError}
               onRetry={reload}
               isEmpty={salleAttente.length === 0}
+              emptyMessage="Aucun patient en file d'attente."
+              emptyIcon={Users}
+              emptyAction={
+                <Button size="sm" variant="outline" asChild>
+                  <Link to="/accueil" search={{ mode: "rdv" }}>
+                    Prendre rendez-vous
+                  </Link>
+                </Button>
+              }
               skeleton={
-                <div className="space-y-2 px-6">
+                <div className="space-y-2 px-5 py-4">
                   <Skeleton className="h-10 w-full" />
                   <Skeleton className="h-10 w-full" />
                   <Skeleton className="h-10 w-full" />
                 </div>
               }
             >
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="pl-6">Heure</TableHead>
-                    <TableHead>Patient</TableHead>
-                    <TableHead className="hidden sm:table-cell">Examen</TableHead>
-                    <TableHead className="pr-6 text-right">Statut</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {salleAttente.map((r) => (
-                    <TableRow key={`${r.heure}-${r.patient}-${r.examen}`}>
-                      <TableCell className="pl-6 font-mono text-xs">{r.heure}</TableCell>
-                      <TableCell>
-                        <p className="font-medium">{r.patient}</p>
-                        <p className="text-xs text-muted-foreground">{r.medecin}</p>
-                      </TableCell>
-                      <TableCell className="hidden text-sm text-muted-foreground sm:table-cell">
-                        {r.examen}
-                      </TableCell>
-                      <TableCell className="pr-6 text-right">
-                        <Pill tone={statutTone[r.statut]}>{r.statut}</Pill>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <ul className="divide-y divide-border">
+                {salleAttente.map((r) => (
+                  <li
+                    key={`${r.heure}-${r.patient}-${r.examen}`}
+                    className="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-muted/40"
+                  >
+                    <span className="w-12 shrink-0 font-mono text-xs tabular-nums text-muted-foreground">
+                      {r.heure}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">{r.patient}</p>
+                      <p className="truncate text-xs text-muted-foreground">{r.examen}</p>
+                    </div>
+                    <Pill tone={statutTone[r.statut]}>{r.statut}</Pill>
+                  </li>
+                ))}
+              </ul>
             </AsyncSection>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        {profile.canSeeFinance ? (
-          <Card className="lg:col-span-2">
-            <CardHeader className="flex-row items-center justify-between">
-              <CardTitle>Dernières alertes détectées</CardTitle>
-              <Button variant="ghost" size="sm" asChild>
-                <Link to="/audit">
-                  Audit <ArrowRight className="ml-1 size-4" />
+        <div className="app-surface overflow-hidden">
+          <SectionHeader
+            title="Examens du jour"
+            description="Répartition des statuts"
+            action={
+              <Button variant="ghost" size="sm" className="h-8 text-xs text-muted-foreground" asChild>
+                <Link to="/worklist">
+                  Worklist <ArrowRight className="ml-1 size-3.5" />
                 </Link>
               </Button>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <AsyncSection
-                isLoading={alertesLoading}
-                error={alertesError}
-                onRetry={reload}
-                isEmpty={alertes.length === 0}
-                skeleton={
-                  <div className="space-y-3">
-                    <Skeleton className="h-16 w-full rounded-xl" />
-                    <Skeleton className="h-16 w-full rounded-xl" />
-                  </div>
+            }
+          />
+          <div className="border-t border-border">
+            {kpisLoading ? (
+              <div className="space-y-2 px-5 py-4">
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+              </div>
+            ) : stats.examensAujourdhui === 0 ? (
+              <EmptyState
+                compact
+                icon={ScanLine}
+                title="Aucun examen prévu aujourd'hui."
+                action={
+                  <Button size="sm" variant="outline" asChild>
+                    <Link to="/accueil" search={{ mode: "rdv" }}>
+                      Prendre rendez-vous
+                    </Link>
+                  </Button>
                 }
-              >
-                {alertes.map((a) => (
-                  <div
-                    key={a.id}
-                    className="rounded-xl border border-border bg-background p-3 transition-colors hover:border-primary/40"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-sm font-semibold">{a.titre}</p>
-                      <Pill tone={niveauTone[a.niveau]}>{niveauLabel[a.niveau]}</Pill>
+              />
+            ) : (
+              <>
+                <div className="px-5 py-4">
+                  <p className="text-2xl font-semibold tabular-nums tracking-tight">
+                    {stats.examensAujourdhui}
+                  </p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">examens enregistrés aujourd'hui</p>
+                </div>
+                <div className="grid grid-cols-3 divide-x divide-border border-t border-border">
+                  {[
+                    { label: "En attente", value: crPending },
+                    { label: "En cours", value: enCours },
+                    { label: "Terminés", value: termines },
+                  ].map((item) => (
+                    <div key={item.label} className="px-4 py-4">
+                      <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                        {item.label}
+                      </p>
+                      <p className="mt-1.5 text-xl font-semibold tabular-nums">{item.value}</p>
                     </div>
-                    <p className="mt-1 text-xs text-muted-foreground">{a.detail}</p>
-                    <p className="mt-2 font-mono text-[11px] text-muted-foreground">
-                      {a.id} · {a.temps}
-                    </p>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-5">
+        <div className="app-surface overflow-hidden lg:col-span-3">
+          <SectionHeader title="À traiter" description="Priorités du centre" />
+          <div className="space-y-2 border-t border-border px-5 py-4">
+            <Link
+              to="/comptes-rendus"
+              className="flex items-center justify-between rounded-lg px-3 py-2.5 transition-colors hover:bg-muted/50"
+            >
+              <span className="flex items-center gap-3 text-sm">
+                <FileText className="size-4 text-muted-foreground" />
+                Examens en attente
+              </span>
+              <span
+                className={`text-sm font-semibold tabular-nums ${crPending > 0 ? "text-warning" : ""}`}
+              >
+                {crPending}
+              </span>
+            </Link>
+            {profile.canSeeFinance ? (
+              <Link
+                to="/impayes"
+                className="flex items-center justify-between rounded-lg px-3 py-2.5 transition-colors hover:bg-muted/50"
+              >
+                <span className="flex items-center gap-3 text-sm">
+                  <Wallet className="size-4 text-muted-foreground" />
+                  Actes en attente d&apos;export
+                </span>
+                <span
+                  className={`text-sm font-semibold tabular-nums ${
+                    !comptaLoading && !comptaError && comptabilite.pending > 0 ? "text-warning" : ""
+                  }`}
+                >
+                  {comptaLoading || comptaError ? "—" : comptabilite.pending}
+                </span>
+              </Link>
+            ) : null}
+            <Link
+              to="/dossiers"
+              className="flex items-center justify-between rounded-lg px-3 py-2.5 transition-colors hover:bg-muted/50"
+            >
+              <span className="flex items-center gap-3 text-sm">
+                <FolderOpen className="size-4 text-muted-foreground" />
+                Dossiers à remettre
+              </span>
+              <span className="text-xs text-muted-foreground">Ouvrir</span>
+            </Link>
+            <AsyncSection
+              isLoading={alertesLoading}
+              error={alertesError}
+              onRetry={reload}
+              isEmpty={alertes.length === 0}
+              emptyMessage="Aucune alerte en cours."
+              emptyIcon={Activity}
+              skeleton={
+                <div className="space-y-2 pt-2">
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-12 w-full" />
+                </div>
+              }
+            >
+              <div className="divide-y divide-border pt-1">
+                {alertes.map((a) => (
+                  <div key={a.id} className="flex items-start justify-between gap-3 py-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium">{a.titre}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">{a.detail}</p>
+                    </div>
+                    <Pill tone={niveauTone[a.niveau]}>{niveauLabel[a.niveau]}</Pill>
                   </div>
                 ))}
+              </div>
+            </AsyncSection>
+          </div>
+        </div>
+
+        <div className="app-surface overflow-hidden lg:col-span-2">
+          <SectionHeader title="Activité récente" description="Journal opérationnel" />
+          <div className="border-t border-border px-5 py-4">
+            <AsyncSection
+              isLoading={alertesLoading}
+              error={alertesError}
+              onRetry={reload}
+              isEmpty={alertes.length === 0}
+              emptyMessage="Aucune activité récente."
+              emptyIcon={Clock}
+              skeleton={<Skeleton className="h-32 w-full" />}
+            >
+              <ol className="relative space-y-4 border-l border-border pl-4">
+                {alertes.map((a) => (
+                  <li key={`tl-${a.id}`} className="relative">
+                    <span className="absolute -left-[21px] top-1.5 size-2 rounded-full bg-primary" />
+                    <p className="font-mono text-[11px] tabular-nums text-muted-foreground">{a.temps}</p>
+                    <p className="mt-0.5 text-sm font-medium">{a.titre}</p>
+                    <p className="text-xs text-muted-foreground">{a.detail}</p>
+                  </li>
+                ))}
+              </ol>
+            </AsyncSection>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        <div className="app-surface overflow-hidden">
+          <SectionHeader title="Tension du planning" description="Créneaux des prochains jours" />
+          <div className="border-t border-border px-5 py-4">
+            <AsyncSection
+              isLoading={planningLoading}
+              error={planningError}
+              onRetry={reload}
+              isEmpty={planningTension.length === 0}
+              emptyMessage="Aucun créneau de planning n'est encore disponible."
+              emptyIcon={CalendarDays}
+              skeleton={<Skeleton className="h-32 w-full rounded-lg" />}
+            >
+              <PlanningHeatmap data={planningTension} />
+            </AsyncSection>
+          </div>
+        </div>
+
+        {role === "directeur" ? (
+          <div className="app-surface overflow-hidden">
+            <SectionHeader
+              title="Urgences audit"
+              action={
+                <Button variant="ghost" size="sm" className="h-8 text-xs text-muted-foreground" asChild>
+                  <Link to="/audit">
+                    Voir tout <ArrowRight className="ml-1 size-3.5" />
+                  </Link>
+                </Button>
+              }
+            />
+            <div className="border-t border-border px-5 py-4">
+              <AsyncSection
+                isLoading={urgencesLoading}
+                error={urgencesError}
+                onRetry={reload}
+                isEmpty={urgencesFraude.length === 0}
+                emptyMessage="Aucune urgence d'audit."
+                emptyIcon={ShieldAlert}
+                skeleton={<Skeleton className="h-24 w-full rounded-lg" />}
+              >
+                <div className="divide-y divide-border">
+                  {urgencesFraude.map((u) => (
+                    <div key={u.id} className="flex items-center justify-between gap-3 py-2.5">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium">{u.patient}</p>
+                        <p className="text-xs text-muted-foreground">{u.anomalie}</p>
+                      </div>
+                      <Button variant="ghost" size="sm" className="h-8 text-xs" asChild>
+                        <Link to="/audit">Traiter</Link>
+                      </Button>
+                    </div>
+                  ))}
+                </div>
               </AsyncSection>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
+        ) : null}
+
+        {profile.canSeeFinance ? (
+          <div className="app-surface overflow-hidden">
+            <SectionHeader title="Facturation" description="Synthèse comptable" />
+            <div className="space-y-4 border-t border-border px-5 py-4">
+              {comptaLoading ? (
+                <Skeleton className="h-20 w-full" />
+              ) : comptaError ? (
+                <EmptyState
+                  compact
+                  icon={FileSpreadsheet}
+                  title="Synthèse indisponible"
+                  description="Le module comptable n'est pas encore connecté."
+                />
+              ) : (
+                <>
+                  <div>
+                    <p className="text-2xl font-semibold tracking-tight tabular-nums">
+                      {comptabilite.validated}
+                    </p>
+                    <p className="text-sm text-muted-foreground">actes validés prêts à exporter</p>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {comptabilite.pending} en attente · Dernier export {comptabilite.lastExport ?? "jamais"}
+                  </p>
+                  {profile.canExportCompta ? (
+                    <ActionButton
+                      className="w-full"
+                      variant="outline"
+                      action={() => javaApi("/api/comptabilite/export", { method: "POST" })}
+                      toastMessage="Export comptable généré"
+                      errorMessage="Export impossible"
+                    >
+                      <FileSpreadsheet className="mr-2 size-4" /> Exporter
+                    </ActionButton>
+                  ) : null}
+                </>
+              )}
+            </div>
+          </div>
         ) : null}
       </div>
+
+      {role === "directeur" ? <CaisseFraudAlert /> : null}
     </div>
   );
 }

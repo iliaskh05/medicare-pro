@@ -10,10 +10,15 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AccueilRouteImport } from './routes/accueil'
+import { Route as AgendaRouteImport } from './routes/agenda'
+import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as AuditRouteImport } from './routes/audit'
+import { Route as CatalogueRouteImport } from './routes/catalogue'
 import { Route as ChatRouteImport } from './routes/chat'
 import { Route as ComptesRendusRouteImport } from './routes/comptes-rendus'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as DonneesRouteImport } from './routes/donnees'
 import { Route as FacturationRouteImport } from './routes/facturation'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as ImagerieRouteImport } from './routes/imagerie'
@@ -34,9 +39,29 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AccueilRoute = AccueilRouteImport.update({
+  id: '/accueil',
+  path: '/accueil',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AgendaRoute = AgendaRouteImport.update({
+  id: '/agenda',
+  path: '/agenda',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AnalyticsRoute = AnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuditRoute = AuditRouteImport.update({
   id: '/audit',
   path: '/audit',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CatalogueRoute = CatalogueRouteImport.update({
+  id: '/catalogue',
+  path: '/catalogue',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ChatRoute = ChatRouteImport.update({
@@ -52,6 +77,11 @@ const ComptesRendusRoute = ComptesRendusRouteImport.update({
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DonneesRoute = DonneesRouteImport.update({
+  id: '/donnees',
+  path: '/donnees',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FacturationRoute = FacturationRouteImport.update({
@@ -127,10 +157,15 @@ const PatientPatientIdRoute = PatientPatientIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/accueil': typeof AccueilRoute
+  '/agenda': typeof AgendaRoute
+  '/analytics': typeof AnalyticsRoute
   '/audit': typeof AuditRoute
+  '/catalogue': typeof CatalogueRoute
   '/chat': typeof ChatRoute
   '/comptes-rendus': typeof ComptesRendusRoute
   '/dashboard': typeof DashboardRoute
+  '/donnees': typeof DonneesRoute
   '/facturation': typeof FacturationRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/imagerie': typeof ImagerieRoute
@@ -148,10 +183,15 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/accueil': typeof AccueilRoute
+  '/agenda': typeof AgendaRoute
+  '/analytics': typeof AnalyticsRoute
   '/audit': typeof AuditRoute
+  '/catalogue': typeof CatalogueRoute
   '/chat': typeof ChatRoute
   '/comptes-rendus': typeof ComptesRendusRoute
   '/dashboard': typeof DashboardRoute
+  '/donnees': typeof DonneesRoute
   '/facturation': typeof FacturationRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/imagerie': typeof ImagerieRoute
@@ -170,10 +210,15 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/accueil': typeof AccueilRoute
+  '/agenda': typeof AgendaRoute
+  '/analytics': typeof AnalyticsRoute
   '/audit': typeof AuditRoute
+  '/catalogue': typeof CatalogueRoute
   '/chat': typeof ChatRoute
   '/comptes-rendus': typeof ComptesRendusRoute
   '/dashboard': typeof DashboardRoute
+  '/donnees': typeof DonneesRoute
   '/facturation': typeof FacturationRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/imagerie': typeof ImagerieRoute
@@ -193,10 +238,15 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/accueil'
+    | '/agenda'
+    | '/analytics'
     | '/audit'
+    | '/catalogue'
     | '/chat'
     | '/comptes-rendus'
     | '/dashboard'
+    | '/donnees'
     | '/facturation'
     | '/forgot-password'
     | '/imagerie'
@@ -214,10 +264,15 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/accueil'
+    | '/agenda'
+    | '/analytics'
     | '/audit'
+    | '/catalogue'
     | '/chat'
     | '/comptes-rendus'
     | '/dashboard'
+    | '/donnees'
     | '/facturation'
     | '/forgot-password'
     | '/imagerie'
@@ -235,10 +290,15 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/accueil'
+    | '/agenda'
+    | '/analytics'
     | '/audit'
+    | '/catalogue'
     | '/chat'
     | '/comptes-rendus'
     | '/dashboard'
+    | '/donnees'
     | '/facturation'
     | '/forgot-password'
     | '/imagerie'
@@ -257,10 +317,15 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AccueilRoute: typeof AccueilRoute
+  AgendaRoute: typeof AgendaRoute
+  AnalyticsRoute: typeof AnalyticsRoute
   AuditRoute: typeof AuditRoute
+  CatalogueRoute: typeof CatalogueRoute
   ChatRoute: typeof ChatRoute
   ComptesRendusRoute: typeof ComptesRendusRoute
   DashboardRoute: typeof DashboardRoute
+  DonneesRoute: typeof DonneesRoute
   FacturationRoute: typeof FacturationRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   ImagerieRoute: typeof ImagerieRoute
@@ -286,11 +351,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/accueil': {
+      id: '/accueil'
+      path: '/accueil'
+      fullPath: '/accueil'
+      preLoaderRoute: typeof AccueilRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/agenda': {
+      id: '/agenda'
+      path: '/agenda'
+      fullPath: '/agenda'
+      preLoaderRoute: typeof AgendaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/analytics': {
+      id: '/analytics'
+      path: '/analytics'
+      fullPath: '/analytics'
+      preLoaderRoute: typeof AnalyticsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/audit': {
       id: '/audit'
       path: '/audit'
       fullPath: '/audit'
       preLoaderRoute: typeof AuditRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/catalogue': {
+      id: '/catalogue'
+      path: '/catalogue'
+      fullPath: '/catalogue'
+      preLoaderRoute: typeof CatalogueRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/chat': {
@@ -312,6 +405,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/donnees': {
+      id: '/donnees'
+      path: '/donnees'
+      fullPath: '/donnees'
+      preLoaderRoute: typeof DonneesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/facturation': {
@@ -417,10 +517,15 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AccueilRoute: AccueilRoute,
+  AgendaRoute: AgendaRoute,
+  AnalyticsRoute: AnalyticsRoute,
   AuditRoute: AuditRoute,
+  CatalogueRoute: CatalogueRoute,
   ChatRoute: ChatRoute,
   ComptesRendusRoute: ComptesRendusRoute,
   DashboardRoute: DashboardRoute,
+  DonneesRoute: DonneesRoute,
   FacturationRoute: FacturationRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   ImagerieRoute: ImagerieRoute,

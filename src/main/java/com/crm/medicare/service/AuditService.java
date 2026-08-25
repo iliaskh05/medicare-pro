@@ -33,6 +33,21 @@ public class AuditService {
     public static final String EXAM_CREATE = "EXAM_CREATE";
     public static final String EXAM_UPDATE = "EXAM_UPDATE";
     public static final String EXAM_STATUS_CHANGED = "EXAM_STATUS_CHANGED";
+    public static final String APPOINTMENT_CREATE = "APPOINTMENT_CREATE";
+    public static final String APPOINTMENT_UPDATE = "APPOINTMENT_UPDATE";
+    public static final String APPOINTMENT_CANCEL = "APPOINTMENT_CANCEL";
+    public static final String CHECKIN = "CHECKIN";
+    public static final String WORKLIST_ASSIGN = "WORKLIST_ASSIGN";
+    public static final String REPORT_CREATE = "REPORT_CREATE";
+    public static final String REPORT_UPDATE = "REPORT_UPDATE";
+    public static final String REPORT_VALIDATE = "REPORT_VALIDATE";
+    public static final String REPORT_AMEND = "REPORT_AMEND";
+    public static final String INVOICE_CREATE = "INVOICE_CREATE";
+    public static final String INVOICE_CANCEL = "INVOICE_CANCEL";
+    public static final String INVOICE_REFUND = "INVOICE_REFUND";
+    public static final String PAYMENT_CREATE = "PAYMENT_CREATE";
+    public static final String DOCUMENT_DOWNLOAD = "DOCUMENT_DOWNLOAD";
+    public static final String SETTINGS_UPDATE = "SETTINGS_UPDATE";
     public static final String USER_PERMISSION_CHANGED = "USER_PERMISSION_CHANGED";
 
     private final AuditLogRepository auditLogRepository;

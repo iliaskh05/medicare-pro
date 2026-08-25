@@ -103,8 +103,9 @@ function MedecinsReferentsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Médecins correspondants"
-        subtitle={`Répertoire du Centre d'Imagerie Médicale · ${rows.length} médecin(s) affiché(s) sur ${medecins.length}`}
+        eyebrow="Médecins"
+        title="Correspondants"
+        subtitle={`${rows.length} médecin(s) affiché(s) sur ${medecins.length}`}
         actions={
           <ActionButton
             toastKind="info"

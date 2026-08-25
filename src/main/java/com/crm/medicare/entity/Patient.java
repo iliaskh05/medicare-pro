@@ -56,6 +56,10 @@ public class Patient {
 
     private String mutuelle;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "insurance_plan_id")
+    private InsurancePlan insurancePlan;
+
     @Column(name = "num_affiliation")
     private String numAffiliation;
 

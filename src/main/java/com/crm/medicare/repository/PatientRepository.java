@@ -34,8 +34,8 @@ public interface PatientRepository extends JpaRepository<Patient, Long>, JpaSpec
               AND (
                 :phone IS NOT NULL AND p.telephone = :phone
                 OR (
-                  LOWER(p.nom) = LOWER(:nom)
-                  AND LOWER(p.prenom) = LOWER(:prenom)
+                  LOWER(p.nom) = CAST(:nom AS string)
+                  AND LOWER(p.prenom) = CAST(:prenom AS string)
                   AND p.dateNaissance = :dob
                 )
               )

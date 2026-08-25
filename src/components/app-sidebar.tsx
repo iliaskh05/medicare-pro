@@ -1,17 +1,24 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
+  CalendarDays,
   ClipboardList,
-  Users,
-  ReceiptText,
-  Printer,
-  Mic,
-  ShieldAlert,
-  ScanLine,
-  MessagesSquare,
-  MessageCircle,
+  Clock,
   Contact,
-  Settings,
+  Database,
+  FileText,
+  FolderOpen,
   LayoutDashboard,
+  MessageCircle,
+  MessagesSquare,
+  ReceiptText,
+  ScanLine,
+  Settings,
+  ShieldAlert,
+  Stethoscope,
+  UserRound,
+  Users,
+  Wallet,
+  BarChart3,
 } from "lucide-react";
 
 import {
@@ -39,30 +46,60 @@ type NavItem = {
 
 const navGroups: { label: string; items: NavItem[] }[] = [
   {
-    label: "Opérationnel",
+    label: "Accueil",
+    items: [{ title: "Tableau de bord", url: "/dashboard", icon: LayoutDashboard }],
+  },
+  {
+    label: "Patients",
+    items: [{ title: "Dossiers patients", url: "/patients", icon: Users }],
+  },
+  {
+    label: "Activité",
     items: [
-      { title: "Worklist", url: "/worklist", icon: ClipboardList },
-      { title: "Dossiers patients", url: "/patients", icon: Users },
-      { title: "Numérisation & étiquettes", url: "/numerisation", icon: Printer },
-      { title: "Tableau de bord", url: "/dashboard", icon: LayoutDashboard },
+      { title: "Accueil / Admissions", url: "/accueil", icon: UserRound },
+      { title: "Rendez-vous", url: "/agenda", icon: CalendarDays },
+      { title: "File d'attente", url: "/file-attente", icon: Clock },
+      { title: "Examens", url: "/worklist", icon: ClipboardList },
+      { title: "Comptes rendus", url: "/comptes-rendus", icon: FileText },
+      { title: "Imagerie", url: "/viewer", icon: ScanLine },
     ],
   },
   {
-    label: "Médical & administratif",
+    label: "Catalogue",
+    items: [{ title: "Examens & tarifs", url: "/catalogue", icon: Stethoscope }],
+  },
+  {
+    label: "Médecins",
     items: [
-      { title: "Comptes rendus", url: "/comptes-rendus", icon: Mic },
-      { title: "Visionneuse IA", url: "/viewer", icon: ScanLine },
-      { title: "Caisse & facturation", url: "/facturation", icon: ReceiptText, finance: true },
       { title: "Correspondants", url: "/medecins-referents", icon: Contact },
-      { title: "Chat médecins", url: "/chat", icon: MessagesSquare },
+      { title: "Réseau", url: "/medecins", icon: Stethoscope },
+    ],
+  },
+  {
+    label: "Gestion",
+    items: [
+      { title: "Facturation", url: "/facturation", icon: ReceiptText, finance: true },
+      { title: "Restes à payer", url: "/impayes", icon: Wallet, finance: true },
+      { title: "Dossiers à remettre", url: "/dossiers", icon: FolderOpen },
+    ],
+  },
+  {
+    label: "Communication",
+    items: [
+      { title: "Messagerie interne", url: "/chat", icon: MessagesSquare },
       { title: "WhatsApp patients", url: "/whatsapp", icon: MessageCircle },
     ],
   },
   {
-    label: "Direction",
+    label: "Analytics",
+    items: [{ title: "Activité", url: "/analytics", icon: BarChart3 }],
+  },
+  {
+    label: "Administration",
     items: [
-      { title: "Audit & fraude", url: "/audit", icon: ShieldAlert, fraude: true },
-      { title: "Configuration", url: "/parametres", icon: Settings },
+      { title: "Données & import", url: "/donnees", icon: Database },
+      { title: "Audit", url: "/audit", icon: ShieldAlert, fraude: true },
+      { title: "Paramètres", url: "/parametres", icon: Settings },
     ],
   },
 ];
@@ -79,54 +116,37 @@ export function AppSidebar() {
     }))
     .filter((group) => group.items.length > 0);
 
+  const isActive = (url: string) =>
+    currentPath === url || (url !== "/dashboard" && currentPath.startsWith(`${url}/`)) ||
+    (url === "/patients" && currentPath.startsWith("/patient/"));
 
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="icon" className="border-r border-sidebar-border">
       <SidebarHeader className="border-b border-sidebar-border">
-        <div className="flex items-center gap-3 px-1 py-2">
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-foreground/10 ring-1 ring-inset ring-primary-foreground/15">
-            <img
-              src={logoRadioCrm}
-              alt="Logo RadioCRM"
-              width={512}
-              height={512}
-              className="size-6"
-            />
+        <div className="flex items-center gap-2.5 px-1 py-2">
+          <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary-soft">
+            <img src={logoRadioCrm} alt="Logo RadioCRM" width={512} height={512} className="size-5" />
           </div>
           <div className="min-w-0 group-data-[collapsible=icon]:hidden">
-            <p className="truncate text-sm font-bold tracking-tight">RadioCRM</p>
-            <p className="truncate text-xs text-muted-foreground">
-              Centre d&apos;Imagerie Médicale
-            </p>
+            <p className="truncate text-[13px] font-semibold tracking-tight">RadioCRM</p>
+            <p className="truncate text-[11px] text-muted-foreground">Centre d&apos;imagerie</p>
           </div>
         </div>
       </SidebarHeader>
 
       <SidebarContent>
         {visibleGroups.map((group) => (
-          <SidebarGroup key={group.label}>
-            <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+          <SidebarGroup key={group.label} className="py-1">
+            <SidebarGroupLabel className="px-2 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+              {group.label}
+            </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {group.items.map((item) => (
                   <SidebarMenuItem key={item.url}>
-                    <SidebarMenuButton
-                      asChild
-                      tooltip={item.title}
-                      isActive={currentPath === item.url}
-                    >
-                      <Link
-                        to={item.url}
-                        preload="intent"
-                        className="flex items-center gap-2 font-medium"
-                      >
-                        <item.icon
-                          className={
-                            currentPath === item.url
-                              ? "size-4 text-[oklch(0.78_0.13_235)]"
-                              : "size-4 opacity-80"
-                          }
-                        />
+                    <SidebarMenuButton asChild tooltip={item.title} isActive={isActive(item.url)}>
+                      <Link to={item.url} preload="intent" className="text-[13px]">
+                        <item.icon className="size-4" />
                         <span>{item.title}</span>
                       </Link>
                     </SidebarMenuButton>
@@ -138,13 +158,10 @@ export function AppSidebar() {
         ))}
       </SidebarContent>
 
-
       <SidebarFooter className="border-t border-sidebar-border">
-        <div className="rounded-lg bg-sidebar-accent px-3 py-2 group-data-[collapsible=icon]:hidden">
-          <p className="text-xs font-semibold text-sidebar-accent-foreground">
-            Centre d&apos;Imagerie Médicale
-          </p>
-          <p className="mt-0.5 text-xs text-sidebar-foreground/60">Casablanca</p>
+        <div className="px-2 py-2 group-data-[collapsible=icon]:hidden">
+          <p className="text-xs font-medium text-foreground">Centre Bentachfine</p>
+          <p className="mt-0.5 text-[11px] text-muted-foreground">Témara</p>
         </div>
       </SidebarFooter>
     </Sidebar>

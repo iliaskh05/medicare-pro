@@ -17,6 +17,8 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppHeader } from "@/components/app-header";
+import { CommandPalette } from "@/components/command-palette";
+import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { Toaster } from "@/components/ui/sonner";
 import { MessagerieDock } from "@/components/messagerie-dock";
 import { PlatformAssistant } from "@/components/assistant/platform-assistant";
@@ -100,7 +102,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   beforeLoad: ({ location }) => {
     /**
      * Garde synchrone (client uniquement) :
-     * - Token présent + route login → /worklist
+     * - Token présent + route login → /dashboard
      * - Token présent + route protégée → JAMAIS de redirect vers login
      * - Pas de token + route protégée → /
      */
@@ -112,7 +114,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
     if (isPublicAuthPath(path)) {
       if (hasToken && (path === "/" || path === "/login")) {
-        throw redirect({ to: "/worklist" });
+        throw redirect({ to: "/dashboard" });
       }
       return;
     }
@@ -220,18 +222,19 @@ function AppShell() {
               <AppSidebar />
               <div className="flex min-w-0 flex-1 flex-col">
                 <AppHeader />
-                <main className="flex-1 px-3 py-5 sm:px-6 sm:py-7">
+                <main className="flex-1 px-4 py-5 pb-20 sm:px-6 sm:py-6 md:px-8 md:pb-8">
                   <Outlet />
                 </main>
-                <footer className="border-t border-border px-3 py-4 sm:px-6">
-                  <p className="flex items-start gap-2 text-xs text-muted-foreground">
-                    <ShieldCheck className="mt-0.5 size-4 shrink-0 text-success" />
-                    Hébergement sécurisé HDS - Conforme aux directives de la CNDP (Loi 09-08) sur la
-                    protection des données.
+                <footer className="hidden border-t border-border px-3 py-3 sm:px-6 md:block">
+                  <p className="flex items-start gap-2 text-[11px] text-muted-foreground">
+                    <ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-success" />
+                    Hébergement sécurisé HDS — conforme CNDP (Loi 09-08).
                   </p>
                 </footer>
               </div>
             </div>
+            <MobileBottomNav />
+            <CommandPalette />
           </SidebarProvider>
           <MessagerieDock />
           <PlatformAssistant />

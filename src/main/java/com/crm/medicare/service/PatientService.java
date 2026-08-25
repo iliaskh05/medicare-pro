@@ -2,15 +2,23 @@ package com.crm.medicare.service;
 
 import com.crm.medicare.common.ApiException;
 import com.crm.medicare.common.PageResponse;
+import com.crm.medicare.dto.AppointmentDto;
 import com.crm.medicare.dto.Patient360Dtos;
 import com.crm.medicare.dto.PatientDuplicateMatch;
 import com.crm.medicare.dto.PatientResponse;
 import com.crm.medicare.dto.PatientWriteRequest;
+import com.crm.medicare.dto.ReportDto;
+import com.crm.medicare.entity.Appointment;
 import com.crm.medicare.entity.Examen;
+import com.crm.medicare.entity.Invoice;
 import com.crm.medicare.entity.Paiement;
 import com.crm.medicare.entity.Patient;
+import com.crm.medicare.entity.Report;
+import com.crm.medicare.repository.AppointmentRepository;
 import com.crm.medicare.repository.ExamenRepository;
+import com.crm.medicare.repository.InvoiceRepository;
 import com.crm.medicare.repository.PatientRepository;
+import com.crm.medicare.repository.ReportRepository;
 import com.crm.medicare.security.SecurityUtils;
 import jakarta.persistence.criteria.Predicate;
 import java.math.BigDecimal;
@@ -21,6 +29,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -42,6 +51,9 @@ public class PatientService {
 
     private final PatientRepository patientRepository;
     private final ExamenRepository examenRepository;
+    private final AppointmentRepository appointmentRepository;
+    private final ReportRepository reportRepository;
+    private final InvoiceRepository invoiceRepository;
     private final AuditService auditService;
 
     @Transactional(readOnly = true)
@@ -111,7 +123,12 @@ public class PatientService {
         }
         List<Patient> candidates =
                 new ArrayList<>(
-                        patientRepository.findPotentialDuplicates(phone, nomVal, prenom, dob, null));
+                        patientRepository.findPotentialDuplicates(
+                                phone,
+                                nomVal != null ? nomVal.toLowerCase(Locale.ROOT) : null,
+                                prenom != null ? prenom.toLowerCase(Locale.ROOT) : null,
+                                dob,
+                                null));
         if (notBlank(cin)) {
             patientRepository
                     .findByCinIgnoreCaseAndDeletedAtIsNull(cin.trim())
@@ -291,6 +308,7 @@ public class PatientService {
                 .map(
                         e -> {
                             BigDecimal total = e.getMontant() != null ? e.getMontant() : BigDecimal.ZERO;
+                            BigDecimal acompte = e.getAcompte() != null ? e.getAcompte() : BigDecimal.ZERO;
                             return Patient360Dtos.BillingItem.builder()
                                     .id(e.getNumSejour())
                                     .acte(
@@ -300,6 +318,8 @@ public class PatientService {
                                     .date(formatDate(e.getDateExamen()))
                                     .total(total)
                                     .mutuelle(BigDecimal.ZERO)
+                                    .acompte(acompte)
+                                    .reste(total.subtract(acompte).max(BigDecimal.ZERO))
                                     .statut(e.getPaiement() != null ? e.getPaiement().name() : Paiement.impaye.name())
                                     .tone(
                                             e.getPaiement() == Paiement.paye
@@ -320,8 +340,7 @@ public class PatientService {
                         .reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal paid =
                 exams.stream()
-                        .filter(e -> e.getPaiement() == Paiement.paye)
-                        .map(e -> e.getMontant() != null ? e.getMontant() : BigDecimal.ZERO)
+                        .map(e -> e.getAcompte() != null ? e.getAcompte() : BigDecimal.ZERO)
                         .reduce(BigDecimal.ZERO, BigDecimal::add);
         String lastExam =
                 exams.isEmpty()
@@ -329,12 +348,213 @@ public class PatientService {
                         : exams.get(0).getDescription() != null
                                 ? exams.get(0).getDescription()
                                 : exams.get(0).getNumSejour();
+        BigDecimal reste = total.subtract(paid).max(BigDecimal.ZERO);
         return Patient360Dtos.FinancialStatus.builder()
                 .examen(lastExam)
                 .total(total)
                 .acompte(paid)
-                .statutImpression(paid.compareTo(total) >= 0 && total.signum() > 0 ? "soldé" : "ouvert")
-                .reste(total.subtract(paid).max(BigDecimal.ZERO))
+                .statutImpression(reste.signum() == 0 && total.signum() > 0 ? "soldé" : "ouvert")
+                .reste(reste)
+                .build();
+    }
+
+    /** Agrégat réel examens / RDV / CR / factures — listes vides si aucune donnée. */
+    @Transactional(readOnly = true)
+    public List<Patient360Dtos.TimelineEvent> timeline(Long patientId) {
+        requirePatient(patientId);
+        List<Patient360Dtos.TimelineEvent> events = new ArrayList<>();
+
+        for (Examen e : examenRepository.findByPatientIdOrderByDateExamenDesc(patientId)) {
+            events.add(
+                    Patient360Dtos.TimelineEvent.builder()
+                            .id("exam-" + e.getId())
+                            .source("examen")
+                            .type(e.getWorkflowStatus() != null ? e.getWorkflowStatus().name() : "EXAMEN")
+                            .title(
+                                    e.getDescription() != null
+                                            ? e.getDescription()
+                                            : e.getModalite() != null ? e.getModalite().name() : "Examen")
+                            .detail(e.getNumSejour())
+                            .at(formatDate(e.getDateExamen()))
+                            .actor(e.getMedecin())
+                            .action("Examen créé / planifié")
+                            .build());
+            if (e.getStatusHistory() != null) {
+                for (var h : e.getStatusHistory()) {
+                    events.add(
+                            Patient360Dtos.TimelineEvent.builder()
+                                    .id("exam-hist-" + e.getId() + "-" + h.getId())
+                                    .source("examen")
+                                    .type(h.getToStatus())
+                                    .title("Statut examen → " + h.getToStatus())
+                                    .detail(e.getNumSejour())
+                                    .at(formatDate(h.getCreatedAt()))
+                                    .actor(h.getActorName())
+                                    .action(
+                                            (h.getFromStatus() != null ? h.getFromStatus() : "?")
+                                                    + " → "
+                                                    + h.getToStatus())
+                                    .build());
+                }
+            }
+        }
+
+        Page<Appointment> appts =
+                appointmentRepository.findByPatientIdOrderByStartsAtDesc(
+                        patientId, PageRequest.of(0, 200));
+        for (Appointment a : appts.getContent()) {
+            events.add(
+                    Patient360Dtos.TimelineEvent.builder()
+                            .id("appt-" + a.getId())
+                            .source("appointment")
+                            .type(a.getStatut() != null ? a.getStatut().name() : "RDV")
+                            .title(
+                                    a.getCatalogue() != null
+                                            ? a.getCatalogue().getNom()
+                                            : a.getModalite() != null ? a.getModalite().name() : "Rendez-vous")
+                            .detail(a.getMotif())
+                            .at(formatDate(a.getStartsAt()))
+                            .actor(a.getPrescripteur() != null ? a.getPrescripteur().getNom() : null)
+                            .action("Rendez-vous " + (a.getStatut() != null ? a.getStatut().name() : ""))
+                            .build());
+        }
+
+        for (Report r : reportRepository.findAllFiltered(patientId, null)) {
+            events.add(
+                    Patient360Dtos.TimelineEvent.builder()
+                            .id("report-" + r.getId())
+                            .source("report")
+                            .type(r.getStatus() != null ? r.getStatus().name() : "REPORT")
+                            .title("Compte-rendu")
+                            .detail(r.getAuthorName())
+                            .at(formatDate(r.getCreatedAt()))
+                            .actor(r.getAuthorName())
+                            .action(
+                                    r.getStatus() != null && "VALIDATED".equals(r.getStatus().name())
+                                            ? "Compte-rendu validé"
+                                            : "Compte-rendu enregistré")
+                            .build());
+        }
+
+        for (Invoice inv : invoiceRepository.findByPatientId(patientId)) {
+            events.add(
+                    Patient360Dtos.TimelineEvent.builder()
+                            .id("invoice-" + inv.getId())
+                            .source("invoice")
+                            .type(inv.getStatut() != null ? inv.getStatut().name() : "INVOICE")
+                            .title(inv.getReference())
+                            .detail(
+                                    inv.getTotal() != null
+                                            ? inv.getTotal().toPlainString() + " MAD"
+                                            : null)
+                            .at(formatDate(inv.getCreatedAt()))
+                            .actor(inv.getCreatedByName())
+                            .action("Facture " + (inv.getStatut() != null ? inv.getStatut().name() : ""))
+                            .build());
+            if (inv.getPayments() != null) {
+                for (var pay : inv.getPayments()) {
+                    events.add(
+                            Patient360Dtos.TimelineEvent.builder()
+                                    .id("pay-" + pay.getId())
+                                    .source("payment")
+                                    .type("PAYMENT")
+                                    .title("Paiement " + (pay.getMontant() != null ? pay.getMontant() + " MAD" : ""))
+                                    .detail(pay.getMode())
+                                    .at(formatDate(pay.getCreatedAt()))
+                                    .actor(pay.getCreatedByName())
+                                    .action("Paiement enregistré")
+                                    .build());
+                }
+            }
+        }
+
+        events.sort(
+                Comparator.comparing(
+                                Patient360Dtos.TimelineEvent::getAt,
+                                Comparator.nullsLast(Comparator.naturalOrder()))
+                        .reversed());
+        return events;
+    }
+
+    @Transactional(readOnly = true)
+    public List<AppointmentDto> appointments(Long patientId) {
+        requirePatient(patientId);
+        return appointmentRepository
+                .findByPatientIdOrderByStartsAtDesc(patientId, PageRequest.of(0, 200))
+                .getContent()
+                .stream()
+                .map(this::toAppointmentDto)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ReportDto> reports(Long patientId) {
+        requirePatient(patientId);
+        return reportRepository.findAllFiltered(patientId, null).stream()
+                .map(this::toReportDto)
+                .toList();
+    }
+
+    private AppointmentDto toAppointmentDto(Appointment a) {
+        return AppointmentDto.builder()
+                .id(String.valueOf(a.getId()))
+                .patientId(
+                        a.getPatient() != null ? String.valueOf(a.getPatient().getId()) : null)
+                .patient(a.getPatient() != null ? a.getPatient().getNomComplet() : null)
+                .catalogueId(
+                        a.getCatalogue() != null ? String.valueOf(a.getCatalogue().getId()) : null)
+                .examenLibelle(a.getCatalogue() != null ? a.getCatalogue().getNom() : null)
+                .resourceId(
+                        a.getResource() != null ? String.valueOf(a.getResource().getId()) : null)
+                .resourceCode(a.getResource() != null ? a.getResource().getCode() : null)
+                .resourceLibelle(a.getResource() != null ? a.getResource().getLibelle() : null)
+                .salle(a.getResource() != null ? a.getResource().getLibelle() : null)
+                .modalite(a.getModalite() != null ? a.getModalite().name() : null)
+                .prescripteurId(
+                        a.getPrescripteur() != null
+                                ? String.valueOf(a.getPrescripteur().getId())
+                                : null)
+                .prescripteur(a.getPrescripteur() != null ? a.getPrescripteur().getNom() : null)
+                .examenId(a.getExamen() != null ? String.valueOf(a.getExamen().getId()) : null)
+                .statut(a.getStatut() != null ? a.getStatut().name() : null)
+                .priorite(a.getPriorite())
+                .dureeMinutes(a.getDureeMinutes())
+                .motif(a.getMotif())
+                .notes(a.getNotes())
+                .startsAt(a.getStartsAt())
+                .endsAt(a.getEndsAt())
+                .build();
+    }
+
+    private ReportDto toReportDto(Report r) {
+        Examen e = r.getExamen();
+        return ReportDto.builder()
+                .id(String.valueOf(r.getId()))
+                .examenId(e != null ? String.valueOf(e.getId()) : null)
+                .patientId(
+                        e != null && e.getPatient() != null
+                                ? String.valueOf(e.getPatient().getId())
+                                : null)
+                .patientName(
+                        e != null && e.getPatient() != null ? e.getPatient().getNomComplet() : null)
+                .examLabel(
+                        e != null
+                                ? (e.getDescription() != null
+                                        ? e.getDescription()
+                                        : e.getModalite() != null ? e.getModalite().name() : null)
+                                : null)
+                .status(r.getStatus() != null ? r.getStatus().name().toLowerCase(Locale.ROOT) : null)
+                .radiologist(r.getAuthorName())
+                .authorName(r.getAuthorName())
+                .currentVersion(r.getCurrentVersion())
+                .indication(e != null ? e.getIndication() : null)
+                .technique(e != null ? e.getTechnique() : null)
+                .resultats(e != null ? e.getResultats() : null)
+                .conclusion(e != null ? e.getConclusion() : null)
+                .body(e != null ? e.getCompteRendu() : null)
+                .texte(e != null ? e.getCompteRendu() : null)
+                .createdAt(r.getCreatedAt())
+                .validatedAt(r.getValidatedAt())
                 .build();
     }
 
@@ -418,7 +638,14 @@ public class PatientService {
         if (phone == null && nomKey == null) {
             return List.of();
         }
-        return patientRepository.findPotentialDuplicates(phone, nomKey, prenomKey, dob, excludeId).stream()
+        return patientRepository
+                .findPotentialDuplicates(
+                        phone,
+                        nomKey != null ? nomKey.toLowerCase(Locale.ROOT) : null,
+                        prenomKey != null ? prenomKey.toLowerCase(Locale.ROOT) : null,
+                        dob,
+                        excludeId)
+                .stream()
                 .map(
                         p ->
                                 new PatientResponse.DuplicateWarning(
@@ -488,8 +715,12 @@ public class PatientService {
                         cb.or(
                                 cb.like(cb.lower(root.get("nomComplet")), like),
                                 cb.like(cb.lower(root.get("cin")), like),
-                                cb.like(cb.lower(cb.coalesce(root.get("telephone"), "")), like),
-                                cb.like(cb.lower(cb.coalesce(root.get("numeroDossier"), "")), like)));
+                                cb.and(
+                                        cb.isNotNull(root.get("telephone")),
+                                        cb.like(cb.lower(root.get("telephone")), like)),
+                                cb.and(
+                                        cb.isNotNull(root.get("numeroDossier")),
+                                        cb.like(cb.lower(root.get("numeroDossier")), like))));
             }
             return cb.and(predicates.toArray(Predicate[]::new));
         };

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Building2, Lock, Mail, ShieldCheck, Sparkles, User } from "lucide-react";
 import { AUTH_TOKEN_KEY, AUTH_USER_KEY, persistAuthToken } from "@/lib/auth-session";
 import { useAuth } from "@/hooks/use-auth";
+import { JAVA_API_BASE } from "@/lib/api/config";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,11 +54,11 @@ function LoginPage() {
   const navigate = useNavigate();
   const { setToken } = useAuth();
 
-  /* Déjà connecté → worklist (évite le rebond login). */
+  /* Déjà connecté → cockpit (évite le rebond login). */
   useEffect(() => {
     const existing = window.localStorage.getItem(AUTH_TOKEN_KEY);
     if (existing?.trim()) {
-      void navigate({ to: "/worklist" });
+      void navigate({ to: "/dashboard" });
     }
   }, [navigate]);
 
@@ -75,6 +76,7 @@ function LoginPage() {
   const [registerPassword, setRegisterPassword] = useState("");
   const [registerConfirmPassword, setRegisterConfirmPassword] = useState("");
   const [registerLoading, setRegisterLoading] = useState(false);
+  const [registerError, setRegisterError] = useState<string | null>(null);
 
   const passwordsMatch = useMemo(
     () => registerPassword === registerConfirmPassword,
@@ -98,7 +100,7 @@ function LoginPage() {
     setLoginLoading(true);
     setLoginError(null);
     try {
-      const response = await fetch("http://localhost:8080/api/auth/login", {
+      const response = await fetch(`${JAVA_API_BASE}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -144,12 +146,11 @@ function LoginPage() {
         throw new Error("Impossible d'enregistrer la session locale");
       }
 
-      void navigate({ to: "/worklist" });
+      void navigate({ to: "/dashboard" });
     } catch (error: unknown) {
       const message =
         error instanceof Error ? error.message : "Impossible de se connecter";
       setLoginError(message);
-      alert(message);
     } finally {
       setLoginLoading(false);
     }
@@ -160,8 +161,9 @@ function LoginPage() {
     if (!canSubmitRegister) return;
 
     setRegisterLoading(true);
+    setRegisterError(null);
     try {
-      const response = await fetch("http://localhost:8080/api/auth/register", {
+      const response = await fetch(`${JAVA_API_BASE}/api/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -201,9 +203,9 @@ function LoginPage() {
         );
       }
 
-      void navigate({ to: "/worklist" });
+      void navigate({ to: "/dashboard" });
     } catch (error: unknown) {
-      alert(error instanceof Error ? error.message : "Impossible de créer le compte");
+      setRegisterError(error instanceof Error ? error.message : "Impossible de créer le compte");
     } finally {
       setRegisterLoading(false);
     }
@@ -218,18 +220,7 @@ function LoginPage() {
         style={{ backgroundImage: `url(${loginBgAsset.url})` }}
       />
 
-      {/* Overlay bleu nuit */}
       <div aria-hidden className="login-overlay absolute inset-0 z-0" />
-
-      {/* Halo décoratif subtil */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -right-40 -top-40 z-0 size-[36rem] rounded-full bg-primary/20 blur-[120px]"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -bottom-40 -left-40 z-0 size-[32rem] rounded-full bg-primary/15 blur-[100px]"
-      />
 
       {/* En-tête marque */}
       <div className="relative z-10 mb-8 flex flex-col items-center gap-4">
@@ -454,6 +445,7 @@ function LoginPage() {
               >
                 {registerLoading ? "Création en cours..." : "Créer mon compte"}
               </Button>
+              {registerError ? <p className="login-error text-center text-xs">{registerError}</p> : null}
             </form>
           </TabsContent>
 

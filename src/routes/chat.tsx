@@ -44,8 +44,9 @@ function ChatPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        eyebrow="Communication"
         title="Messagerie interne"
-        subtitle="Canaux du centre d'imagerie médicale — coordination accueil, techniciens et médecins"
+        subtitle="Coordination accueil, manipulateurs et radiologues"
         actions={
           <Pill tone={status === "open" ? "success" : "neutral"}>
             <Radio className="size-3.5" />

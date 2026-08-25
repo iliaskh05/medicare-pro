@@ -51,10 +51,10 @@ export function DocumentMenu({
 }) {
   const [loading, setLoading] = useState<string | null>(null);
 
-  const generer = (modele: string) => {
+  const generer = async (modele: string) => {
     if (loading) return;
     setLoading(modele);
-    {
+    try {
       const reste = context.total - context.acompte;
       const lignes = [
         { label: "Patient", valeur: context.patient },
@@ -64,23 +64,24 @@ export function DocumentMenu({
         { label: "Acompte encaissé", valeur: mad(context.acompte) },
         { label: "Reste à payer", valeur: mad(reste) },
       ];
-      telechargerDossierPdf({
+      await telechargerDossierPdf({
         titre: modele,
         reference: `${context.reference}-${modele.slice(0, 3).toUpperCase()}`,
         lignes,
         blocs: [
           {
             titre: "Objet",
-            contenu: `${modele} émis(e) par le Centre d'Imagerie Médicale pour l'examen « ${context.examen} ».`,
+            contenu: `${modele} émis(e) pour l'examen « ${context.examen} ».`,
           },
         ],
         mention:
           "Hébergement sécurisé HDS — Conforme aux directives de la CNDP (Loi 09-08) sur la protection des données.",
       });
-      setLoading(null);
       toast.success(`${modele} générée`, {
         description: `${context.patient} · ${context.reference} — PDF prêt au téléchargement.`,
       });
+    } finally {
+      setLoading(null);
     }
   };
 
@@ -100,7 +101,7 @@ export function DocumentMenu({
         <DropdownMenuLabel>Modèles disponibles</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {modeles.map((m) => (
-          <DropdownMenuItem key={m} onClick={() => generer(m)} className="py-2">
+          <DropdownMenuItem key={m} onClick={() => void generer(m)} className="py-2">
             {m}
           </DropdownMenuItem>
         ))}

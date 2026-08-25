@@ -1,9 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Search, UserPlus, FileText, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { Search, UserPlus, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,11 +33,15 @@ import {
 import { PageHeader, Pill } from "@/components/ui-kit";
 import { DataState, LastUpdated } from "@/components/data-state";
 import { useApiResource } from "@/hooks/use-api-resource";
+import { useDisplayPreference } from "@/hooks/use-display-preference";
 import { useRole } from "@/hooks/use-role";
 import { toastMessage } from "@/lib/api/errors";
 import { createPatient, fetchPatients, type PatientRow } from "@/lib/api/patients";
 
 export const Route = createFileRoute("/patients")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    nouveau: search.nouveau === "1" || search.nouveau === true,
+  }),
   head: () => ({
     meta: [
       { title: "Gestion des patients — RadioCRM" },
@@ -58,10 +61,10 @@ export const Route = createFileRoute("/patients")({
   component: PatientsPage,
 });
 
-const mutuelleTones: Record<string, "primary" | "success" | "warning" | "neutral"> = {
+const mutuelleTones: Record<string, "primary" | "neutral"> = {
   AMO: "primary",
-  CNSS: "success",
-  CNOPS: "warning",
+  CNSS: "neutral",
+  CNOPS: "neutral",
   Privée: "neutral",
 };
 
@@ -84,7 +87,9 @@ function ageFromBirthDate(value: string): number {
 }
 
 function PatientsPage() {
+  const { nouveau } = Route.useSearch();
   const { canCreate } = useRole();
+  const { setMode, isCardsView } = useDisplayPreference("patients", "table");
   const patientsResource = useApiResource<PatientRow[]>((signal) => fetchPatients(signal));
   const patients = patientsResource.data ?? [];
 
@@ -94,6 +99,10 @@ function PatientsPage() {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(emptyDraft);
   const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (nouveau && canCreate("patients")) setOpen(true);
+  }, [nouveau, canCreate]);
 
   const canSubmit = draft.nomComplet.trim() !== "" && draft.cin.trim() !== "";
 
@@ -141,16 +150,32 @@ function PatientsPage() {
       : patientsResource.status;
 
   return (
-    <div className="space-y-6">
+    <div className="page-shell">
       <PageHeader
-        title="Gestion des patients"
+        eyebrow="Patients"
+        title="Dossiers patients"
         subtitle={
           patientsResource.isLoading
             ? "Chargement des dossiers…"
-            : `${patients.length} dossier(s) — Centre d'Imagerie Médicale`
+            : `${patients.length} dossier(s) enregistré(s)`
         }
         actions={
-          canCreate("patients") ? (
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant={!isCardsView ? "default" : "outline"}
+              size="sm"
+              onClick={() => setMode("table")}
+            >
+              Tableau
+            </Button>
+            <Button
+              variant={isCardsView ? "default" : "outline"}
+              size="sm"
+              onClick={() => setMode("cards")}
+            >
+              Cartes
+            </Button>
+            {canCreate("patients") ? (
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger asChild>
                 <Button>
@@ -228,12 +253,13 @@ function PatientsPage() {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
-          ) : null
+            ) : null}
+          </div>
         }
       />
 
-      <Card>
-        <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
+      <div className="app-surface overflow-hidden">
+        <div className="flex flex-col gap-3 border-b border-border px-4 py-3 sm:flex-row sm:items-center">
           <div className="relative flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -266,11 +292,9 @@ function PatientsPage() {
               ))}
             </SelectContent>
           </Select>
-        </CardContent>
-      </Card>
+        </div>
 
-      <Card data-tour="patients-table">
-        <CardContent className="px-0 py-0" aria-busy={patientsResource.isLoading}>
+        <div data-tour="patients-table" aria-busy={patientsResource.isLoading}>
           <DataState
             status={viewStatus}
             error={patientsResource.error}
@@ -283,24 +307,57 @@ function PatientsPage() {
                 : "Aucun dossier ne correspond à cette recherche ou à ce filtre mutuelle."
             }
           >
+            {isCardsView ? (
+              <div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3">
+                {rows.map((p) => (
+                  <Link
+                    key={p.id}
+                    to="/patient/$patientId"
+                    params={{ patientId: p.id }}
+                    className="app-surface block p-4 transition-colors hover:bg-muted/30"
+                  >
+                    <p className="font-semibold">{p.nomComplet}</p>
+                    <p className="mt-1 font-mono text-xs text-muted-foreground">
+                      {p.numeroDossier ?? p.id} · {p.cin}
+                    </p>
+                    <div className="mt-2 flex items-center justify-between gap-2">
+                      <span className="text-sm text-muted-foreground">{p.age} ans</span>
+                      <Pill tone={mutuelleTones[p.mutuelle] ?? "neutral"}>{p.mutuelle}</Pill>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="pl-6">Nom complet</TableHead>
+                    <TableHead className="pl-6">Patient</TableHead>
+                    <TableHead>N° dossier</TableHead>
                     <TableHead>CIN</TableHead>
                     <TableHead>Âge</TableHead>
                     <TableHead className="hidden md:table-cell">Téléphone</TableHead>
                     <TableHead>Mutuelle</TableHead>
-                    <TableHead className="pr-6 text-right">Action</TableHead>
+                    <TableHead className="pr-6 text-right"> </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {rows.map((p) => (
-                    <TableRow key={p.id}>
+                    <TableRow key={p.id} className="cursor-pointer">
                       <TableCell className="pl-6">
-                        <p className="font-medium">{p.nomComplet}</p>
-                        <p className="text-xs text-muted-foreground">{p.id}</p>
+                        <Link
+                          to="/patient/$patientId"
+                          params={{ patientId: p.id }}
+                          className="block"
+                        >
+                          <p className="font-medium text-foreground">{p.nomComplet}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {p.medecinTraitant || p.ville || "—"}
+                          </p>
+                        </Link>
+                      </TableCell>
+                      <TableCell className="font-mono text-xs">
+                        {p.numeroDossier ?? p.id}
                       </TableCell>
                       <TableCell className="font-mono text-xs">{p.cin}</TableCell>
                       <TableCell className="text-sm">{p.age} ans</TableCell>
@@ -309,9 +366,9 @@ function PatientsPage() {
                         <Pill tone={mutuelleTones[p.mutuelle] ?? "neutral"}>{p.mutuelle}</Pill>
                       </TableCell>
                       <TableCell className="pr-6 text-right">
-                        <Button variant="outline" size="sm" asChild>
+                        <Button variant="ghost" size="sm" asChild>
                           <Link to="/patient/$patientId" params={{ patientId: p.id }}>
-                            <FileText className="mr-1.5 size-4" /> Voir dossier
+                            Ouvrir
                           </Link>
                         </Button>
                       </TableCell>
@@ -320,6 +377,7 @@ function PatientsPage() {
                 </TableBody>
               </Table>
             </div>
+            )}
 
             <div className="flex flex-col items-center justify-between gap-3 border-t border-border px-6 py-4 sm:flex-row">
               <div className="space-y-1 text-center sm:text-left">
@@ -348,8 +406,8 @@ function PatientsPage() {
               </div>
             </div>
           </DataState>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

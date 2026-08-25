@@ -14,10 +14,18 @@ dist-ssr
 .vinxi
 .tanstack/**
 .nitro
+target/
 *.local
 .env
 .env.*
 !.env.example
+
+# Local recovery scratch (do not commit)
+.recover/
+.recover-*.cjs
+.recover-*.js
+.tmp-*.cjs
+.tmp-*.js
 
 # Wrangler / Cloudflare
 .wrangler/
@@ -28,6 +36,9 @@ services/ml/.venv/
 __pycache__/
 *.pyc
 .pytest_cache/
+
+# Uploads locaux (documents / imagerie)
+data/uploads/
 
 # Editor directories and files
 .vscode/*

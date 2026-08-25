@@ -160,6 +160,72 @@ export const javaApi = <T>(path: string, options?: RequestOptions) =>
 export const mlApi = <T>(path: string, options?: RequestOptions) =>
   httpRequest<T>(ML_API_BASE, path, options);
 
+const UPLOAD_TIMEOUT_MS = 120_000;
+
+/** POST multipart authentifié (ne pas forcer Content-Type : le navigateur pose la boundary). */
+export async function javaApiForm<T>(
+  path: string,
+  form: FormData,
+  { signal, method = "POST" }: { signal?: AbortSignal; method?: "POST" | "PUT" } = {},
+): Promise<T> {
+  if (!JAVA_API_BASE) {
+    throw new ApiError("URL du service indisponible.", 0, "backend_not_configured");
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), UPLOAD_TIMEOUT_MS);
+  const onParentAbort = () => controller.abort();
+  signal?.addEventListener("abort", onParentAbort);
+
+  const token = readAuthToken();
+  const url = `${JAVA_API_BASE}${path}`;
+
+  try {
+    const res = await fetch(url, {
+      method,
+      signal: controller.signal,
+      headers: {
+        Accept: "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: form,
+    });
+
+    if (signal?.aborted || controller.signal.aborted) {
+      throw new ApiError("Requête annulée", 0, "aborted");
+    }
+
+    if (res.status === 401 || res.status === 403) {
+      const payload = await parseErrorPayload(
+        res,
+        res.status === 401 ? "Session expirée — reconnexion requise" : "Accès refusé",
+      );
+      clearSessionAndRedirectToLogin();
+      throw new ApiError(payload.message, res.status, payload.code);
+    }
+
+    if (!res.ok) {
+      const payload = await parseErrorPayload(res, `Erreur ${res.status} sur ${path}`);
+      throw new ApiError(payload.message, res.status, payload.code);
+    }
+    if (res.status === 204) return undefined as T;
+    return (await res.json()) as T;
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
+    if (isAbortError(error) || signal?.aborted) {
+      throw new ApiError("Requête annulée", 0, "aborted");
+    }
+    throw new ApiError(
+      error instanceof Error ? error.message : "Envoi du fichier impossible",
+      0,
+      "network_error",
+    );
+  } finally {
+    clearTimeout(timeout);
+    signal?.removeEventListener("abort", onParentAbort);
+  }
+}
+
 /**
  * GET authentifié renvoyant un Blob (PDF, fichiers binaires).
  */

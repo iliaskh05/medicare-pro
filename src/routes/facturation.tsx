@@ -127,16 +127,17 @@ function FacturationPage() {
       patientName: patient?.nomComplet ?? "",
       acte: form.examen,
       montant: form.total,
-      acompte: form.partMutuelle,
+      acompte: 0,
       modePaiement: form.modePaiement,
     });
   }, [form, patients]);
 
   return (
-    <div className="space-y-6">
+    <div className="page-shell">
       <PageHeader
-        title="Saisie des actes & facturation"
-        subtitle="Enregistrement d'un examen et de sa prise en charge"
+        eyebrow="Gestion"
+        title="Facturation"
+        subtitle="Actes, encaissements et historique des factures du centre"
         actions={
           <ActionButton
             variant="outline"
@@ -281,11 +282,11 @@ function FacturationPage() {
               </div>
             </div>
 
-            <div className="rounded-xl border border-border bg-primary/5 p-4">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <div className="rounded-xl border border-border bg-primary-soft/60 p-4">
+              <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                 Reste à charge patient
               </p>
-              <p className="mt-1 text-3xl font-bold tracking-tight text-primary">
+              <p className="mt-1 text-2xl font-semibold tracking-tight tabular-nums text-foreground">
                 {formatMAD(reste)}
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
@@ -393,9 +394,9 @@ function FacturationPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="gap-1.5 border-primary/25 bg-primary/5 font-semibold text-primary shadow-sm transition-shadow hover:bg-primary/10 hover:shadow-md"
+                          className="gap-1.5"
                           onClick={() =>
-                            telechargerDossierPdf({
+                            void telechargerDossierPdf({
                               titre: "Dossier de facturation",
                               reference: f.id,
                               lignes: [

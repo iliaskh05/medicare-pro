@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ClipboardList,
@@ -15,7 +15,6 @@ import {
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -48,7 +47,6 @@ import {
   EtatPatientStatusMenu,
   PaiementBadge,
 } from "@/components/worklist/status-badges";
-import { NouvelExamenDialog } from "@/components/worklist/nouvel-examen-dialog";
 import { ExamenSheet } from "@/components/worklist/examen-sheet";
 import { DicomViewerModal } from "@/components/worklist/dicom-viewer-modal";
 import { downloadFactureExamen } from "@/lib/api/factures";
@@ -63,6 +61,11 @@ import {
   type StatutPaiement,
   type WorklistItem,
 } from "@/lib/api/worklist";
+import { fetchResources, type ResourceDto } from "@/lib/api/appointments";
+import { fetchRadiologues, type StaffRadiologue } from "@/lib/api/staff";
+import { useDisplayPreference } from "@/hooks/use-display-preference";
+import { toLocalDateKey } from "@/lib/date";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/worklist")({
   head: () => ({
@@ -87,10 +90,11 @@ export const Route = createFileRoute("/worklist")({
 });
 
 function today(): string {
-  return new Date().toISOString().slice(0, 10);
+  return toLocalDateKey();
 }
 
 function WorklistPage() {
+  const { mode, setMode, isTableView } = useDisplayPreference("worklist", "table");
   const [date, setDate] = useState(today);
   const [items, setItems] = useState<WorklistItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -101,9 +105,13 @@ function WorklistPage() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("tous");
   const [modalite, setModalite] = useState("toutes");
+  const [salle, setSalle] = useState("toutes");
+  const [radiologueId, setRadiologueId] = useState("tous");
   const [statutCr, setStatutCr] = useState("tous");
   const [paiement, setPaiement] = useState("tous");
   const [statusUpdatingId, setStatusUpdatingId] = useState<string | null>(null);
+  const [resources, setResources] = useState<ResourceDto[]>([]);
+  const [radiologues, setRadiologues] = useState<StaffRadiologue[]>([]);
 
   const [selected, setSelected] = useState<WorklistItem | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -118,6 +126,24 @@ function WorklistPage() {
 
   useEffect(() => {
     const controller = new AbortController();
+    Promise.all([
+      fetchResources(controller.signal),
+      fetchRadiologues(controller.signal),
+    ])
+      .then(([resourceRows, radiologueRows]) => {
+        setResources(resourceRows.filter((r) => r.actif !== false));
+        setRadiologues(radiologueRows);
+      })
+      .catch(() => {
+        if (controller.signal.aborted) return;
+        setResources([]);
+        setRadiologues([]);
+      });
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
     setIsLoading(true);
     setError(null);
     fetchWorklist(
@@ -125,6 +151,8 @@ function WorklistPage() {
         date,
         search: debouncedSearch || undefined,
         status: statusFilter === "tous" ? undefined : statusFilter,
+        modalite: modalite === "toutes" ? undefined : modalite,
+        radiologueId: radiologueId === "tous" ? undefined : radiologueId,
       },
       controller.signal,
     )
@@ -139,16 +167,23 @@ function WorklistPage() {
         if (!controller.signal.aborted) setIsLoading(false);
       });
     return () => controller.abort();
-  }, [date, debouncedSearch, statusFilter, reloadKey]);
+  }, [date, debouncedSearch, statusFilter, modalite, radiologueId, reloadKey]);
+
+  const salleOptions = useMemo(() => {
+    return resources
+      .map((r) => r.libelle)
+      .filter((label) => label.trim())
+      .sort((a, b) => a.localeCompare(b, "fr"));
+  }, [resources]);
 
   const rows = useMemo(() => {
     return items.filter(
       (i) =>
-        (modalite === "toutes" || i.modalite === modalite) &&
         (statutCr === "tous" || i.statutCr === statutCr) &&
-        (paiement === "tous" || i.paiement === paiement),
+        (paiement === "tous" || i.paiement === paiement) &&
+        (salle === "toutes" || i.salle === salle),
     );
-  }, [items, modalite, statutCr, paiement]);
+  }, [items, statutCr, paiement, salle]);
 
   const openSheet = useCallback((item: WorklistItem) => {
     setSelected(item);
@@ -176,7 +211,7 @@ function WorklistPage() {
   }, []);
 
   const changeStatut = useCallback(
-    async (item: WorklistItem, patch: Partial<WorklistItem>) => {
+    async (item: WorklistItem, patch: Partial<Pick<WorklistItem, "etatPatient" | "statutCr" | "paiement">>) => {
       if (patch.etatPatient) {
         await changeEtatPatient(item, patch.etatPatient);
         return;
@@ -194,10 +229,6 @@ function WorklistPage() {
   );
 
   const downloadFacture = useCallback(async (item: WorklistItem) => {
-    if (item.etatPatient !== "arrive") {
-      toast.error("La facture PDF n'est disponible que pour un examen terminé.");
-      return;
-    }
     try {
       await downloadFactureExamen(item.id, item.patient);
       toast.success(`Facture PDF téléchargée — ${item.patient}`);
@@ -219,26 +250,82 @@ function WorklistPage() {
   ];
 
   return (
-    <div className="space-y-5">
+    <div className="page-shell">
       <PageHeader
-        title="Worklist du jour"
+        eyebrow="Activité médicale"
+        title="Examens"
         subtitle={
           isLoading
             ? "Chargement de la file d'attente…"
-            : `${rows.length} examen(s) affiché(s) — Centre d'Imagerie Médicale`
+            : `${rows.length} examen(s) — worklist du ${date}`
         }
         actions={
-          <NouvelExamenDialog
-            onCreated={() => {
-              setReloadKey((k) => k + 1);
-            }}
-          />
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant={isTableView ? "default" : "outline"}
+              size="sm"
+              onClick={() => setMode("table")}
+            >
+              Tableau
+            </Button>
+            <Button
+              variant={mode === "compact" || mode === "list" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setMode("compact")}
+            >
+              Compact
+            </Button>
+            <Button
+              variant="outline"
+              disabled={rows.length === 0}
+              onClick={() => {
+                const header = [
+                  "Patient",
+                  "Sejour",
+                  "Examen",
+                  "Modalite",
+                  "Date",
+                  "Etat",
+                  "Compte rendu",
+                  "Paiement",
+                ];
+                const body = rows.map((r) =>
+                  [r.patient, r.numSejour, r.description, r.modalite, r.dateExamen, r.etatPatient, r.statutCr, r.paiement]
+                    .map((v) => `"${String(v).replaceAll('"', '""')}"`)
+                    .join(","),
+                );
+                const blob = new Blob([[header.join(","), ...body].join("\n")], {
+                  type: "text/csv;charset=utf-8",
+                });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `examens-${date}.csv`;
+                a.click();
+                URL.revokeObjectURL(url);
+              }}
+            >
+              <FileDown className="mr-1.5 size-4" /> Exporter CSV
+            </Button>
+            <Button asChild>
+              <Link to="/accueil" search={{ mode: "rdv" }}>
+                Nouvel examen
+              </Link>
+            </Button>
+          </div>
         }
       />
 
-      <Card data-tour="worklist-filtres">
-        <CardContent className="grid gap-3 p-4 lg:grid-cols-12">
-          <div className="space-y-1.5 lg:col-span-3">
+      {error ? (
+        <ServiceNotice
+          message={error || "File d'attente en attente de connexion au serveur du centre."}
+          onRetry={() => setReloadKey((k) => k + 1)}
+        />
+      ) : null}
+
+      <div className="app-surface overflow-hidden" data-tour="worklist-filtres">
+        <div className="grid gap-3 border-b border-border px-4 py-3 lg:grid-cols-12">
+          <div className="space-y-1.5 lg:col-span-2">
             <Label htmlFor="wl-search" className="text-xs text-muted-foreground">
               Chercher patient
             </Label>
@@ -264,8 +351,8 @@ function WorklistPage() {
               onChange={(e) => setDate(e.target.value || today())}
             />
           </div>
-          <div className="space-y-1.5 lg:col-span-2">
-            <Label className="text-xs text-muted-foreground">État patient</Label>
+          <div className="space-y-1.5 lg:col-span-1">
+            <Label className="text-xs text-muted-foreground">État</Label>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger>
                 <SelectValue />
@@ -295,14 +382,50 @@ function WorklistPage() {
               </SelectContent>
             </Select>
           </div>
+          <div className="space-y-1.5 lg:col-span-1">
+            <Label className="text-xs text-muted-foreground">Salle</Label>
+            <Select value={salle} onValueChange={setSalle} disabled={salleOptions.length === 0}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="toutes">Toutes</SelectItem>
+                {salleOptions.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {s}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <div className="space-y-1.5 lg:col-span-2">
-            <Label className="text-xs text-muted-foreground">Compte rendu</Label>
+            <Label className="text-xs text-muted-foreground">Radiologue</Label>
+            <Select
+              value={radiologueId}
+              onValueChange={setRadiologueId}
+              disabled={radiologues.length === 0}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="tous">Tous</SelectItem>
+                {radiologues.map((m) => (
+                  <SelectItem key={m.id} value={m.id}>
+                    {m.nomComplet}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5 lg:col-span-1">
+            <Label className="text-xs text-muted-foreground">CR</Label>
             <Select value={statutCr} onValueChange={setStatutCr}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="tous">Tous les statuts</SelectItem>
+                <SelectItem value="tous">Tous</SelectItem>
                 {crOptions.map((o) => (
                   <SelectItem key={o.value} value={o.value}>
                     {o.label}
@@ -337,18 +460,13 @@ function WorklistPage() {
               <RefreshCw className="size-4" />
             </Button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
 
-      {error ? (
-        <ServiceNotice
-          message={error || "File d'attente en attente de connexion au serveur du centre."}
-          onRetry={() => setReloadKey((k) => k + 1)}
-        />
-      ) : null}
-
-      <Card data-tour="worklist-table">
-        <CardContent className="px-0 py-0" aria-busy={isLoading}>
+        <div
+          data-tour="worklist-table"
+          aria-busy={isLoading}
+          className={cn(!isTableView && "text-[13px] [&_td]:py-1.5 [&_th]:py-2")}
+        >
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -358,6 +476,7 @@ function WorklistPage() {
                   <TableHead>N° séjour</TableHead>
                   <TableHead className="hidden lg:table-cell">Médecin</TableHead>
                   <TableHead>Date examen</TableHead>
+                  <TableHead className="hidden md:table-cell">Modalité</TableHead>
                   <TableHead className="hidden xl:table-cell">Salle</TableHead>
                   <TableHead>Description</TableHead>
                   <TableHead>Compte rendu</TableHead>
@@ -369,7 +488,7 @@ function WorklistPage() {
                 {isLoading
                   ? Array.from({ length: 6 }).map((_, i) => (
                       <TableRow key={`sk-${i}`}>
-                        <TableCell colSpan={10} className="px-6">
+                        <TableCell colSpan={11} className="px-6">
                           <Skeleton className="h-7 w-full" />
                         </TableCell>
                       </TableRow>
@@ -391,6 +510,7 @@ function WorklistPage() {
                         <TableCell className="font-mono text-xs">{i.numSejour}</TableCell>
                         <TableCell className="hidden lg:table-cell">{i.medecin}</TableCell>
                         <TableCell className="whitespace-nowrap">{i.dateExamen}</TableCell>
+                        <TableCell className="hidden md:table-cell">{i.modalite}</TableCell>
                         <TableCell className="hidden xl:table-cell">{i.salle}</TableCell>
                         <TableCell className="max-w-56 truncate">{i.description}</TableCell>
                         <TableCell>
@@ -480,7 +600,7 @@ function WorklistPage() {
                     ))}
                 {!isLoading && rows.length === 0 ? (
                   <TableRow className="hover:bg-transparent">
-                    <TableCell colSpan={10} className="p-0">
+                    <TableCell colSpan={11} className="p-0">
                       <EmptyState
                         icon={ListFilter}
                         title="Aucun examen dans la file d'attente"
@@ -492,10 +612,23 @@ function WorklistPage() {
               </TableBody>
             </Table>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      <ExamenSheet item={selected} open={sheetOpen} onOpenChange={setSheetOpen} />
+      <ExamenSheet
+        item={selected}
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        onOpenImagerie={(exam) => {
+          setSheetOpen(false);
+          openImagerie(exam);
+        }}
+        onDownloadFacture={(exam) => void downloadFacture(exam)}
+        onUpdated={(exam) => {
+          setSelected(exam);
+          setItems((prev) => prev.map((i) => (i.id === exam.id ? exam : i)));
+        }}
+      />
       <DicomViewerModal
         examenId={viewerExamenId}
         patientLabel={viewerPatient}

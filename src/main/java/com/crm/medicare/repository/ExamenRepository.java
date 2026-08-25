@@ -2,6 +2,7 @@ package com.crm.medicare.repository;
 
 import com.crm.medicare.entity.EtatPatient;
 import com.crm.medicare.entity.Examen;
+import com.crm.medicare.entity.Paiement;
 import com.crm.medicare.entity.StatutCr;
 import com.crm.medicare.workflow.EncounterStatus;
 import java.math.BigDecimal;
@@ -17,35 +18,99 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface ExamenRepository extends JpaRepository<Examen, Long> {
 
+    /**
+     * Worklist search. Patterns are pre-built in Java ({@code %term%}, already lowercased) to avoid
+     * Hibernate 6 + PostgreSQL typing CONCAT/empty-string literals as {@code bytea} (lower(bytea)).
+     */
     @Query(
             """
             SELECT e FROM Examen e
             JOIN FETCH e.patient p
             LEFT JOIN FETCH e.prescripteur
+            LEFT JOIN FETCH e.catalogue
+            LEFT JOIN FETCH e.assignedRadiologue
+            LEFT JOIN FETCH e.resource
             WHERE e.dateExamen >= :debut AND e.dateExamen < :fin
               AND (
-                :search IS NULL OR :search = ''
-                OR LOWER(p.nomComplet) LIKE LOWER(CONCAT('%', :search, '%'))
-                OR LOWER(e.numSejour) LIKE LOWER(CONCAT('%', :search, '%'))
-                OR LOWER(COALESCE(p.cin, '')) LIKE LOWER(CONCAT('%', :search, '%'))
+                :searchPattern IS NULL
+                OR LOWER(p.nomComplet) LIKE CAST(:searchPattern AS string)
+                OR LOWER(e.numSejour) LIKE CAST(:searchPattern AS string)
+                OR (p.cin IS NOT NULL AND LOWER(p.cin) LIKE CAST(:searchPattern AS string))
               )
               AND (:status IS NULL OR e.etatPatient = :status)
+              AND (:modalite IS NULL OR e.modalite = :modalite)
+              AND (:priorite IS NULL OR LOWER(e.priorite) = CAST(:priorite AS string))
+              AND (:radiologueId IS NULL OR e.assignedRadiologue.id = :radiologueId)
             ORDER BY e.dateExamen ASC
             """)
     List<Examen> searchWorklist(
             @Param("debut") LocalDateTime debut,
             @Param("fin") LocalDateTime fin,
-            @Param("search") String search,
-            @Param("status") EtatPatient status);
+            @Param("searchPattern") String searchPattern,
+            @Param("status") EtatPatient status,
+            @Param("modalite") com.crm.medicare.entity.Modalite modalite,
+            @Param("priorite") String priorite,
+            @Param("radiologueId") Long radiologueId);
+
+    @Query(
+            """
+            SELECT e.id FROM Examen e
+            JOIN e.patient p
+            WHERE e.dateExamen >= :debut AND e.dateExamen < :fin
+              AND (
+                :searchPattern IS NULL
+                OR LOWER(p.nomComplet) LIKE CAST(:searchPattern AS string)
+                OR LOWER(e.numSejour) LIKE CAST(:searchPattern AS string)
+                OR (p.cin IS NOT NULL AND LOWER(p.cin) LIKE CAST(:searchPattern AS string))
+              )
+              AND (:status IS NULL OR e.etatPatient = :status)
+              AND (:modalite IS NULL OR e.modalite = :modalite)
+              AND (:priorite IS NULL OR LOWER(e.priorite) = CAST(:priorite AS string))
+              AND (:radiologueId IS NULL OR e.assignedRadiologue.id = :radiologueId)
+            ORDER BY e.dateExamen ASC
+            """)
+    org.springframework.data.domain.Page<Long> searchWorklistIds(
+            @Param("debut") LocalDateTime debut,
+            @Param("fin") LocalDateTime fin,
+            @Param("searchPattern") String searchPattern,
+            @Param("status") EtatPatient status,
+            @Param("modalite") com.crm.medicare.entity.Modalite modalite,
+            @Param("priorite") String priorite,
+            @Param("radiologueId") Long radiologueId,
+            org.springframework.data.domain.Pageable pageable);
+
+    @Query(
+            """
+            SELECT DISTINCT e FROM Examen e
+            JOIN FETCH e.patient
+            LEFT JOIN FETCH e.prescripteur
+            LEFT JOIN FETCH e.catalogue
+            LEFT JOIN FETCH e.assignedRadiologue
+            LEFT JOIN FETCH e.resource
+            WHERE e.id IN :ids
+            """)
+    List<Examen> findAllByIdWithDetails(@Param("ids") Collection<Long> ids);
 
     @Query(
             """
             SELECT e FROM Examen e
             JOIN FETCH e.patient
             LEFT JOIN FETCH e.prescripteur
+            LEFT JOIN FETCH e.catalogue
             WHERE e.id = :id
             """)
     Optional<Examen> findByIdWithPatient(@Param("id") Long id);
+
+    @Query(
+            """
+            SELECT e FROM Examen e
+            JOIN FETCH e.patient
+            LEFT JOIN FETCH e.prescripteur
+            LEFT JOIN FETCH e.catalogue
+            LEFT JOIN FETCH e.historique
+            WHERE e.id = :id
+            """)
+    Optional<Examen> findByIdWithHistorique(@Param("id") Long id);
 
     long countByNumSejourStartingWith(String prefix);
 
@@ -70,6 +135,31 @@ public interface ExamenRepository extends JpaRepository<Examen, Long> {
             ORDER BY e.dateExamen DESC
             """)
     List<Examen> findByPatientIdOrderByDateExamenDesc(@Param("patientId") Long patientId);
+
+    @Query(
+            """
+            SELECT e FROM Examen e
+            JOIN FETCH e.patient
+            LEFT JOIN FETCH e.prescripteur
+            LEFT JOIN FETCH e.catalogue
+            WHERE e.cancelledAt IS NULL AND e.dossierStatut IN :statuts
+            ORDER BY e.dateExamen DESC
+            """)
+    List<Examen> findDossiersByStatuts(@Param("statuts") Collection<String> statuts);
+
+    @Query(
+            """
+            SELECT e FROM Examen e
+            JOIN FETCH e.patient
+            LEFT JOIN FETCH e.prescripteur
+            LEFT JOIN FETCH e.catalogue
+            WHERE e.cancelledAt IS NULL
+              AND e.paiement IN :paiements
+              AND e.montant IS NOT NULL
+              AND e.montant > 0
+            ORDER BY e.dateExamen DESC
+            """)
+    List<Examen> findImpayes(@Param("paiements") Collection<Paiement> paiements);
 
     @Query(
             """
@@ -111,4 +201,23 @@ public interface ExamenRepository extends JpaRepository<Examen, Long> {
             @Param("before") LocalDateTime before,
             @Param("statuts") Collection<StatutCr> statuts,
             @Param("excluded") Collection<EncounterStatus> excluded);
+
+    long countByPrescripteurId(Long prescripteurId);
+
+    @Query(
+            """
+            SELECT MAX(e.dateExamen) FROM Examen e
+            WHERE e.prescripteur.id = :prescripteurId
+            """)
+    LocalDateTime findLastExamenAtByPrescripteurId(@Param("prescripteurId") Long prescripteurId);
+
+    @Query(
+            """
+            SELECT e FROM Examen e
+            WHERE e.dateExamen >= :debut AND e.dateExamen < :fin
+              AND e.arrivedAt IS NOT NULL
+              AND e.cancelledAt IS NULL
+            """)
+    List<Examen> findWithArrivedAtBetween(
+            @Param("debut") LocalDateTime debut, @Param("fin") LocalDateTime fin);
 }

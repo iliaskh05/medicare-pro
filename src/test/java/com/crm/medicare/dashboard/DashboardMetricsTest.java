@@ -54,6 +54,24 @@ class DashboardMetricsTest {
     }
 
     @Test
+    void emptyDayYieldsZeroKpisAndNullWait() {
+        DashboardKpisDto empty = DashboardMetrics.kpis(List.of(), BigDecimal.ZERO, null, null);
+        assertThat(empty.getPatientsDuJour()).isZero();
+        assertThat(empty.getActesRealises()).isZero();
+        assertThat(empty.getTauxOccupation()).isZero();
+        assertThat(empty.getTempsAttenteMoyenMinutes()).isNull();
+        assertThat(DashboardMetrics.averageWaitMinutes(List.of())).isNull();
+    }
+
+    @Test
+    void averageWaitFromArrivedAt() {
+        Examen e = exam(1L, 1L, EtatPatient.arrive, EncounterStatus.ARRIVED, StatutCr.a_faire);
+        e.setArrivedAt(LocalDateTime.of(2026, 8, 17, 8, 0));
+        e.setDateExamen(LocalDateTime.of(2026, 8, 17, 8, 30));
+        assertThat(DashboardMetrics.averageWaitMinutes(List.of(e))).isEqualTo(30.0);
+    }
+
+    @Test
     void tauxOccupationIsShareOfTodaysExamsAlreadyStarted() {
         Examen waiting = exam(1L, 1L, EtatPatient.attendu, EncounterStatus.SCHEDULED, StatutCr.a_faire);
         Examen inRoom = exam(2L, 2L, EtatPatient.arrive, EncounterStatus.ARRIVED, StatutCr.a_faire);

@@ -60,6 +60,8 @@ public final class Patient360Dtos {
         private String date;
         private BigDecimal total;
         private BigDecimal mutuelle;
+        private BigDecimal acompte;
+        private BigDecimal reste;
         private String statut;
         private String tone;
     }
@@ -74,5 +76,22 @@ public final class Patient360Dtos {
         private BigDecimal acompte;
         private String statutImpression;
         private BigDecimal reste;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class TimelineEvent {
+        private String id;
+        private String source;
+        private String type;
+        private String title;
+        private String detail;
+        private String at;
+        /** Utilisateur / acteur (si connu). */
+        private String actor;
+        /** Action métier lisible. */
+        private String action;
     }
 }

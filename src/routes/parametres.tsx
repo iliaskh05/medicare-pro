@@ -1,7 +1,18 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { BadgeCheck, Bell, History, KeyRound, Moon, ShieldCheck, Sun, UserCog } from "lucide-react";
+import {
+  BadgeCheck,
+  Bell,
+  Building2,
+  History,
+  KeyRound,
+  Loader2,
+  Moon,
+  ShieldCheck,
+  Sun,
+  UserCog,
+} from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -12,8 +23,10 @@ import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { EmptyState, PageHeader, Pill } from "@/components/ui-kit";
+import { WriteGuard } from "@/components/permission-guard";
 import { useRole } from "@/hooks/use-role";
 import { useTheme } from "@/hooks/use-theme";
+import { fetchSettings, saveSettings } from "@/lib/api/settings";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/parametres")({
@@ -310,12 +323,101 @@ function Securite() {
   );
 }
 
+function CentreSettings() {
+  const [form, setForm] = useState({
+    "centre.nom": "",
+    "centre.ville": "",
+    "centre.telephone": "",
+    "centre.heure_ouverture": "",
+    "centre.heure_fermeture": "",
+    "schedule.slot_minutes_default": "30",
+  });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchSettings(undefined, controller.signal)
+      .then((s) => {
+        setForm((prev) => {
+          const next = { ...prev };
+          for (const key of Object.keys(prev) as (keyof typeof prev)[]) {
+            if (s[key] != null) next[key] = s[key]!;
+          }
+          return next;
+        });
+      })
+      .catch(() => toast.error("Impossible de charger les paramètres du centre"))
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
+  }, []);
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      await saveSettings(form);
+      toast.success("Paramètres du centre enregistrés");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Enregistrement impossible");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return <Loader2 className="size-5 animate-spin text-muted-foreground" />;
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Centre</CardTitle>
+        <CardDescription>
+          Identité et horaires — réservé à la direction (contrôle backend SETTINGS_WRITE).
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid gap-4 sm:grid-cols-2">
+          {(
+            [
+              ["centre.nom", "Nom du centre"],
+              ["centre.ville", "Ville"],
+              ["centre.telephone", "Téléphone"],
+              ["centre.heure_ouverture", "Ouverture"],
+              ["centre.heure_fermeture", "Fermeture"],
+              ["schedule.slot_minutes_default", "Durée créneau (min)"],
+            ] as const
+          ).map(([key, label]) => (
+            <div key={key} className="space-y-1.5">
+              <Label htmlFor={key}>{label}</Label>
+              <Input
+                id={key}
+                value={form[key]}
+                onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
+              />
+            </div>
+          ))}
+        </div>
+        <div className="flex justify-end">
+          <Button onClick={() => void save()} disabled={saving}>
+            {saving ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
+            Enregistrer
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function ParametresPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Profil & Paramètres"
-        subtitle="Compte, préférences d'affichage et sécurité du poste de travail."
+        eyebrow="Administration"
+        title="Paramètres"
+        subtitle="Compte, affichage et sécurité du poste de travail."
       />
 
       <Tabs defaultValue="compte" className="space-y-4">
@@ -326,6 +428,11 @@ function ParametresPage() {
           <TabsTrigger value="preferences" className="gap-2">
             <Bell className="size-4" /> Préférences
           </TabsTrigger>
+          <WriteGuard resource="settings">
+            <TabsTrigger value="centre" className="gap-2">
+              <Building2 className="size-4" /> Centre
+            </TabsTrigger>
+          </WriteGuard>
           <TabsTrigger value="securite" className="gap-2">
             <ShieldCheck className="size-4" /> Sécurité
           </TabsTrigger>
@@ -337,6 +444,11 @@ function ParametresPage() {
         <TabsContent value="preferences">
           <Preferences />
         </TabsContent>
+        <WriteGuard resource="settings">
+          <TabsContent value="centre">
+            <CentreSettings />
+          </TabsContent>
+        </WriteGuard>
         <TabsContent value="securite">
           <Securite />
         </TabsContent>

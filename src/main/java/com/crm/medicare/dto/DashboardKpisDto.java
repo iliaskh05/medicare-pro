@@ -19,4 +19,6 @@ public class DashboardKpisDto {
     private long actesRealises;
     private BigDecimal chiffreAffaires;
     private int tauxOccupation;
+    /** Minutes ; {@code null} si aucun {@code arrived_at} exploitable. */
+    private Double tempsAttenteMoyenMinutes;
 }
