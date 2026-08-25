@@ -224,6 +224,14 @@
   box-shadow: var(--shadow-card);
 }
 
+/* Alias legacy (agenda, patients, analytics) → même surface que panel. */
+@utility app-surface {
+  background-color: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}
+
 /* En-tête de tableau collant pour les longues listes opérationnelles. */
 @utility table-sticky-head {
   position: sticky;

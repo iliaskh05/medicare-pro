@@ -414,3 +414,60 @@ export function ServiceNotice({
     </div>
   );
 }
+
+/** Alias compat — pages legacy (accueil, admission, etc.). */
+export function Surface({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return <div className={cn("panel", className)}>{children}</div>;
+}
+
+export function SectionHeader({
+  title,
+  description,
+  action,
+}: {
+  title: string;
+  description?: string;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 px-5 py-4">
+      <div className="min-w-0">
+        <h2 className="section-title">{title}</h2>
+        {description ? <p className="mt-0.5 text-xs text-muted-foreground">{description}</p> : null}
+      </div>
+      {action}
+    </div>
+  );
+}
+
+export function KpiCard({
+  label,
+  value,
+  hint,
+  icon,
+  tone = "primary",
+}: {
+  label: string;
+  value: ReactNode;
+  hint?: string;
+  icon: ComponentType<{ className?: string }>;
+  tone?: Tone;
+}) {
+  const normalized =
+    value === null || value === undefined
+      ? null
+      : typeof value === "string" || typeof value === "number"
+        ? value
+        : String(value);
+  return (
+    <div className="panel">
+      <KpiStat label={label} value={normalized} icon={icon} tone={tone} context={hint} />
+    </div>
+  );
+}
