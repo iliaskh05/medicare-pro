@@ -7,6 +7,8 @@ import com.crm.medicare.entity.Utilisateur;
 import com.crm.medicare.repository.AuditLogRepository;
 import com.crm.medicare.repository.SecurityEventRepository;
 import com.crm.medicare.security.SecurityUtils;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
 import java.util.HashMap;
@@ -53,6 +55,9 @@ public class AuditService {
     private final AuditLogRepository auditLogRepository;
     private final SecurityEventRepository securityEventRepository;
 
+    @PersistenceContext
+    private EntityManager entityManager;
+
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void record(String action, String entityType, String entityId, Map<String, ?> metadata) {
         record(action, entityType, entityId, metadata, null, null);
@@ -82,7 +87,10 @@ public class AuditService {
                             .afterState(copy(after))
                             .createdAt(Instant.now())
                             .build();
-            auditLogRepository.save(logEntry);
+            // Flush + detach: Hibernate JSON maps often look "dirty" at commit and would
+            // issue UPDATE audit_logs, blocked by prevent_audit_mutation().
+            auditLogRepository.saveAndFlush(logEntry);
+            entityManager.detach(logEntry);
         } catch (Exception ex) {
             log.warn("Échec écriture audit action={} entity={}/{}", action, entityType, entityId, ex);
         }
@@ -91,7 +99,7 @@ public class AuditService {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void securityEvent(String eventType, String email, boolean success, String detail) {
         try {
-            securityEventRepository.save(
+            SecurityEvent event =
                     SecurityEvent.builder()
                             .eventType(eventType)
                             .email(email)
@@ -99,7 +107,9 @@ public class AuditService {
                             .success(success)
                             .detail(detail)
                             .createdAt(Instant.now())
-                            .build());
+                            .build();
+            securityEventRepository.saveAndFlush(event);
+            entityManager.detach(event);
         } catch (Exception ex) {
             log.warn("Échec écriture security_event type={} email={}", eventType, email, ex);
         }
@@ -109,7 +119,12 @@ public class AuditService {
         if (value == null || value.isEmpty()) {
             return null;
         }
-        return new HashMap<>(value);
+        Map<String, Object> out = new HashMap<>(value.size());
+        for (Map.Entry<String, ?> e : value.entrySet()) {
+            Object v = e.getValue();
+            out.put(e.getKey(), v == null ? null : String.valueOf(v));
+        }
+        return out;
     }
 
     private static String clientIp() {

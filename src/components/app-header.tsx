@@ -2,14 +2,11 @@ import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
   Bell,
-  Check,
   ChevronDown,
   LogOut,
   Moon,
   Search,
   Settings,
-  ShieldCheck,
-  Stethoscope,
   Sun,
 } from "lucide-react";
 
@@ -26,16 +23,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { openCommandPalette } from "@/components/command-palette";
 import { QuickCreateMenu } from "@/components/quick-create";
-import { roleProfiles, useRole, clearAuthSession, type AppRole } from "@/hooks/use-role";
+import { useRole, clearAuthSession } from "@/hooks/use-role";
 import { useAuth } from "@/hooks/use-auth";
 import { useTheme } from "@/hooks/use-theme";
 
-const roleIcons: Record<AppRole, typeof ShieldCheck> = {
-  directeur: ShieldCheck,
-  accueil: Stethoscope,
-  technicien: Stethoscope,
-  medecin: Stethoscope,
-};
 
 const pageContext: { match: string; label: string }[] = [
   { match: "/dashboard", label: "Tableau de bord" },
@@ -54,7 +45,7 @@ const pageContext: { match: string; label: string }[] = [
 ];
 
 export function AppHeader() {
-  const { role, profile, setRole } = useRole();
+  const { profile } = useRole();
   const { logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
@@ -136,28 +127,19 @@ export function AppHeader() {
               <ChevronDown className="hidden size-4 text-muted-foreground sm:block" />
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-60">
+          <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel>Mon compte</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <div className="px-2 py-1.5">
+              <p className="text-sm font-medium">{profile.nom}</p>
+              <p className="text-[11px] text-muted-foreground">{profile.label}</p>
+            </div>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
               <Link to="/parametres">
                 <Settings className="mr-2 size-4" /> Paramètres
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuLabel className="text-[11px] font-normal text-muted-foreground">
-              Aperçu des profils (affichage)
-            </DropdownMenuLabel>
-            {Object.values(roleProfiles).map((p) => {
-              const Icon = roleIcons[p.id];
-              return (
-                <DropdownMenuItem key={p.id} onClick={() => setRole(p.id)} className="gap-2">
-                  <Icon className="size-4 text-primary" />
-                  <span className="flex-1 text-sm">{p.label}</span>
-                  {p.id === role ? <Check className="size-3.5 text-success" /> : null}
-                </DropdownMenuItem>
-              );
-            })}
             <DropdownMenuSeparator />
             <DropdownMenuItem className="text-destructive" onClick={handleLogout}>
               <LogOut className="mr-2 size-4" /> Se déconnecter

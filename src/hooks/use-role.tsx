@@ -120,7 +120,6 @@ type RoleContextValue = {
   canExport: (resource: Resource) => boolean;
   profile: RoleProfile;
   user: AppUser;
-  setRole: (role: AppRole) => void;
   /** Helper de rendu conditionnel : `hasPermission("canSeeFraudModule")`. */
   hasPermission: (
     permission: "canSeeFraudModule" | "canExportCompta" | "canValiderAnomalie" | "canSeeFinance",
@@ -265,7 +264,6 @@ export function RoleProvider({ children }: { children: ReactNode }) {
       backendRole,
       profile,
       user: toUser(profile),
-      setRole,
       can: (permission) => rbacHasPermission(backendRole, permission),
       canAccess: (resource) => rbacCanAccess(backendRole, resource),
       canCreate: (resource) => rbacCanCreate(backendRole, resource),
@@ -287,7 +285,6 @@ export function useRole(): RoleContextValue {
       backendRole: "DIRECTEUR",
       profile: roleProfiles.directeur,
       user: toUser(roleProfiles.directeur),
-      setRole: () => {},
       can: (permission) => rbacHasPermission("DIRECTEUR", permission),
       canAccess: (resource) => rbacCanAccess("DIRECTEUR", resource),
       canCreate: (resource) => rbacCanCreate("DIRECTEUR", resource),

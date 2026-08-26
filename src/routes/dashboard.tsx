@@ -29,7 +29,6 @@ import { javaApi } from "@/lib/api/config";
 import {
   fetchDashboardKpis,
   fetchDashboardStats,
-  fetchSalleAttente,
   fetchPlanningTension,
   fetchUrgencesFraude,
   fetchAlertes,
@@ -40,15 +39,15 @@ import {
   type DashboardKpis,
   type DashboardStats,
 } from "@/lib/api/dashboard";
+import { fetchWaitingRoom, type WaitingRoomItem } from "@/lib/api/waiting-room";
+import { patientDossierLink } from "@/lib/patient-nav";
 import {
   formatMAD,
   type Alerte,
   type PlanningSlot,
-  type SalleAttente,
   type SyntheseComptable,
   type UrgenceFraude,
 } from "@/types/domain";
-import scannerHero from "@/assets/ct-scanner.jpg";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -176,7 +175,7 @@ function Dashboard() {
   const [kpisLoading, setKpisLoading] = useState(true);
   const [kpisError, setKpisError] = useState<string | null>(null);
 
-  const [salleAttente, setSalleAttente] = useState<SalleAttente[]>([]);
+  const [salleAttente, setSalleAttente] = useState<WaitingRoomItem[]>([]);
   const [salleLoading, setSalleLoading] = useState(true);
   const [salleError, setSalleError] = useState<string | null>(null);
 
@@ -223,7 +222,7 @@ function Dashboard() {
     const controller = new AbortController();
     setSalleLoading(true);
     setSalleError(null);
-    fetchSalleAttente(controller.signal)
+    fetchWaitingRoom({}, controller.signal)
       .then(setSalleAttente)
       .catch((e: unknown) => {
         if (controller.signal.aborted) return;
@@ -318,49 +317,29 @@ function Dashboard() {
         </Button>
       </div>
 
-      <section className="grid items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(240px,38%)]">
-        <div className="flex flex-col justify-center py-1">
-          <h1 className="page-title">
-            {greeting}, {profile.nom}
-          </h1>
-          <p className="mt-2 max-w-lg text-sm text-muted-foreground">
-            Activité du centre aujourd&apos;hui — patients, examens et files à traiter.
-          </p>
-          <div className="mt-5 flex flex-wrap gap-2">
-            <Button size="sm" asChild>
-              <Link to="/patients" search={{ nouveau: "1" } as never}>
-                <UserPlus className="size-4" /> Nouveau patient
-              </Link>
-            </Button>
-            <Button size="sm" variant="outline" asChild>
-              <Link to="/accueil" search={{ mode: "rdv" }}>
-                <CalendarPlus className="size-4" /> Prendre rendez-vous
-              </Link>
-            </Button>
-            <Button size="sm" variant="outline" asChild>
-              <Link to="/accueil" search={{ mode: "walkin" }}>
-                <Footprints className="size-4" /> Passage sans rendez-vous
-              </Link>
-            </Button>
-          </div>
-        </div>
-        <div className="relative hidden overflow-hidden rounded-2xl border border-border lg:block">
-          <img
-            src={scannerHero}
-            alt="Scanner d'imagerie médicale"
-            className="h-full min-h-[196px] max-h-[228px] w-full object-cover object-center"
-          />
-          <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-foreground/25 to-transparent" />
-          <p className="absolute bottom-3 left-3 text-[10px] font-medium uppercase tracking-[0.16em] text-white/85">
-            Imagerie médicale
-          </p>
-        </div>
-        <div className="relative overflow-hidden rounded-2xl border border-border lg:hidden">
-          <img
-            src={scannerHero}
-            alt="Scanner d'imagerie médicale"
-            className="h-32 w-full object-cover object-center"
-          />
+      <section className="py-1">
+        <h1 className="page-title">
+          {greeting}, {profile.nom}
+        </h1>
+        <p className="mt-2 max-w-lg text-sm text-muted-foreground">
+          Activité du centre aujourd&apos;hui — patients, examens et files à traiter.
+        </p>
+        <div className="mt-5 flex flex-wrap gap-2">
+          <Button size="sm" asChild>
+            <Link to="/patients" search={{ nouveau: "1" } as never}>
+              <UserPlus className="size-4" /> Nouveau patient
+            </Link>
+          </Button>
+          <Button size="sm" variant="outline" asChild>
+            <Link to="/accueil" search={{ mode: "rdv" }}>
+              <CalendarPlus className="size-4" /> Prendre rendez-vous
+            </Link>
+          </Button>
+          <Button size="sm" variant="outline" asChild>
+            <Link to="/accueil" search={{ mode: "walkin" }}>
+              <Footprints className="size-4" /> Passage sans rendez-vous
+            </Link>
+          </Button>
         </div>
       </section>
 
@@ -448,21 +427,40 @@ function Dashboard() {
               }
             >
               <ul className="divide-y divide-border">
-                {salleAttente.map((r) => (
-                  <li
-                    key={`${r.heure}-${r.patient}-${r.examen}`}
-                    className="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-muted/40"
-                  >
-                    <span className="w-12 shrink-0 font-mono text-xs tabular-nums text-muted-foreground">
-                      {r.heure}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{r.patient}</p>
-                      <p className="truncate text-xs text-muted-foreground">{r.examen}</p>
-                    </div>
-                    <Pill tone={statutTone[r.statut]}>{r.statut}</Pill>
-                  </li>
-                ))}
+                {salleAttente.map((r) => {
+                  const dossier = patientDossierLink(r.patientId);
+                  const row = (
+                    <>
+                      <span className="w-12 shrink-0 font-mono text-xs tabular-nums text-muted-foreground">
+                        {r.heureArrivee?.slice(11, 16) ??
+                          r.heurePrevue?.slice(11, 16) ??
+                          "—"}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">{r.patient}</p>
+                        <p className="truncate text-xs text-muted-foreground">{r.examen}</p>
+                      </div>
+                      <Pill tone={statutTone[r.statut as keyof typeof statutTone] ?? "neutral"}>
+                        {r.statut}
+                      </Pill>
+                    </>
+                  );
+                  return (
+                    <li key={r.id} className="transition-colors hover:bg-muted/40">
+                      {dossier ? (
+                        <Link
+                          to={dossier.to}
+                          params={dossier.params}
+                          className="flex items-center gap-3 px-5 py-3"
+                        >
+                          {row}
+                        </Link>
+                      ) : (
+                        <div className="flex items-center gap-3 px-5 py-3">{row}</div>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             </AsyncSection>
           </div>
@@ -552,15 +550,9 @@ function Dashboard() {
               >
                 <span className="flex items-center gap-3 text-sm">
                   <Wallet className="size-4 text-muted-foreground" />
-                  Actes en attente d&apos;export
+                  Restes à payer
                 </span>
-                <span
-                  className={`text-sm font-semibold tabular-nums ${
-                    !comptaLoading && !comptaError && comptabilite.pending > 0 ? "text-warning" : ""
-                  }`}
-                >
-                  {comptaLoading || comptaError ? "—" : comptabilite.pending}
-                </span>
+                <span className="text-xs text-muted-foreground">Ouvrir</span>
               </Link>
             ) : null}
             <Link
@@ -718,6 +710,7 @@ function Dashboard() {
                       action={() => javaApi("/api/comptabilite/export", { method: "POST" })}
                       toastMessage="Export comptable généré"
                       errorMessage="Export impossible"
+                      onDone={reload}
                     >
                       <FileSpreadsheet className="mr-2 size-4" /> Exporter
                     </ActionButton>

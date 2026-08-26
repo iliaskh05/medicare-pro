@@ -25,6 +25,7 @@ type InvoiceApiRow = Partial<Facture> & {
   total?: number | string;
   partMutuelle?: number | string;
   resteACharge?: number | string;
+  reste?: number | string;
   paiement?: string;
   status?: string;
   statut?: string;
@@ -39,13 +40,17 @@ function asNumber(value: unknown): number {
 }
 
 function mapFacture(row: InvoiceApiRow): Facture {
-  const statutRaw = row.status ?? row.statut ?? "En attente de mutuelle";
-  const statut: Facture["statut"] =
-    statutRaw === "Payé" || statutRaw === "PAID"
+  const resteACharge = asNumber(row.resteACharge ?? row.reste);
+  const statutRaw = String(row.status ?? row.statut ?? "");
+  const cancelled =
+    statutRaw === "Annulé" ||
+    statutRaw === "CANCELLED" ||
+    statutRaw === "REFUNDED";
+  const statut: Facture["statut"] = cancelled
+    ? "Annulé"
+    : resteACharge <= 0 || statutRaw === "Payé" || statutRaw === "PAID"
       ? "Payé"
-      : statutRaw === "Annulé" || statutRaw === "CANCELLED" || statutRaw === "REFUNDED"
-        ? "Annulé"
-        : "En attente de mutuelle";
+      : "En attente de mutuelle";
   const paiementRaw = row.paiement ?? row.modePaiement ?? "Espèces";
   const paiement: Facture["paiement"] =
     paiementRaw.toLowerCase().includes("carte")
@@ -62,7 +67,7 @@ function mapFacture(row: InvoiceApiRow): Facture {
     examen: row.examen ?? row.acte ?? "",
     total: asNumber(row.total),
     partMutuelle: asNumber(row.partMutuelle),
-    resteACharge: asNumber(row.resteACharge),
+    resteACharge: cancelled ? 0 : resteACharge,
     paiement,
     statut,
   };

@@ -10,6 +10,7 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",
+    "test:nav": "node scripts/test-patient-nav.mjs",
     "dev:ws": "node services/ws/server.mjs",
     "dev:ml": "py -m uvicorn app.main:app --app-dir services/ml --host 127.0.0.1 --port 8090 --reload",
     "ml:install": "py -m pip install -r services/ml/requirements.txt"

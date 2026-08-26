@@ -13,6 +13,7 @@ export type BackendRole =
   | "DIRECTION"
   | "DIRECTEUR"
   | "ACCUEIL"
+  | "SECRETARIAT"
   | "SECRETAIRE"
   | "RADIOLOGUE"
   | "MANIPULATEUR"
@@ -79,6 +80,14 @@ const MATRIX: Record<BackendRole, Permission[]> = {
     ...grant(["doctors", "settings"], ["create", "edit"]),
   ],
   ACCUEIL: [
+    ...grant(
+      ["patients", "appointments", "waiting-room", "worklist", "doctors", "messaging", "settings"],
+      ["view"],
+    ),
+    ...grant(["patients", "appointments", "waiting-room"], ["create", "edit"]),
+    ...grant(["billing"], ["view", "create"]),
+  ],
+  SECRETARIAT: [
     ...grant(
       ["patients", "appointments", "waiting-room", "worklist", "doctors", "messaging", "settings"],
       ["view"],

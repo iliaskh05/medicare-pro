@@ -19,9 +19,12 @@ import { Route as ChatRouteImport } from './routes/chat'
 import { Route as ComptesRendusRouteImport } from './routes/comptes-rendus'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as DonneesRouteImport } from './routes/donnees'
+import { Route as DossiersRouteImport } from './routes/dossiers'
 import { Route as FacturationRouteImport } from './routes/facturation'
+import { Route as FileAttenteRouteImport } from './routes/file-attente'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as ImagerieRouteImport } from './routes/imagerie'
+import { Route as ImpayesRouteImport } from './routes/impayes'
 import { Route as MedecinsRouteImport } from './routes/medecins'
 import { Route as MedecinsReferentsRouteImport } from './routes/medecins-referents'
 import { Route as NumerisationRouteImport } from './routes/numerisation'
@@ -84,9 +87,19 @@ const DonneesRoute = DonneesRouteImport.update({
   path: '/donnees',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DossiersRoute = DossiersRouteImport.update({
+  id: '/dossiers',
+  path: '/dossiers',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const FacturationRoute = FacturationRouteImport.update({
   id: '/facturation',
   path: '/facturation',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FileAttenteRoute = FileAttenteRouteImport.update({
+  id: '/file-attente',
+  path: '/file-attente',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
@@ -97,6 +110,11 @@ const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
 const ImagerieRoute = ImagerieRouteImport.update({
   id: '/imagerie',
   path: '/imagerie',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ImpayesRoute = ImpayesRouteImport.update({
+  id: '/impayes',
+  path: '/impayes',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MedecinsRoute = MedecinsRouteImport.update({
@@ -166,9 +184,12 @@ export interface FileRoutesByFullPath {
   '/comptes-rendus': typeof ComptesRendusRoute
   '/dashboard': typeof DashboardRoute
   '/donnees': typeof DonneesRoute
+  '/dossiers': typeof DossiersRoute
   '/facturation': typeof FacturationRoute
+  '/file-attente': typeof FileAttenteRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/imagerie': typeof ImagerieRoute
+  '/impayes': typeof ImpayesRoute
   '/medecins': typeof MedecinsRoute
   '/medecins-referents': typeof MedecinsReferentsRoute
   '/numerisation': typeof NumerisationRoute
@@ -192,9 +213,12 @@ export interface FileRoutesByTo {
   '/comptes-rendus': typeof ComptesRendusRoute
   '/dashboard': typeof DashboardRoute
   '/donnees': typeof DonneesRoute
+  '/dossiers': typeof DossiersRoute
   '/facturation': typeof FacturationRoute
+  '/file-attente': typeof FileAttenteRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/imagerie': typeof ImagerieRoute
+  '/impayes': typeof ImpayesRoute
   '/medecins': typeof MedecinsRoute
   '/medecins-referents': typeof MedecinsReferentsRoute
   '/numerisation': typeof NumerisationRoute
@@ -219,9 +243,12 @@ export interface FileRoutesById {
   '/comptes-rendus': typeof ComptesRendusRoute
   '/dashboard': typeof DashboardRoute
   '/donnees': typeof DonneesRoute
+  '/dossiers': typeof DossiersRoute
   '/facturation': typeof FacturationRoute
+  '/file-attente': typeof FileAttenteRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/imagerie': typeof ImagerieRoute
+  '/impayes': typeof ImpayesRoute
   '/medecins': typeof MedecinsRoute
   '/medecins-referents': typeof MedecinsReferentsRoute
   '/numerisation': typeof NumerisationRoute
@@ -247,9 +274,12 @@ export interface FileRouteTypes {
     | '/comptes-rendus'
     | '/dashboard'
     | '/donnees'
+    | '/dossiers'
     | '/facturation'
+    | '/file-attente'
     | '/forgot-password'
     | '/imagerie'
+    | '/impayes'
     | '/medecins'
     | '/medecins-referents'
     | '/numerisation'
@@ -273,9 +303,12 @@ export interface FileRouteTypes {
     | '/comptes-rendus'
     | '/dashboard'
     | '/donnees'
+    | '/dossiers'
     | '/facturation'
+    | '/file-attente'
     | '/forgot-password'
     | '/imagerie'
+    | '/impayes'
     | '/medecins'
     | '/medecins-referents'
     | '/numerisation'
@@ -299,9 +332,12 @@ export interface FileRouteTypes {
     | '/comptes-rendus'
     | '/dashboard'
     | '/donnees'
+    | '/dossiers'
     | '/facturation'
+    | '/file-attente'
     | '/forgot-password'
     | '/imagerie'
+    | '/impayes'
     | '/medecins'
     | '/medecins-referents'
     | '/numerisation'
@@ -326,9 +362,12 @@ export interface RootRouteChildren {
   ComptesRendusRoute: typeof ComptesRendusRoute
   DashboardRoute: typeof DashboardRoute
   DonneesRoute: typeof DonneesRoute
+  DossiersRoute: typeof DossiersRoute
   FacturationRoute: typeof FacturationRoute
+  FileAttenteRoute: typeof FileAttenteRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   ImagerieRoute: typeof ImagerieRoute
+  ImpayesRoute: typeof ImpayesRoute
   MedecinsRoute: typeof MedecinsRoute
   MedecinsReferentsRoute: typeof MedecinsReferentsRoute
   NumerisationRoute: typeof NumerisationRoute
@@ -414,11 +453,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DonneesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dossiers': {
+      id: '/dossiers'
+      path: '/dossiers'
+      fullPath: '/dossiers'
+      preLoaderRoute: typeof DossiersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/facturation': {
       id: '/facturation'
       path: '/facturation'
       fullPath: '/facturation'
       preLoaderRoute: typeof FacturationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/file-attente': {
+      id: '/file-attente'
+      path: '/file-attente'
+      fullPath: '/file-attente'
+      preLoaderRoute: typeof FileAttenteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/forgot-password': {
@@ -433,6 +486,13 @@ declare module '@tanstack/react-router' {
       path: '/imagerie'
       fullPath: '/imagerie'
       preLoaderRoute: typeof ImagerieRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/impayes': {
+      id: '/impayes'
+      path: '/impayes'
+      fullPath: '/impayes'
+      preLoaderRoute: typeof ImpayesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/medecins': {
@@ -526,9 +586,12 @@ const rootRouteChildren: RootRouteChildren = {
   ComptesRendusRoute: ComptesRendusRoute,
   DashboardRoute: DashboardRoute,
   DonneesRoute: DonneesRoute,
+  DossiersRoute: DossiersRoute,
   FacturationRoute: FacturationRoute,
+  FileAttenteRoute: FileAttenteRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   ImagerieRoute: ImagerieRoute,
+  ImpayesRoute: ImpayesRoute,
   MedecinsRoute: MedecinsRoute,
   MedecinsReferentsRoute: MedecinsReferentsRoute,
   NumerisationRoute: NumerisationRoute,

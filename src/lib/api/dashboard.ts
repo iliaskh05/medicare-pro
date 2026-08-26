@@ -8,7 +8,7 @@ import type {
 } from "@/types/domain";
 
 import { api } from "./client";
-import { javaApi } from "./config";
+import { ApiError, javaApi } from "./config";
 
 export type DashboardKpis = {
   patientsDuJour: number;
@@ -90,16 +90,30 @@ export async function fetchSalleAttente(signal?: AbortSignal): Promise<SalleAtte
   return rows ?? [];
 }
 
-/** GET {JAVA_API_BASE}/api/planning/tension */
-export async function fetchPlanningTension(signal?: AbortSignal): Promise<PlanningSlot[]> {
-  const rows = await javaApi<PlanningSlot[]>("/api/planning/tension", signal ? { signal } : {});
-  return rows ?? [];
+function isMissingEndpoint(error: unknown): boolean {
+  return error instanceof ApiError && (error.status === 404 || error.status === 501);
 }
 
-/** GET {JAVA_API_BASE}/api/audit/urgences */
+/** GET {JAVA_API_BASE}/api/planning/tension — soft-fail si endpoint absent. */
+export async function fetchPlanningTension(signal?: AbortSignal): Promise<PlanningSlot[]> {
+  try {
+    const rows = await javaApi<PlanningSlot[]>("/api/planning/tension", signal ? { signal } : {});
+    return rows ?? [];
+  } catch (error) {
+    if (isMissingEndpoint(error)) return [];
+    throw error;
+  }
+}
+
+/** GET {JAVA_API_BASE}/api/audit/urgences — soft-fail si endpoint absent. */
 export async function fetchUrgencesFraude(signal?: AbortSignal): Promise<UrgenceFraude[]> {
-  const rows = await javaApi<UrgenceFraude[]>("/api/audit/urgences", signal ? { signal } : {});
-  return rows ?? [];
+  try {
+    const rows = await javaApi<UrgenceFraude[]>("/api/audit/urgences", signal ? { signal } : {});
+    return rows ?? [];
+  } catch (error) {
+    if (isMissingEndpoint(error)) return [];
+    throw error;
+  }
 }
 
 /** GET {JAVA_API_BASE}/api/alertes */
@@ -108,13 +122,18 @@ export async function fetchAlertes(signal?: AbortSignal): Promise<Alerte[]> {
   return rows ?? [];
 }
 
-/** GET {JAVA_API_BASE}/api/comptabilite/synthese */
+/** GET {JAVA_API_BASE}/api/comptabilite/synthese — soft-fail si endpoint absent. */
 export async function fetchSyntheseComptable(signal?: AbortSignal): Promise<SyntheseComptable> {
-  const data = await javaApi<SyntheseComptable>(
-    "/api/comptabilite/synthese",
-    signal ? { signal } : {},
-  );
-  return data ?? EMPTY_COMPTABILITE;
+  try {
+    const data = await javaApi<SyntheseComptable>(
+      "/api/comptabilite/synthese",
+      signal ? { signal } : {},
+    );
+    return data ?? EMPTY_COMPTABILITE;
+  } catch (error) {
+    if (isMissingEndpoint(error)) return EMPTY_COMPTABILITE;
+    throw error;
+  }
 }
 
 /** GET {JAVA_API_BASE}/api/medecins/prescripteurs */

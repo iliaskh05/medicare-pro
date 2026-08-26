@@ -8,12 +8,9 @@ import {
   FileText,
   FolderOpen,
   LayoutDashboard,
-  MessageCircle,
-  MessagesSquare,
   ReceiptText,
   ScanLine,
   Settings,
-  ShieldAlert,
   Stethoscope,
   UserRound,
   Users,
@@ -84,13 +81,6 @@ const navGroups: { label: string; items: NavItem[] }[] = [
     ],
   },
   {
-    label: "Communication",
-    items: [
-      { title: "Messagerie interne", url: "/chat", icon: MessagesSquare },
-      { title: "WhatsApp patients", url: "/whatsapp", icon: MessageCircle },
-    ],
-  },
-  {
     label: "Analytics",
     items: [{ title: "Activité", url: "/analytics", icon: BarChart3 }],
   },
@@ -98,7 +88,6 @@ const navGroups: { label: string; items: NavItem[] }[] = [
     label: "Administration",
     items: [
       { title: "Données & import", url: "/donnees", icon: Database },
-      { title: "Audit", url: "/audit", icon: ShieldAlert, fraude: true },
       { title: "Paramètres", url: "/parametres", icon: Settings },
     ],
   },

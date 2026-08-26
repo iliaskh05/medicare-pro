@@ -42,6 +42,28 @@ export function addDaysToKey(key: string, days: number): string {
   return toLocalDateKey(d);
 }
 
+/** Décale d'un nombre de mois civils (jour plafonné si besoin, ex. 31 → 28/30). */
+export function addMonthsToKey(key: string, months: number): string {
+  const d = parseLocalDateKey(key);
+  const day = d.getDate();
+  d.setDate(1);
+  d.setMonth(d.getMonth() + months);
+  const last = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  d.setDate(Math.min(day, last));
+  return toLocalDateKey(d);
+}
+
+/** Ex. « août 2026 ». */
+export function formatMonthYear(key: string): string {
+  const d = parseLocalDateKey(key);
+  const label = new Intl.DateTimeFormat("fr-FR", {
+    month: "long",
+    year: "numeric",
+    timeZone: CENTRE_TIMEZONE,
+  }).format(d);
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
 export function startOfWeekKey(key: string): string {
   const d = parseLocalDateKey(key);
   const day = d.getDay();

@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import logoRadioCrm from "@/assets/logo-radiocrm.png";
-import loginBgAsset from "@/assets/login-bg.jpg.asset.json";
+import loginScannerBg from "@/assets/ct-scanner.jpg";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -217,7 +217,7 @@ function LoginPage() {
       <div
         aria-hidden
         className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: `url(${loginBgAsset.url})` }}
+        style={{ backgroundImage: `url(${loginScannerBg})` }}
       />
 
       <div aria-hidden className="login-overlay absolute inset-0 z-0" />

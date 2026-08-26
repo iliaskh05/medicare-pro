@@ -25,6 +25,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useDisplayPreference } from "@/hooks/use-display-preference";
 import {
   addDaysToKey,
+  addMonthsToKey,
+  formatMonthYear,
   parseLocalDateKey,
   startOfWeekKey,
   toLocalDateKey,
@@ -52,6 +54,34 @@ function appointmentDayKey(row: AppointmentDto): string {
   return (row.startsAt ?? "").slice(0, 10);
 }
 
+/** HH:mm depuis startsAt (ISO, espace, ou tableau Jackson rare). */
+function appointmentTime(startsAt: string | null | undefined): string {
+  if (!startsAt) return "—:—";
+  if (typeof startsAt !== "string") {
+    const arr = startsAt as unknown;
+    if (Array.isArray(arr) && arr.length >= 5) {
+      return `${String(arr[3]).padStart(2, "0")}:${String(arr[4]).padStart(2, "0")}`;
+    }
+    return "—:—";
+  }
+  const m = startsAt.match(/T(\d{2}):(\d{2})/) ?? startsAt.match(/\s(\d{2}):(\d{2})/);
+  if (m) return `${m[1]}:${m[2]}`;
+  const d = new Date(startsAt);
+  if (!Number.isNaN(d.getTime())) {
+    return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  }
+  return "—:—";
+}
+
+function appointmentEndTime(row: AppointmentDto): string {
+  if (row.endsAt) return appointmentTime(row.endsAt);
+  const start = appointmentTime(row.startsAt);
+  if (start === "—:—") return start;
+  const [h, m] = start.split(":").map(Number);
+  const total = (h ?? 0) * 60 + (m ?? 0) + (row.dureeMinutes || 30);
+  return `${String(Math.floor(total / 60) % 24).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+}
+
 function statutTone(statut: string): "primary" | "success" | "warning" | "destructive" | "neutral" {
   switch (statut) {
     case "CONFIRMED":
@@ -68,9 +98,9 @@ function statutTone(statut: string): "primary" | "success" | "warning" | "destru
 }
 
 function AgendaPage() {
-  const { mode, setMode, isCalendarView, isListView } = useDisplayPreference("agenda", "calendar");
+  const { mode, setMode } = useDisplayPreference("agenda", "calendar");
   const [view, setView] = useState<View>(() =>
-    mode === "list" ? "liste" : mode === "calendar" ? "semaine" : "semaine",
+    mode === "list" ? "liste" : "mois",
   );
   const [cursorKey, setCursorKey] = useState(() => toLocalDateKey());
   const [modalite, setModalite] = useState("toutes");
@@ -184,6 +214,26 @@ function AgendaPage() {
       .sort((a, b) => (a.startsAt ?? "").localeCompare(b.startsAt ?? ""));
   }, [rows, cursorKey]);
 
+  /** Créneaux horaires 7h–20h pour la vue jour. */
+  const dayTimeline = useMemo(() => {
+    const hours = Array.from({ length: 14 }, (_, i) => i + 7); // 07 → 20
+    return hours.map((hour) => {
+      const label = `${String(hour).padStart(2, "0")}:00`;
+      const items = dayRows.filter((r) => {
+        const t = appointmentTime(r.startsAt);
+        if (t === "—:—") return false;
+        return Number(t.slice(0, 2)) === hour;
+      });
+      return { hour, label, items };
+    });
+  }, [dayRows]);
+
+  const periodLabel = useMemo(() => {
+    if (view === "mois") return formatMonthYear(cursorKey);
+    if (view === "jour") return cursorKey;
+    return `${range.from} → ${range.to}`;
+  }, [view, cursorKey, range.from, range.to]);
+
   const changeView = (v: View) => {
     setView(v);
     setMode(v === "liste" ? "list" : "calendar");
@@ -247,7 +297,7 @@ function AgendaPage() {
       <PageHeader
         eyebrow="Activité"
         title="Agenda"
-        subtitle="Rendez-vous réels. Créneaux issus des ressources / salles du centre."
+        subtitle={`Rendez-vous réels · ${periodLabel}`}
         actions={
           <div className="flex flex-wrap gap-2">
             <Button size="sm" asChild>
@@ -255,14 +305,21 @@ function AgendaPage() {
                 Nouveau RDV
               </Link>
             </Button>
-            {(["jour", "semaine", "mois", "liste"] as View[]).map((v) => (
+            {(
+              [
+                { id: "jour" as const, label: "Jour" },
+                { id: "semaine" as const, label: "Semaine" },
+                { id: "mois" as const, label: "Mois" },
+                { id: "liste" as const, label: "Liste" },
+              ] as const
+            ).map((v) => (
               <Button
-                key={v}
+                key={v.id}
                 size="sm"
-                variant={view === v ? "default" : "outline"}
-                onClick={() => changeView(v)}
+                variant={view === v.id ? "default" : "outline"}
+                onClick={() => changeView(v.id)}
               >
-                {v.charAt(0).toUpperCase() + v.slice(1)}
+                {v.label}
               </Button>
             ))}
           </div>
@@ -273,7 +330,11 @@ function AgendaPage() {
           variant="outline"
           size="sm"
           onClick={() =>
-            setCursorKey(addDaysToKey(cursorKey, view === "mois" ? -30 : view === "jour" ? -1 : -7))
+            setCursorKey(
+              view === "mois"
+                ? addMonthsToKey(cursorKey, -1)
+                : addDaysToKey(cursorKey, view === "jour" ? -1 : -7),
+            )
           }
         >
           Précédent
@@ -285,11 +346,16 @@ function AgendaPage() {
           variant="outline"
           size="sm"
           onClick={() =>
-            setCursorKey(addDaysToKey(cursorKey, view === "mois" ? 30 : view === "jour" ? 1 : 7))
+            setCursorKey(
+              view === "mois"
+                ? addMonthsToKey(cursorKey, 1)
+                : addDaysToKey(cursorKey, view === "jour" ? 1 : 7),
+            )
           }
         >
           Suivant
         </Button>
+        <span className="px-1 text-sm font-medium text-muted-foreground">{periodLabel}</span>
         <Select value={modalite} onValueChange={setModalite}>
           <SelectTrigger className="w-44">
             <SelectValue />
@@ -335,69 +401,142 @@ function AgendaPage() {
         <Skeleton className="h-80" />
       ) : error ? (
         <EmptyState icon={CalendarDays} title="Impossible de charger les données." />
-      ) : rows.length === 0 ? (
-        <EmptyState
-          icon={CalendarDays}
-          title="Aucun rendez-vous sur cette période"
-          description={`${range.from} → ${range.to}`}
-          action={
-            <Button size="sm" asChild>
-              <Link to="/accueil" search={{ mode: "rdv" }}>
-                Prendre rendez-vous
-              </Link>
-            </Button>
-          }
-        />
-      ) : view === "semaine" && isCalendarView ? (
+      ) : view === "semaine" ? (
         <div className="grid gap-2 md:grid-cols-7">
           {weekDays.map((day) => (
             <div key={day} className="app-surface min-h-40 p-2">
-              <p className="mb-2 text-xs font-semibold text-muted-foreground">{day}</p>
+              <button
+                type="button"
+                className="mb-2 text-xs font-semibold text-muted-foreground hover:text-primary"
+                onClick={() => openDay(day)}
+              >
+                {day}
+              </button>
               <div className="space-y-2">
-                {(byDay.get(day) ?? []).map((row) => (
-                  <div key={row.id} className="rounded-md border border-border bg-background p-2 text-xs">
-                    <p className="font-semibold">{row.startsAt?.slice(11, 16)} · {row.patient}</p>
-                    <p className="text-muted-foreground">
-                      {row.examenLibelle || row.modalite} · {row.salle || "—"}
-                    </p>
-                    {rowActions(row)}
-                  </div>
-                ))}
+                {(byDay.get(day) ?? []).length === 0 ? (
+                  <p className="text-[11px] text-muted-foreground">Aucun RDV</p>
+                ) : (
+                  (byDay.get(day) ?? []).map((row) => (
+                    <div key={row.id} className="rounded-md border border-border bg-background p-2 text-xs">
+                      <p className="font-semibold">
+                        <span className="tabular-nums text-primary">
+                          {appointmentTime(row.startsAt)}–{appointmentEndTime(row)}
+                        </span>{" "}
+                        · {row.patient}
+                      </p>
+                      <p className="text-muted-foreground">
+                        {row.examenLibelle || row.modalite} · {row.salle || "—"}
+                      </p>
+                      {rowActions(row)}
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           ))}
         </div>
       ) : view === "jour" ? (
-        <div className="app-surface divide-y divide-border">
-          <div className="px-4 py-3 text-sm font-semibold text-muted-foreground">{cursorKey}</div>
+        <div className="app-surface overflow-hidden">
+          <div className="flex items-center justify-between border-b border-border px-4 py-3">
+            <p className="text-sm font-semibold">{cursorKey}</p>
+            <p className="text-xs text-muted-foreground">
+              {dayRows.length} rendez-vous · planning horaire 07:00–20:00
+            </p>
+          </div>
           {dayRows.length === 0 ? (
             <EmptyState
               icon={CalendarDays}
               title="Aucun rendez-vous ce jour"
               description={cursorKey}
+              action={
+                <Button size="sm" asChild>
+                  <Link to="/accueil" search={{ mode: "rdv" }}>
+                    Prendre rendez-vous
+                  </Link>
+                </Button>
+              }
             />
           ) : (
-            dayRows.map((row) => (
-              <div
-                key={row.id}
-                className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
-              >
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold">
-                    {row.startsAt?.slice(11, 16)} · {row.patient}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {row.examenLibelle || row.modalite} · {row.salle || "Salle non précisée"} ·{" "}
-                    {row.dureeMinutes} min
-                  </p>
+            <div className="divide-y divide-border">
+              {dayTimeline.map((slot) => (
+                <div key={slot.label} className="grid grid-cols-[4.5rem_1fr] gap-3 px-4 py-2.5">
+                  <div className="pt-1 text-right">
+                    <span className="font-mono text-xs font-semibold tabular-nums text-muted-foreground">
+                      {slot.label}
+                    </span>
+                  </div>
+                  <div className="min-w-0 space-y-2">
+                    {slot.items.length === 0 ? (
+                      <div className="h-7 rounded border border-dashed border-border/70 bg-muted/10" />
+                    ) : (
+                      slot.items.map((row) => (
+                        <div
+                          key={row.id}
+                          className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-background px-3 py-2"
+                        >
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold">
+                              <span className="tabular-nums text-primary">
+                                {appointmentTime(row.startsAt)}–{appointmentEndTime(row)}
+                              </span>{" "}
+                              · {row.patient}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {row.examenLibelle || row.modalite} · {row.salle || "Salle non précisée"} ·{" "}
+                              {row.dureeMinutes} min
+                            </p>
+                          </div>
+                          {rowActions(row)}
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
-                {rowActions(row)}
-              </div>
-            ))
+              ))}
+              {/* RDV hors plage 7–20h */}
+              {dayRows.some((r) => {
+                const h = Number(appointmentTime(r.startsAt).slice(0, 2));
+                return Number.isFinite(h) && (h < 7 || h > 20);
+              }) ? (
+                <div className="space-y-2 px-4 py-3">
+                  <p className="text-xs font-semibold text-muted-foreground">Hors plage 07–20h</p>
+                  {dayRows
+                    .filter((r) => {
+                      const h = Number(appointmentTime(r.startsAt).slice(0, 2));
+                      return Number.isFinite(h) && (h < 7 || h > 20);
+                    })
+                    .map((row) => (
+                      <div
+                        key={row.id}
+                        className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border px-3 py-2"
+                      >
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold">
+                            <span className="tabular-nums text-primary">
+                              {appointmentTime(row.startsAt)}–{appointmentEndTime(row)}
+                            </span>{" "}
+                            · {row.patient}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {row.examenLibelle || row.modalite} · {row.salle || "—"}
+                          </p>
+                        </div>
+                        {rowActions(row)}
+                      </div>
+                    ))}
+                </div>
+              ) : null}
+            </div>
           )}
         </div>
       ) : view === "mois" ? (
         <div className="app-surface overflow-hidden">
+          <div className="flex items-center justify-between border-b border-border px-4 py-3">
+            <p className="text-sm font-semibold">{periodLabel}</p>
+            <p className="text-xs text-muted-foreground">
+              {rows.length} rendez-vous · heure + patient par jour · clic → vue horaire
+            </p>
+          </div>
           <div className="grid grid-cols-7 border-b border-border">
             {WEEKDAY_HEADERS.map((label) => (
               <div
@@ -455,14 +594,14 @@ function AgendaPage() {
                           e.stopPropagation();
                           openDay(day);
                         }}
-                        title={`${row.startsAt?.slice(11, 16)} · ${row.patient} · ${row.examenLibelle || row.modalite} · ${row.salle || "—"}`}
+                        title={`${appointmentTime(row.startsAt)}–${appointmentEndTime(row)} · ${row.patient} · ${row.examenLibelle || row.modalite} · ${row.salle || "—"}`}
                       >
-                        <span className="font-semibold tabular-nums">
-                          {row.startsAt?.slice(11, 16)}
+                        <span className="inline-block rounded bg-primary/10 px-1 font-semibold tabular-nums text-primary">
+                          {appointmentTime(row.startsAt)}
                         </span>{" "}
-                        <span className="truncate">{shortPatient(row.patient)}</span>
+                        <span className="truncate font-medium">{shortPatient(row.patient)}</span>
                         <span className="mt-0.5 block truncate text-muted-foreground">
-                          {row.modalite || row.examenLibelle || "—"}
+                          →{appointmentEndTime(row)} · {row.modalite || row.examenLibelle || "—"}
                           {row.salle ? ` · ${row.salle}` : ""}
                         </span>
                       </button>
@@ -476,6 +615,19 @@ function AgendaPage() {
             })}
           </div>
         </div>
+      ) : rows.length === 0 ? (
+        <EmptyState
+          icon={CalendarDays}
+          title="Aucun rendez-vous sur cette période"
+          description={periodLabel}
+          action={
+            <Button size="sm" asChild>
+              <Link to="/accueil" search={{ mode: "rdv" }}>
+                Prendre rendez-vous
+              </Link>
+            </Button>
+          }
+        />
       ) : (
         <div className="app-surface divide-y divide-border">
           {rows.map((row) => (
@@ -486,9 +638,11 @@ function AgendaPage() {
               <div className="min-w-0">
                 <p className="text-sm font-semibold">{row.patient}</p>
                 <p className="text-xs text-muted-foreground">
-                  {row.startsAt?.replace("T", " ").slice(0, 16)} ·{" "}
-                  {row.examenLibelle || row.modalite} · {row.salle || "Salle non précisée"} ·{" "}
-                  {row.dureeMinutes} min
+                  <span className="font-medium tabular-nums text-foreground">
+                    {appointmentTime(row.startsAt)}–{appointmentEndTime(row)}
+                  </span>{" "}
+                  · {row.startsAt?.slice(0, 10)} · {row.examenLibelle || row.modalite} ·{" "}
+                  {row.salle || "Salle non précisée"} · {row.dureeMinutes} min
                 </p>
               </div>
               {rowActions(row)}
@@ -496,7 +650,6 @@ function AgendaPage() {
           ))}
         </div>
       )}
-      {isListView ? null : null}
     </div>
   );
 }

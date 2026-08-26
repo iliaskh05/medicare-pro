@@ -174,7 +174,7 @@ const rules: Rule[] = [
       text:
         ctx.role === "directeur"
           ? "**Export comptable** — depuis Facturation ou Audit, le bouton d'export produit un fichier CSV téléchargeable, correspondant aux lignes actuellement filtrées."
-          : "L'export comptable est réservé au profil **Directeur (Mr Adnane)** dans cette version. Basculez de rôle depuis le sélecteur du bandeau supérieur pour le visualiser.",
+          : "L'export comptable est réservé au profil **Directeur**. Connectez-vous avec un compte Directeur pour y accéder.",
       actions: [{ kind: "navigate", label: "Ouvrir Facturation", to: "/facturation" }],
     }),
   },
@@ -227,7 +227,7 @@ const rules: Rule[] = [
     motsCles: ["role", "profil", "droit", "permission", "rbac", "directeur", "radiologue"],
     build: (ctx) => ({
       intent: "role",
-      text: `**Gestion des rôles** — le sélecteur du bandeau supérieur bascule entre *Directeur (Mr Adnane)* (accès complet, y compris le module de détection de fraude), *Accueil*, *Technicien* et *Médecin* (modules financiers et IA restreints).\n\nProfil actif : **${roleLabels[ctx.role]}**.`,
+      text: `**Gestion des rôles** — chaque compte est associé à un seul type d'utilisateur (Directeur, Secrétariat, Manipulateur ou Radiologue). Les droits sont définis à la connexion ; aucun changement de rôle n'est possible depuis le profil.\n\nProfil actif : **${roleLabels[ctx.role]}**.`,
       actions: [{ kind: "navigate", label: "Ouvrir le tableau de bord", to: "/dashboard" }],
     }),
   },

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
-import { Stethoscope, Wallet, Save, RotateCcw, FileDown } from "lucide-react";
+import { Stethoscope, Wallet, Save, RotateCcw, FileDown, Banknote } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,7 +27,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { PageHeader, Pill, IconTile } from "@/components/ui-kit";
-import { fetchInvoices, submitInvoice, type InvoicePayload } from "@/lib/api/billing";
+import { fetchInvoices, settleInvoice, submitInvoice, type InvoicePayload } from "@/lib/api/billing";
 import { fetchPatients, type PatientRow } from "@/lib/api/patients";
 import { fetchPrescripteurs } from "@/lib/api/dashboard";
 import { formatMAD, typesExamen, type Facture, type Medecin } from "@/types/domain";
@@ -365,7 +365,7 @@ function FacturationPage() {
                     <TableHead className="text-right">Reste</TableHead>
                     <TableHead className="hidden md:table-cell">Paiement</TableHead>
                     <TableHead className="text-right">Statut</TableHead>
-                    <TableHead className="pr-6 text-right">Dossier</TableHead>
+                    <TableHead className="pr-6 text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -390,41 +390,57 @@ function FacturationPage() {
                       <TableCell className="text-right">
                         <Pill tone={statutTone[f.statut]}>{f.statut}</Pill>
                       </TableCell>
-                      <TableCell className="pr-6 text-right">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="gap-1.5"
-                          onClick={() =>
-                            void telechargerDossierPdf({
-                              titre: "Dossier de facturation",
-                              reference: f.id,
-                              lignes: [
-                                { label: "Patient", valeur: f.patient },
-                                { label: "Examen", valeur: f.examen },
-                                { label: "Date", valeur: f.date },
-                                { label: "Total facturé", valeur: formatMAD(f.total) },
-                                { label: "Part mutuelle", valeur: formatMAD(f.partMutuelle) },
-                                {
-                                  label: "Reste à charge patient",
-                                  valeur: formatMAD(f.resteACharge),
-                                },
-                                { label: "Mode de paiement", valeur: f.paiement },
-                                { label: "Statut", valeur: f.statut },
-                              ],
-                              blocs: [
-                                {
-                                  titre: "Mention légale",
-                                  contenu:
-                                    "Facture émise en dirhams marocains (MAD). Document valable comme justificatif de remboursement auprès de la mutuelle.",
-                                },
-                              ],
-                            })
-                          }
-                        >
-                          <FileDown className="size-4" />
-                          Télécharger (PDF)
-                        </Button>
+                      <TableCell className="pr-6">
+                        <div className="flex flex-wrap items-center justify-end gap-1.5">
+                          {f.statut !== "Payé" && f.statut !== "Annulé" && f.resteACharge > 0 ? (
+                            <ActionButton
+                              variant="default"
+                              size="sm"
+                              className="gap-1.5"
+                              action={() => settleInvoice(f.id)}
+                              toastMessage={`Facture ${f.id} réglée.`}
+                              errorMessage="Règlement impossible"
+                              onDone={retry}
+                            >
+                              <Banknote className="size-4" />
+                              Régler
+                            </ActionButton>
+                          ) : null}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1.5"
+                            onClick={() =>
+                              void telechargerDossierPdf({
+                                titre: "Dossier de facturation",
+                                reference: f.id,
+                                lignes: [
+                                  { label: "Patient", valeur: f.patient },
+                                  { label: "Examen", valeur: f.examen },
+                                  { label: "Date", valeur: f.date },
+                                  { label: "Total facturé", valeur: formatMAD(f.total) },
+                                  { label: "Part mutuelle", valeur: formatMAD(f.partMutuelle) },
+                                  {
+                                    label: "Reste à charge patient",
+                                    valeur: formatMAD(f.resteACharge),
+                                  },
+                                  { label: "Mode de paiement", valeur: f.paiement },
+                                  { label: "Statut", valeur: f.statut },
+                                ],
+                                blocs: [
+                                  {
+                                    titre: "Mention légale",
+                                    contenu:
+                                      "Facture émise en dirhams marocains (MAD). Document valable comme justificatif de remboursement auprès de la mutuelle.",
+                                  },
+                                ],
+                              })
+                            }
+                          >
+                            <FileDown className="size-4" />
+                            PDF
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
