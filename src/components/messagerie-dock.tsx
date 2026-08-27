@@ -32,11 +32,12 @@ function heure(iso: string) {
 
 /** Fil actif : historique chargé depuis le backend et envoi temps réel. */
 function ChannelThread({ channelId }: { channelId: ChannelId }) {
-  const { profile } = useRole();
+  const { profile, userId, backendRole } = useRole();
+  const authorId = userId ?? "anonymous";
   const { messages, isLoading, error, sendMessage } = useChatChannel(channelId, {
-    id: profile.id,
+    id: authorId,
     name: profile.nom,
-    role: profile.label,
+    role: backendRole,
   });
   const [draft, setDraft] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -67,7 +68,7 @@ function ChannelThread({ channelId }: { channelId: ChannelId }) {
             </p>
           ) : (
             messages.map((m) => {
-              const mine = m.authorId === profile.id;
+              const mine = m.authorId === authorId;
               return (
                 <div key={m.id} className={cn("flex flex-col", mine ? "items-end" : "items-start")}>
                   {!mine ? (

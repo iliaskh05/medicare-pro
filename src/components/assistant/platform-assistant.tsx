@@ -6,6 +6,7 @@ import { AssistantLauncher } from "@/components/assistant/assistant-launcher";
 import { AssistantPanel } from "@/components/assistant/assistant-panel";
 import type { AssistantChatMessage } from "@/components/assistant/assistant-message";
 import { useRole } from "@/hooks/use-role";
+import { askAssistant } from "@/lib/api/assistant";
 import {
   assistantQuickActionsForRoute,
   assistantWelcome,
@@ -29,6 +30,7 @@ export function PlatformAssistant() {
 
   const seq = useRef(0);
   const timers = useRef<Array<ReturnType<typeof setTimeout>>>([]);
+  const abortRef = useRef<AbortController | null>(null);
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { role } = useRole();
@@ -46,7 +48,6 @@ export function PlatformAssistant() {
     setActions(welcome.actions);
   }, [ctx, nextId]);
 
-  // Restauration de la session de conversation (sessionStorage uniquement).
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
@@ -63,7 +64,10 @@ export function PlatformAssistant() {
     }
     setHydrated(true);
     const pending = timers.current;
-    return () => pending.forEach(clearTimeout);
+    return () => {
+      pending.forEach(clearTimeout);
+      abortRef.current?.abort();
+    };
   }, []);
 
   useEffect(() => {
@@ -71,7 +75,7 @@ export function PlatformAssistant() {
     try {
       window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
     } catch {
-      /* quota indisponible : l'assistant fonctionne sans persistance */
+      /* quota indisponible */
     }
   }, [messages, hydrated]);
 
@@ -85,16 +89,36 @@ export function PlatformAssistant() {
   const answer = useCallback(
     (question: string) => {
       setTyping(true);
-      const reply = resolveAssistantReply(question, ctx);
-      const timer = setTimeout(() => {
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+
+      void (async () => {
+        let text = "";
+        try {
+          const remote = await askAssistant(
+            { message: question, pathname: ctx.pathname, role: ctx.role },
+            controller.signal,
+          );
+          if (remote?.gemini && remote.text?.trim()) {
+            text = remote.text.trim();
+          }
+        } catch {
+          /* repli moteur local */
+        }
+
+        if (!text) {
+          text = resolveAssistantReply(question, ctx).text;
+        }
+
+        if (controller.signal.aborted) return;
         setTyping(false);
         setMessages((prev) => [
           ...prev,
-          { id: nextId(), auteur: "assistant", texte: reply.text, heure: heure() },
+          { id: nextId(), auteur: "assistant", texte: text, heure: heure() },
         ]);
-        setActions(reply.actions.length > 0 ? reply.actions : assistantQuickActionsForRoute(ctx));
-      }, 700);
-      timers.current.push(timer);
+        setActions(assistantQuickActionsForRoute(ctx));
+      })();
     },
     [ctx, nextId],
   );
@@ -133,6 +157,7 @@ export function PlatformAssistant() {
 
   const clear = useCallback(() => {
     timers.current.forEach(clearTimeout);
+    abortRef.current?.abort();
     setTyping(false);
     setMessages([]);
     toast.info("Conversation de l'assistant effacée.");
@@ -140,6 +165,7 @@ export function PlatformAssistant() {
 
   const restart = useCallback(() => {
     timers.current.forEach(clearTimeout);
+    abortRef.current?.abort();
     setTyping(false);
     seq.current = 0;
     bootstrap();

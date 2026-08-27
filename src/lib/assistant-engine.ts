@@ -269,7 +269,7 @@ export function assistantWelcome(ctx: AssistantContext): AssistantReply {
       page
         ? `Vous êtes sur **${page.nom}**. ${page.resume}`
         : "Choisissez une destination pour commencer."
-    }\n\n_Assistant d'aide : réponses locales et déterministes._`,
+    }\n\n_Assistant enrichi par Gemini (avec repli local si indisponible)._`,
     actions: assistantQuickActionsForRoute(ctx),
   };
 }

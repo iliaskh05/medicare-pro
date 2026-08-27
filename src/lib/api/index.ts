@@ -19,3 +19,4 @@ export * from "./appointments";
 export * from "./waiting-room";
 export * from "./settings";
 export * from "./staff";
+export * from "./assistant";

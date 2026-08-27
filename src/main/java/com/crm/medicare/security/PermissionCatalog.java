@@ -59,6 +59,9 @@ public final class PermissionCatalog {
     public static final String USER_MANAGE = "USER_MANAGE";
     public static final String NOTIFICATION_MANAGE = "NOTIFICATION_MANAGE";
 
+    public static final String CHAT_READ = "CHAT_READ";
+    public static final String CHAT_WRITE = "CHAT_WRITE";
+
     private static final Set<String> ALL = Set.copyOf(baseAll());
 
     private static Set<String> baseAll() {
@@ -86,6 +89,8 @@ public final class PermissionCatalog {
         s.add(FRAUD_REVIEW);
         s.add(USER_MANAGE);
         s.add(NOTIFICATION_MANAGE);
+        s.add(CHAT_READ);
+        s.add(CHAT_WRITE);
         return s;
     }
 
@@ -103,7 +108,9 @@ public final class PermissionCatalog {
                     DOCUMENT_READ,
                     DOCUMENT_DOWNLOAD,
                     DOCUMENT_WRITE,
-                    SETTINGS_READ);
+                    SETTINGS_READ,
+                    CHAT_READ,
+                    CHAT_WRITE);
 
     private static final Set<String> RADIOLOGUE =
             Set.of(
@@ -117,10 +124,19 @@ public final class PermissionCatalog {
                     REPORT_AMEND,
                     DOCUMENT_READ,
                     DOCUMENT_DOWNLOAD,
-                    DOCUMENT_WRITE);
+                    DOCUMENT_WRITE,
+                    CHAT_READ,
+                    CHAT_WRITE);
 
     private static final Set<String> MANIPULATEUR =
-            Set.of(PATIENT_READ, EXAM_READ, EXAM_UPDATE, WORKLIST_ASSIGN, DOCUMENT_READ);
+            Set.of(
+                    PATIENT_READ,
+                    EXAM_READ,
+                    EXAM_UPDATE,
+                    WORKLIST_ASSIGN,
+                    DOCUMENT_READ,
+                    CHAT_READ,
+                    CHAT_WRITE);
 
     private static final Map<RoleUtilisateur, Set<String>> BY_ROLE;
 

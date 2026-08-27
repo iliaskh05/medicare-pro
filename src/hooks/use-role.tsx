@@ -111,6 +111,8 @@ type RoleContextValue = {
   role: AppRole;
   /** Rôle brut renvoyé par le backend, source des permissions RBAC. */
   backendRole: BackendRole;
+  /** Identifiant utilisateur backend (JWT / localStorage), pour la messagerie. */
+  userId: string | null;
   /** `can("billing:export")` — voir src/lib/rbac.ts. */
   can: (permission: Permission) => boolean;
   canAccess: (resource: Resource) => boolean;
@@ -221,6 +223,11 @@ export function RoleProvider({ children }: { children: ReactNode }) {
     const storedUser = readStoredUser();
     return storedUser?.nomComplet || storedUser?.nom || null;
   });
+  const [userId, setUserId] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    const storedUser = readStoredUser();
+    return storedUser?.id != null ? String(storedUser.id) : null;
+  });
 
   useEffect(() => {
     const storedUser = readStoredUser();
@@ -229,6 +236,7 @@ export function RoleProvider({ children }: { children: ReactNode }) {
       setRole(mapped);
       setBackendRole(normalizeRole(storedUser.role));
       setDisplayName(storedUser.nomComplet || storedUser.nom || null);
+      setUserId(storedUser.id != null ? String(storedUser.id) : null);
       return;
     }
 
@@ -262,6 +270,7 @@ export function RoleProvider({ children }: { children: ReactNode }) {
     return {
       role,
       backendRole,
+      userId,
       profile,
       user: toUser(profile),
       can: (permission) => rbacHasPermission(backendRole, permission),
@@ -272,7 +281,7 @@ export function RoleProvider({ children }: { children: ReactNode }) {
       canExport: (resource) => rbacCanExport(backendRole, resource),
       hasPermission: (permission) => profile[permission],
     };
-  }, [role, backendRole, displayName]);
+  }, [role, backendRole, displayName, userId]);
 
   return <RoleContext.Provider value={value}>{children}</RoleContext.Provider>;
 }
@@ -283,6 +292,7 @@ export function useRole(): RoleContextValue {
     return {
       role: "directeur",
       backendRole: "DIRECTEUR",
+      userId: null,
       profile: roleProfiles.directeur,
       user: toUser(roleProfiles.directeur),
       can: (permission) => rbacHasPermission("DIRECTEUR", permission),

@@ -31,14 +31,14 @@ export const Route = createFileRoute("/chat")({
 });
 
 function ChatPage() {
-  const { profile } = useRole();
+  const { profile, userId, backendRole } = useRole();
   const [channelId, setChannelId] = useState<ChannelId>("accueil-medecins");
   const author = {
-    id: `me-${profile.id}`,
+    id: userId ?? "anonymous",
     name: profile.nom,
-    role: profile.label.split(" (")[0] ?? profile.label,
+    role: backendRole,
   };
-  const { messages, status, isLoading, sendMessage } = useChatChannel(channelId, author);
+  const { messages, status, isLoading, error, sendMessage } = useChatChannel(channelId, author);
   const active = channels.find((c) => c.id === channelId) ?? channels[0]!;
 
   return (
@@ -48,13 +48,15 @@ function ChatPage() {
         title="Messagerie interne"
         subtitle="Coordination accueil, manipulateurs et radiologues"
         actions={
-          <Pill tone={status === "open" ? "success" : "neutral"}>
+          <Pill tone={status === "open" || status === "polling" ? "success" : "neutral"}>
             <Radio className="size-3.5" />
             {status === "open"
               ? "Temps réel connecté"
               : status === "connecting"
                 ? "Connexion…"
-                : "Mode hors temps réel"}
+                : status === "polling"
+                  ? "Synchronisation active"
+                  : "Hors ligne"}
           </Pill>
         }
       />
@@ -93,6 +95,9 @@ function ChatPage() {
           <header className="border-b border-border px-4 py-3">
             <h2 className="truncate text-sm font-bold tracking-tight">{active.name}</h2>
             <p className="truncate text-xs text-muted-foreground">{active.description}</p>
+            {error ? (
+              <p className="mt-1 text-xs text-destructive">{error.message}</p>
+            ) : null}
           </header>
           <MessageList messages={messages} currentAuthorId={author.id} isLoading={isLoading} />
           <MessageInput channelName={active.name} onSend={sendMessage} />

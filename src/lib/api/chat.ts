@@ -42,10 +42,13 @@ export async function fetchChannelMessages(
   return rows ?? [];
 }
 
-/** POST {JAVA_API_BASE}/api/chat/channels/{id}/messages */
+/**
+ * POST {JAVA_API_BASE}/api/chat/channels/{id}/messages
+ * L'auteur est dérivé du JWT côté serveur — ne jamais envoyer authorId/authorName.
+ */
 export async function postChannelMessage(
   channelId: ChannelId,
-  body: { authorId: string; authorName: string; body: string },
+  body: { body: string },
 ): Promise<ChatMessageDto> {
   return javaApi<ChatMessageDto>(`/api/chat/channels/${channelId}/messages`, {
     method: "POST",
@@ -53,7 +56,7 @@ export async function postChannelMessage(
   });
 }
 
-/** URL du WebSocket temps réel exposé par le backend Java. */
+/** URL du WebSocket temps réel (optionnel, si VITE_WS_URL est défini). */
 export function chatSocketUrl(channelId: ChannelId): string {
   const configured = import.meta.env?.["VITE_WS_URL"] as string | undefined;
   const base =
