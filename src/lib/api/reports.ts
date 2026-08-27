@@ -1,6 +1,13 @@
 import { javaApi, javaApiBlob } from "./config";
 
-export type ReportStatus = "draft" | "in_review" | "validated" | "amended" | "sent";
+export type ReportStatus = "draft" | "in_review" | "validated" | "amended";
+
+export const REPORT_STATUS_LABEL: Record<ReportStatus, string> = {
+  draft: "Brouillon",
+  in_review: "En relecture",
+  validated: "Validé",
+  amended: "Amendé",
+};
 
 export type ReportSummary = {
   id: string;
@@ -109,6 +116,15 @@ export async function saveReportDraft(
     method: "PUT",
     body: payload,
   });
+  return normalizeReport(row);
+}
+
+/** POST {JAVA_API_BASE}/api/reports/{id}/submit — DRAFT → IN_REVIEW */
+export async function submitReport(id: string): Promise<ReportSummary> {
+  const row = await javaApi<ReportSummary>(
+    `/api/reports/${encodeURIComponent(id)}/submit`,
+    { method: "POST" },
+  );
   return normalizeReport(row);
 }
 

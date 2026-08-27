@@ -71,8 +71,45 @@ export type PatientBilling = {
   date: string;
   total: number;
   mutuelle: number;
+  acompte?: number;
+  reste?: number;
   statut: string;
   tone: "success" | "warning" | "destructive" | "primary" | "neutral";
+};
+
+export type PatientDuplicateMatch = {
+  patientId: string;
+  score: number;
+  champsIdentiques: string[];
+  nomComplet: string;
+  numeroDossier?: string;
+};
+
+export type PatientWritePayload = {
+  nomComplet?: string;
+  nom?: string;
+  prenom?: string;
+  cin: string;
+  telephone?: string;
+  email?: string;
+  mutuelle?: string;
+  sexe?: string;
+  numAffiliation?: string;
+  medecinTraitant?: string;
+  ville?: string;
+  quartier?: string;
+  adresse?: string;
+  dateNaissance?: string;
+  age?: number;
+  force?: boolean;
+};
+
+export type PatientsPage = {
+  content: PatientRow[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
 };
 
 export type FinancialStatus = {
@@ -107,6 +144,80 @@ function mapPatient(dto: PatientDto): PatientRow {
 export async function fetchPatients(signal?: AbortSignal): Promise<PatientRow[]> {
   const rows = await javaApi<PatientDto[]>("/api/patients", signal ? { signal } : {});
   return (rows ?? []).map(mapPatient);
+}
+
+/** Recherche serveur paginée — déclenche le contrat PageResponse côté backend. */
+export async function searchPatients(
+  params: {
+    search?: string;
+    mutuelle?: string;
+    page?: number;
+    size?: number;
+  },
+  signal?: AbortSignal,
+): Promise<PatientsPage> {
+  const qs = new URLSearchParams();
+  if (params.search?.trim()) qs.set("search", params.search.trim());
+  if (params.mutuelle?.trim()) qs.set("mutuelle", params.mutuelle.trim());
+  qs.set("page", String(params.page ?? 0));
+  qs.set("size", String(params.size ?? 20));
+  // Toujours envoyer page pour forcer le contrat paginé même sans filtre
+  const data = await javaApi<
+    | { content?: PatientDto[]; page?: number; size?: number; totalElements?: number; totalPages?: number }
+    | PatientDto[]
+  >(`/api/patients?${qs.toString()}`, signal ? { signal } : {});
+
+  if (Array.isArray(data)) {
+    const content = data.map(mapPatient);
+    return {
+      content,
+      page: 0,
+      size: content.length,
+      totalElements: content.length,
+      totalPages: 1,
+    };
+  }
+  const content = (data.content ?? []).map(mapPatient);
+  return {
+    content,
+    page: data.page ?? 0,
+    size: data.size ?? content.length,
+    totalElements: data.totalElements ?? content.length,
+    totalPages: data.totalPages ?? 1,
+  };
+}
+
+export async function checkPatientDuplicates(
+  params: { nom?: string; cin?: string; telephone?: string; naissance?: string },
+  signal?: AbortSignal,
+): Promise<PatientDuplicateMatch[]> {
+  const qs = new URLSearchParams();
+  if (params.nom?.trim()) qs.set("nom", params.nom.trim());
+  if (params.cin?.trim()) qs.set("cin", params.cin.trim());
+  if (params.telephone?.trim()) qs.set("telephone", params.telephone.trim());
+  if (params.naissance?.trim()) qs.set("naissance", params.naissance.trim());
+  if ([...qs.keys()].length === 0) return [];
+  const rows = await javaApi<
+    Array<{
+      patientId?: string | number;
+      score?: number;
+      champsIdentiques?: string[];
+      nomComplet?: string;
+      numeroDossier?: string;
+    }>
+  >(`/api/patients/duplicates?${qs.toString()}`, signal ? { signal } : {});
+  return (rows ?? []).map((r) => {
+    const match: PatientDuplicateMatch = {
+      patientId: String(r.patientId ?? ""),
+      score: Number(r.score ?? 0),
+      champsIdentiques: r.champsIdentiques ?? [],
+      nomComplet: r.nomComplet ?? "",
+    };
+    if (r.numeroDossier != null && r.numeroDossier !== "") {
+      match.numeroDossier = r.numeroDossier;
+    }
+    return match;
+  });
 }
 
 export async function fetchPatientData(
@@ -196,7 +307,32 @@ export async function fetchPatientTimeline(
   return rows ?? [];
 }
 
-export async function createPatient(payload: Omit<PatientRow, "id">): Promise<PatientRow> {
+export async function createPatient(payload: PatientWritePayload | Omit<PatientRow, "id">): Promise<PatientRow> {
   const dto = await javaApi<PatientDto>("/api/patients", { method: "POST", body: payload });
   return mapPatient(dto);
+}
+
+export async function updatePatient(
+  id: string,
+  payload: PatientWritePayload,
+): Promise<PatientRow> {
+  const dto = await javaApi<PatientDto>(`/api/patients/${encodeURIComponent(id)}`, {
+    method: "PUT",
+    body: payload,
+  });
+  return mapPatient(dto);
+}
+
+export async function fetchPatientReports(patientId: string, signal?: AbortSignal) {
+  return javaApi<unknown[]>(
+    `/api/patients/${encodeURIComponent(patientId)}/reports`,
+    signal ? { signal } : {},
+  );
+}
+
+export async function fetchPatientAppointments(patientId: string, signal?: AbortSignal) {
+  return javaApi<unknown[]>(
+    `/api/patients/${encodeURIComponent(patientId)}/appointments`,
+    signal ? { signal } : {},
+  );
 }

@@ -41,7 +41,8 @@ export type Facture = {
   partMutuelle: number;
   resteACharge: number;
   paiement: "Espèces" | "Carte bancaire" | "Chèque" | "Virement";
-  statut: "Payé" | "En attente de mutuelle" | "Annulé";
+  /** Libellé UI — préférer Invoice.statut pour la logique métier */
+  statut: string;
 };
 
 export type Medecin = {
