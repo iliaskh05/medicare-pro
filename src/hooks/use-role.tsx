@@ -138,6 +138,7 @@ export function mapBackendRole(role: string | null | undefined): AppRole {
   switch (role.toUpperCase()) {
     case "DIRECTEUR":
     case "DIRECTION":
+    case "AUDITEUR":
     case "SUPER_ADMIN":
     case "ADMIN":
       return "directeur";
@@ -266,6 +267,13 @@ export function RoleProvider({ children }: { children: ReactNode }) {
       nom,
       label: roleLabels[role],
       initiales: initialsFrom(nom),
+      canSeeFraudModule: rbacCanAccess(backendRole, "fraud"),
+      canExportCompta:
+        base.canExportCompta ||
+        rbacCanExport(backendRole, "fraud") ||
+        rbacCanExport(backendRole, "billing"),
+      canValiderAnomalie:
+        base.canValiderAnomalie || rbacCanValidate(backendRole, "fraud"),
     };
     return {
       role,

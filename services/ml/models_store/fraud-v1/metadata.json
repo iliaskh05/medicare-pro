@@ -1,0 +1,89 @@
+{
+  "version": "fraud-v1",
+  "trained_at": "2026-08-28T16:46:24.322667+00:00",
+  "sample_count": 24,
+  "feature_names": [
+    "patient_age",
+    "patient_visit_count_30d",
+    "patient_exam_count_30d",
+    "patient_exam_count_90d",
+    "same_exam_count_30d",
+    "same_exam_count_90d",
+    "catalogue_price",
+    "billed_amount",
+    "deposit_amount",
+    "remaining_amount",
+    "invoice_total",
+    "insurance_share",
+    "patient_share",
+    "amount_paid",
+    "amount_refunded",
+    "discount_amount",
+    "discount_percentage",
+    "billed_to_catalogue_ratio",
+    "patient_share_ratio",
+    "paid_to_total_ratio",
+    "price_deviation",
+    "exam_to_invoice_minutes",
+    "exam_to_payment_minutes",
+    "invoice_to_payment_minutes",
+    "exam_to_document_minutes",
+    "document_to_retrieval_minutes",
+    "dossier_not_retrieved",
+    "document_count",
+    "document_uploaded",
+    "document_upload_delay",
+    "document_reprint_count",
+    "duplicate_document_count",
+    "document_hash_duplicate_count",
+    "operator_average_discount",
+    "operator_discount_std",
+    "operator_discount_rate",
+    "operator_non_retrieval_rate",
+    "operator_cancellation_rate",
+    "operator_refund_rate",
+    "operator_modification_rate",
+    "operator_reprint_rate",
+    "operator_cash_payment_rate",
+    "operator_discount_deviation",
+    "operator_non_retrieval_deviation",
+    "operator_refund_deviation",
+    "invoice_modification_count",
+    "invoice_cancellation_count",
+    "refund_count",
+    "payment_count"
+  ],
+  "center_stats": {
+    "average_discount_pct": 9.916666666666666,
+    "discount_std": 12.25396761144007,
+    "non_retrieval_rate": 0.041666666666666664,
+    "non_retrieval_std": 0.19982631347136331,
+    "refund_rate": 0.01,
+    "refund_std": 0.0
+  },
+  "config": {
+    "n_clusters": 5,
+    "iso_contamination": 0.12,
+    "weights": {
+      "cluster": 0.4,
+      "isolation": 0.3,
+      "rules": 0.3
+    }
+  },
+  "metrics": {
+    "samples": 24,
+    "feature_count": 49,
+    "cluster_silhouette": 0.6219587199728194,
+    "mean_cluster_distance": 1.1086710800230852,
+    "isolation_anomaly_rate": 0.125
+  },
+  "clustering": {
+    "n_clusters": 5,
+    "distance_threshold": 1.9603,
+    "silhouette_score": 0.622
+  },
+  "isolation": {
+    "contamination": 0.12,
+    "n_estimators": 200
+  }
+}

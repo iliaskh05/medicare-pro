@@ -1,11 +1,13 @@
 package com.crm.medicare.controller;
 
 import com.crm.medicare.common.PageResponse;
+import com.crm.medicare.dto.AnomalieDto;
 import com.crm.medicare.dto.Patient360Dtos;
 import com.crm.medicare.dto.PatientDuplicateMatch;
 import com.crm.medicare.dto.PatientResponse;
 import com.crm.medicare.dto.PatientWriteRequest;
 import com.crm.medicare.security.PermissionCatalog;
+import com.crm.medicare.service.AnomalyAuditService;
 import com.crm.medicare.service.PatientService;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
@@ -28,6 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class PatientController {
 
     private final PatientService patientService;
+    private final AnomalyAuditService anomalyAuditService;
 
     /**
      * Sans query : tableau {@code PatientDto[]} (contrat consommé par {@code fetchPatients}).
@@ -163,5 +166,11 @@ public class PatientController {
     @PreAuthorize("hasAuthority('" + PermissionCatalog.PATIENT_READ + "')")
     public List<com.crm.medicare.dto.ReportDto> reports(@PathVariable Long id) {
         return patientService.reports(id);
+    }
+
+    @GetMapping({"/api/patients/{id}/anomalies", "/api/v1/patients/{id}/anomalies"})
+    @PreAuthorize("hasAuthority('" + PermissionCatalog.AUDIT_READ + "')")
+    public List<AnomalieDto> anomalies(@PathVariable Long id) {
+        return anomalyAuditService.listPatientAnomalies(id);
     }
 }

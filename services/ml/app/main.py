@@ -1,7 +1,8 @@
-"""RadioCRM ML microservice — fraud hybrid + image heuristics."""
+"""RadioCRM ML microservice — anomaly detection + legacy fraud + image heuristics."""
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timezone
 from typing import Any
 
@@ -9,10 +10,13 @@ from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from .api.routes import router as anomaly_router
 from .fraud_engine import HybridFraudEngine, default_training_rows
 from .image_analysis import analyze_bytes
 
-app = FastAPI(title="RadioCRM ML", version="1.0.0")
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
+
+app = FastAPI(title="MediCare Pro ML", version="2.0.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -20,7 +24,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-ENGINE = HybridFraudEngine.train(default_training_rows())
+# New anomaly detection API (/health, /score, /train, /model/info)
+app.include_router(anomaly_router)
+
+# Legacy fraud engine for backward compatibility (lazy init)
+_LEGACY_ENGINE: HybridFraudEngine | None = None
+
+
+def get_legacy_engine() -> HybridFraudEngine:
+    global _LEGACY_ENGINE
+    if _LEGACY_ENGINE is None:
+        _LEGACY_ENGINE = HybridFraudEngine()
+    return _LEGACY_ENGINE
 
 
 class InvoiceIn(BaseModel):
@@ -34,6 +49,7 @@ class InvoiceIn(BaseModel):
     isGenderIncoherent: float | None = None
     isDuplicate: float | None = None
     mutuelleExpired: float | None = None
+    catalogue_price: float | None = None
 
     model_config = {"populate_by_name": True}
 
@@ -42,33 +58,24 @@ class TrainIn(BaseModel):
     rows: list[dict[str, Any]]
 
 
-@app.get("/health")
-def health() -> dict[str, Any]:
-    return {
-        "ok": True,
-        "service": "radiocrm-ml",
-        "model": ENGINE.version,
-        "ts": datetime.now(timezone.utc).isoformat(),
-    }
-
-
 @app.post("/fraud/train")
 def fraud_train(body: TrainIn) -> dict[str, Any]:
-    global ENGINE
+    global _LEGACY_ENGINE
     rows = body.rows or default_training_rows()
-    ENGINE = HybridFraudEngine.train(rows)
-    return {"ok": True, "data": {"version": ENGINE.version, "samples": len(rows)}}
+    _LEGACY_ENGINE = HybridFraudEngine.train(rows)
+    return {"ok": True, "data": {"version": _LEGACY_ENGINE.version, "samples": len(rows)}}
 
 
 @app.post("/fraud/score")
 def fraud_score(invoice: InvoiceIn) -> dict[str, Any]:
-    result = ENGINE.score(invoice.model_dump())
+    result = get_legacy_engine().score(invoice.model_dump())
     return {"ok": True, "data": result}
 
 
 @app.post("/fraud/analyze")
 def fraud_analyze(rows: list[InvoiceIn]) -> dict[str, Any]:
-    results = [ENGINE.score(r.model_dump()) for r in rows]
+    engine = get_legacy_engine()
+    results = [engine.score(r.model_dump()) for r in rows]
     results.sort(key=lambda r: r["score"], reverse=True)
     return {"ok": True, "data": {"results": results}}
 
@@ -95,4 +102,4 @@ async def imaging_analyze(
 
 @app.get("/")
 def root() -> dict[str, str]:
-    return {"service": "radiocrm-ml", "docs": "/docs"}
+    return {"service": "medicare-ml", "docs": "/docs", "anomaly_api": "/health"}

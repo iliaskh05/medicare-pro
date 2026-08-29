@@ -57,3 +57,50 @@ export async function updateAnomalieStatut(
     body: { statut },
   });
 }
+
+export type AuditDemoExample = {
+  id: string;
+  title: string;
+  summary: string;
+  expectedScore: number;
+  niveau: string;
+  signals: string[];
+  patient: string;
+  acte: string;
+};
+
+export type AuditDemoStatus = {
+  loaded: boolean;
+  count: number;
+  operationIds: string[];
+};
+
+/** GET /api/audit/demo/examples */
+export async function fetchAuditDemoExamples(signal?: AbortSignal): Promise<AuditDemoExample[]> {
+  const rows = await javaApi<AuditDemoExample[]>(
+    "/api/audit/demo/examples",
+    signal ? { signal } : {},
+  );
+  return rows ?? [];
+}
+
+/** GET /api/audit/demo/status */
+export async function fetchAuditDemoStatus(signal?: AbortSignal): Promise<AuditDemoStatus> {
+  return (
+    (await javaApi<AuditDemoStatus>("/api/audit/demo/status", signal ? { signal } : {})) ?? {
+      loaded: false,
+      count: 0,
+      operationIds: [],
+    }
+  );
+}
+
+/** POST /api/audit/demo/load */
+export async function loadAuditDemo(): Promise<AuditDemoStatus> {
+  return javaApi<AuditDemoStatus>("/api/audit/demo/load", { method: "POST" });
+}
+
+/** POST /api/audit/demo/reset */
+export async function resetAuditDemo(): Promise<AuditDemoStatus> {
+  return javaApi<AuditDemoStatus>("/api/audit/demo/reset", { method: "POST" });
+}

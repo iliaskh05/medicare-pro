@@ -160,7 +160,7 @@ function AsyncSection({
 }
 
 function Dashboard() {
-  const { profile, role } = useRole();
+  const { profile } = useRole();
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Bonjour" : hour < 18 ? "Bon après-midi" : "Bonsoir";
   const todayLabel = new Date().toLocaleDateString("fr-FR", {
@@ -251,7 +251,7 @@ function Dashboard() {
   }, [reloadKey]);
 
   useEffect(() => {
-    if (role !== "directeur") return;
+    if (!profile.canSeeFraudModule) return;
     const controller = new AbortController();
     setUrgencesLoading(true);
     setUrgencesError(null);
@@ -265,7 +265,7 @@ function Dashboard() {
         if (!controller.signal.aborted) setUrgencesLoading(false);
       });
     return () => controller.abort();
-  }, [role, reloadKey]);
+  }, [profile.canSeeFraudModule, reloadKey]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -639,7 +639,7 @@ function Dashboard() {
           </div>
         </div>
 
-        {role === "directeur" ? (
+        {profile.canSeeFraudModule ? (
           <div className="app-surface overflow-hidden">
             <SectionHeader
               title="Urgences audit"
@@ -722,7 +722,7 @@ function Dashboard() {
         ) : null}
       </div>
 
-      {role === "directeur" ? <CaisseFraudAlert /> : null}
+      {profile.canSeeFraudModule ? <CaisseFraudAlert /> : null}
     </div>
   );
 }

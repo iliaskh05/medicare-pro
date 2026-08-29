@@ -59,7 +59,7 @@ import { KpiCard, PageHeader, Pill } from "@/components/ui-kit";
 import { useDisplayPreference } from "@/hooks/use-display-preference";
 import { useRole } from "@/hooks/use-role";
 import { fetchInvoices } from "@/lib/api/billing";
-import { toastMessage } from "@/lib/api/errors";
+import { describeApiError, toastMessage, type FriendlyError } from "@/lib/api/errors";
 import {
   checkPatientDuplicates,
   createPatient,
@@ -74,7 +74,7 @@ import { formatMAD } from "@/types/domain";
 
 export const Route = createFileRoute("/patients")({
   validateSearch: (search: Record<string, unknown>) => ({
-    nouveau: search.nouveau === "1" || search.nouveau === true,
+    nouveau: search["nouveau"] === "1" || search["nouveau"] === true,
   }),
   head: () => ({
     meta: [
@@ -169,7 +169,7 @@ function PatientsPage() {
   const [totalElements, setTotalElements] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [listStatus, setListStatus] = useState<"loading" | "ready" | "error" | "empty">("loading");
-  const [listError, setListError] = useState<unknown>(null);
+  const [listError, setListError] = useState<FriendlyError | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
 
@@ -201,15 +201,16 @@ function PatientsPage() {
     setListStatus("loading");
     setListError(null);
 
-    searchPatients(
-      {
-        search: debouncedQuery || undefined,
-        mutuelle: mutuelle !== "toutes" ? mutuelle : undefined,
-        page,
-        size: PAGE_SIZE,
-      },
-      controller.signal,
-    )
+    const params: {
+      search?: string;
+      mutuelle?: string;
+      page?: number;
+      size?: number;
+    } = { page, size: PAGE_SIZE };
+    if (debouncedQuery) params.search = debouncedQuery;
+    if (mutuelle !== "toutes") params.mutuelle = mutuelle;
+
+    searchPatients(params, controller.signal)
       .then((res) => {
         if (controller.signal.aborted) return;
         setPatients(res.content);
@@ -220,7 +221,7 @@ function PatientsPage() {
       })
       .catch((err) => {
         if (controller.signal.aborted) return;
-        setListError(err);
+        setListError(describeApiError(err));
         setListStatus("error");
       });
 
@@ -300,15 +301,15 @@ function PatientsPage() {
     }
     setCheckingDup(true);
     try {
-      const matches = await checkPatientDuplicates(
-        {
-          cin,
-          nom: [draft.nom, draft.prenom].filter(Boolean).join(" ").trim() || undefined,
-          telephone: draft.telephone.trim() || undefined,
-          naissance: draft.dateNaissance || undefined,
-        },
-        signal,
-      );
+      const dupParams: { nom?: string; cin?: string; telephone?: string; naissance?: string } = {
+        cin,
+      };
+      const nom = [draft.nom, draft.prenom].filter(Boolean).join(" ").trim();
+      if (nom) dupParams.nom = nom;
+      if (draft.telephone.trim()) dupParams.telephone = draft.telephone.trim();
+      if (draft.dateNaissance) dupParams.naissance = draft.dateNaissance;
+
+      const matches = await checkPatientDuplicates(dupParams, signal);
       setDuplicates(matches);
       if (matches.length > 0) {
         setDraft((d) => ({ ...d, force: false }));
@@ -316,11 +317,11 @@ function PatientsPage() {
       return matches;
     } catch (e) {
       toast.error(toastMessage(e));
-      return duplicates;
+      return [];
     } finally {
       setCheckingDup(false);
     }
-  }, [draft.cin, draft.nom, draft.prenom, draft.telephone, draft.dateNaissance, duplicates]);
+  }, [draft.cin, draft.nom, draft.prenom, draft.telephone, draft.dateNaissance]);
 
   const submitDraft = useCallback(async () => {
     if (!canSubmit) return;
@@ -337,19 +338,19 @@ function PatientsPage() {
 
       const payload: PatientWritePayload = {
         nom: draft.nom.trim(),
-        prenom: draft.prenom.trim() || undefined,
         nomComplet: [draft.nom, draft.prenom].filter(Boolean).join(" ").trim(),
         cin: draft.cin.trim().toUpperCase(),
-        dateNaissance: draft.dateNaissance || undefined,
-        sexe: draft.sexe || undefined,
-        telephone: draft.telephone.trim() || undefined,
-        email: draft.email.trim() || undefined,
-        adresse: draft.adresse.trim() || undefined,
-        ville: draft.ville.trim() || undefined,
         mutuelle: draft.mutuelle,
-        numAffiliation: draft.numAffiliation.trim() || undefined,
-        force: matches.length > 0 ? true : undefined,
       };
+      if (draft.prenom.trim()) payload.prenom = draft.prenom.trim();
+      if (draft.dateNaissance) payload.dateNaissance = draft.dateNaissance;
+      if (draft.sexe) payload.sexe = draft.sexe;
+      if (draft.telephone.trim()) payload.telephone = draft.telephone.trim();
+      if (draft.email.trim()) payload.email = draft.email.trim();
+      if (draft.adresse.trim()) payload.adresse = draft.adresse.trim();
+      if (draft.ville.trim()) payload.ville = draft.ville.trim();
+      if (draft.numAffiliation.trim()) payload.numAffiliation = draft.numAffiliation.trim();
+      if (matches.length > 0) payload.force = true;
 
       const created = await createPatient(payload);
       setDraft(emptyDraft());

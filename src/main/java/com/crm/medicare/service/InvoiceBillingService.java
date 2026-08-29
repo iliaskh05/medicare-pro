@@ -47,6 +47,7 @@ public class InvoiceBillingService {
     private final ExamenRepository examenRepository;
     private final WorkflowEngine workflowEngine;
     private final AuditService auditService;
+    private final AnomalyScoringService anomalyScoringService;
 
     @Transactional(readOnly = true)
     public List<InvoiceDto> list() {
@@ -163,6 +164,7 @@ public class InvoiceBillingService {
                 "Invoice",
                 String.valueOf(saved.getId()),
                 Map.of("reference", saved.getReference(), "total", saved.getTotal().toPlainString()));
+        anomalyScoringService.scoreInvoiceAsync(saved.getId());
         return toDto(saved);
     }
 
@@ -180,6 +182,7 @@ public class InvoiceBillingService {
                         request.getMontant() != null ? request.getMontant().toPlainString() : "0",
                         "reference",
                         saved.getReference()));
+        anomalyScoringService.scoreInvoiceAsync(saved.getId());
         return toDto(saved);
     }
 
@@ -239,6 +242,7 @@ public class InvoiceBillingService {
                 "Invoice",
                 String.valueOf(saved.getId()),
                 Map.of("montant", refund.getMontant().toPlainString()));
+        anomalyScoringService.scoreInvoiceAsync(saved.getId());
         return toDto(saved);
     }
 

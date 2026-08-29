@@ -45,7 +45,8 @@ class FlywayMigrationConventionTest {
                         "V13__app_settings_payment_source.sql",
                         "V14__examen_resource_payment_source.sql",
                         "V15__catalogue_demo_import.sql",
-                        "V16__chat_messaging.sql");
+                        "V16__chat_messaging.sql",
+                        "V17__anomaly_operations.sql");
 
         String v3 = read(resources, "V3__schema_hardening.sql");
         assertThat(v3)

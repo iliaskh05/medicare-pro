@@ -72,6 +72,7 @@ import { PageHeader, Pill, IconTile, EmptyState } from "@/components/ui-kit";
 import { DirectionStats } from "@/components/direction-stats";
 import { useRole } from "@/hooks/use-role";
 import { FraudDashboard } from "@/components/fraude/fraud-dashboard";
+import { AuditDemoPanel } from "@/components/fraude/audit-demo-panel";
 import { telechargerDossierPdf } from "@/lib/pdf-export";
 import { formatMAD } from "@/types/domain";
 import {
@@ -418,6 +419,11 @@ function FraudAuditModule() {
           </CardContent>
         </Card>
       ) : null}
+
+      <AuditDemoPanel
+        canManage={profile.canValiderAnomalie}
+        onLoaded={() => setReloadKey((k) => k + 1)}
+      />
 
       <DirectionStats anomaliesCount={anomalies.length} showFinance={profile.canSeeFinance} />
 

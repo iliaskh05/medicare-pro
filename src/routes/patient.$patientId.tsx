@@ -352,21 +352,24 @@ function PatientRecordPage() {
           .join(" · ")}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <Pill tone="primary">{patient.mutuelle || "Sans mutuelle"}</Pill>
+            {patient.mutuelle ? <Pill tone="primary">{patient.mutuelle}</Pill> : null}
+            {patient.numAffiliation ? (
+              <Pill tone="neutral">Affil. {patient.numAffiliation}</Pill>
+            ) : null}
             <Button variant="outline" size="sm" asChild>
               <Link to="/patients" search={{ nouveau: false }}>
                 <ArrowLeft className="mr-1.5 size-4" /> Patients
               </Link>
             </Button>
             <Button variant="outline" size="sm" asChild>
-              <Link to="/agenda">
+              <Link to="/accueil" search={{ mode: "rdv", patientId: patient.id }}>
                 <CalendarPlus className="mr-1.5 size-4" /> Nouveau RDV
               </Link>
             </Button>
             <Button variant="outline" size="sm" asChild>
-              <a href="/worklist?nouveau=1">
+              <Link to="/worklist">
                 <ScanLine className="mr-1.5 size-4" /> Nouvel examen
-              </a>
+              </Link>
             </Button>
             {canSeeFinance ? (
               <Button variant="outline" size="sm" asChild>
@@ -388,7 +391,7 @@ function PatientRecordPage() {
             <TabsList className="h-auto w-full flex-wrap justify-start">
               <TabsTrigger value="apercu">Vue générale</TabsTrigger>
               <TabsTrigger value="historique">
-                <Activity className="mr-2 size-4" /> Historique
+                <Activity className="mr-2 size-4" /> Examens
               </TabsTrigger>
               <TabsTrigger value="comptes-rendus">
                 <FileText className="mr-2 size-4" /> Comptes-rendus

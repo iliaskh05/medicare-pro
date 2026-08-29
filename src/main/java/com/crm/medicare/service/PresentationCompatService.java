@@ -29,6 +29,7 @@ public class PresentationCompatService {
 
     private final AppointmentRepository appointmentRepository;
     private final InvoiceRepository invoiceRepository;
+    private final AnomalyAuditService anomalyAuditService;
 
     @Transactional(readOnly = true)
     public List<Map<String, Object>> planningTension() {
@@ -96,7 +97,7 @@ public class PresentationCompatService {
 
     @Transactional(readOnly = true)
     public List<Map<String, Object>> urgencesFraude() {
-        return List.of();
+        return anomalyAuditService.urgences();
     }
 
     private volatile String lastExportAt;

@@ -11,6 +11,7 @@ import {
   ReceiptText,
   ScanLine,
   Settings,
+  ShieldAlert,
   Stethoscope,
   UserRound,
   Users,
@@ -87,6 +88,7 @@ const navGroups: { label: string; items: NavItem[] }[] = [
   {
     label: "Administration",
     items: [
+      { title: "Audit & conformité", url: "/audit", icon: ShieldAlert, fraude: true },
       { title: "Données & import", url: "/donnees", icon: Database },
       { title: "Paramètres", url: "/parametres", icon: Settings },
     ],

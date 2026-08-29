@@ -31,6 +31,8 @@ C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\controller\W
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dashboard\DashboardMetrics.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\data\MoroccanCatalogueDefinitions.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dto\AlerteDto.java
+C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dto\AnomalieCaisseCompatDto.java
+C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dto\AnomalieDto.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dto\AppointmentCancelRequest.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dto\AppointmentDto.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dto\AppointmentRescheduleRequest.java
@@ -38,6 +40,9 @@ C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dto\Appointm
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dto\AppSettingsDto.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dto\AssistantChatRequest.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dto\AssistantChatResponse.java
+C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dto\AuditDemoExampleDto.java
+C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dto\AuditDemoStatusDto.java
+C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dto\AuditKpisDto.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dto\AuthResponse.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dto\CatalogueExamenWriteRequest.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dto\ChatChannelDto.java
@@ -84,11 +89,13 @@ C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dto\ResetPas
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dto\ResourceDto.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dto\SalleAttenteDto.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dto\StatusHistoryItemDto.java
+C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dto\TendanceAnomalieDto.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dto\WaitingRoomItemDto.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dto\WorklistCreateRequest.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dto\WorklistItemDto.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dto\WorklistPatchRequest.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dto\WorklistStatusUpdateRequest.java
+C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\entity\AnomalyOperation.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\entity\AppNotification.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\entity\Appointment.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\entity\AppointmentStatus.java
@@ -135,8 +142,12 @@ C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\entity\Utili
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\imaging\EmptyImagingProvider.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\imaging\ImagingProvider.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\MedicareApplication.java
+C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\ml\AnomalyFeatureBuilder.java
+C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\ml\FraudMlClient.java
+C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\ml\OperatorHistoricalStatsService.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\notification\NoOpNotificationProvider.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\notification\NotificationProvider.java
+C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\repository\AnomalyOperationRepository.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\repository\AppNotificationRepository.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\repository\AppointmentRepository.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\repository\AppointmentStatusHistoryRepository.java
@@ -177,8 +188,11 @@ C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\security\Log
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\security\PermissionCatalog.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\security\SecurityConfig.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\security\SecurityUtils.java
+C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\service\AnomalyAuditService.java
+C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\service\AnomalyScoringService.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\service\AppointmentService.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\service\AppSettingsService.java
+C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\service\AuditDemoService.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\service\AuditService.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\service\AuthService.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\service\CatalogueService.java
