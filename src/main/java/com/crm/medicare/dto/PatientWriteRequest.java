@@ -48,4 +48,16 @@ public class PatientWriteRequest {
     private Integer age;
 
     private Boolean force;
+
+    private String titre;
+    private String telephoneDomicile;
+    private String telephoneTravail;
+    private String fax;
+    private String pays;
+    private String conventionType;
+    private Boolean vip;
+    private Boolean pacemaker;
+    private Boolean pregnant;
+    private Boolean contrastAllergy;
+    private String medicalAlerts;
 }

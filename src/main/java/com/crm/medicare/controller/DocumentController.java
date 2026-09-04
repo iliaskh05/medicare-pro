@@ -12,6 +12,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -41,13 +42,38 @@ public class DocumentController {
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAnyAuthority('" + PermissionCatalog.EXAM_UPDATE + "','" + PermissionCatalog.PATIENT_UPDATE + "')")
+    @PreAuthorize(
+            "hasAnyAuthority('"
+                    + PermissionCatalog.DOCUMENT_WRITE
+                    + "','"
+                    + PermissionCatalog.EXAM_UPDATE
+                    + "','"
+                    + PermissionCatalog.PATIENT_UPDATE
+                    + "')")
     public DocumentItemDto upload(
             @RequestParam Long patientId,
             @RequestParam(required = false) Long examenId,
             @RequestParam(required = false) String type,
             @RequestParam("file") MultipartFile file) {
-        return documentStorageService.store(patientId, examenId, type, file);
+        DocumentItemDto saved = documentStorageService.store(patientId, examenId, type, file);
+        auditService.record(
+                "DOCUMENT_UPLOAD",
+                "Document",
+                String.valueOf(saved.getId()),
+                Map.of(
+                        "patientId",
+                        String.valueOf(patientId),
+                        "type",
+                        saved.getType() != null ? saved.getType() : ""));
+        return saved;
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('" + PermissionCatalog.DOCUMENT_WRITE + "')")
+    public Map<String, Object> delete(@PathVariable Long id) {
+        documentStorageService.delete(id);
+        auditService.record("DOCUMENT_DELETE", "Document", String.valueOf(id), Map.of());
+        return Map.of("ok", true, "id", id);
     }
 
     @GetMapping("/{id}/fichier")

@@ -17,6 +17,7 @@ import {
   Users,
   Wallet,
   BarChart3,
+  BookMarked,
 } from "lucide-react";
 
 import {
@@ -59,7 +60,7 @@ const navGroups: { label: string; items: NavItem[] }[] = [
       { title: "File d'attente", url: "/file-attente", icon: Clock },
       { title: "Examens", url: "/worklist", icon: ClipboardList },
       { title: "Comptes rendus", url: "/comptes-rendus", icon: FileText },
-      { title: "Imagerie", url: "/viewer", icon: ScanLine },
+      { title: "Numérisation", url: "/numerisation", icon: ScanLine },
     ],
   },
   {
@@ -90,6 +91,7 @@ const navGroups: { label: string; items: NavItem[] }[] = [
     items: [
       { title: "Audit & conformité", url: "/audit", icon: ShieldAlert, fraude: true },
       { title: "Données & import", url: "/donnees", icon: Database },
+      { title: "Dictionnaires", url: "/dictionnaires", icon: BookMarked },
       { title: "Paramètres", url: "/parametres", icon: Settings },
     ],
   },

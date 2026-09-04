@@ -43,7 +43,7 @@ export function PatientDocumentsPanel({
       <label className="inline-flex cursor-pointer items-center gap-2">
         <Button asChild variant="outline" size="sm">
           <span>
-            <FileUp className="mr-2 size-4" /> Ajouter une imagerie / un document
+            <FileUp className="mr-2 size-4" /> Ajouter un document
           </span>
         </Button>
         <input
@@ -58,7 +58,7 @@ export function PatientDocumentsPanel({
               const doc = await uploadDocument({
                 patientId,
                 examenId,
-                type: examenId ? "imagerie" : "document",
+                type: examenId ? "examen" : "document",
                 file,
               });
               setDocs((list) => [doc, ...list]);

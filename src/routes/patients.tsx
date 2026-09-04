@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -122,6 +123,17 @@ type Draft = {
   ville: string;
   mutuelle: string;
   numAffiliation: string;
+  titre: string;
+  telephoneDomicile: string;
+  telephoneTravail: string;
+  fax: string;
+  pays: string;
+  conventionType: string;
+  vip: boolean;
+  pacemaker: boolean;
+  pregnant: boolean;
+  contrastAllergy: boolean;
+  medicalAlerts: string;
   force: boolean;
 };
 
@@ -137,6 +149,17 @@ const emptyDraft = (): Draft => ({
   ville: "",
   mutuelle: "AMO",
   numAffiliation: "",
+  titre: "",
+  telephoneDomicile: "",
+  telephoneTravail: "",
+  fax: "",
+  pays: "Maroc",
+  conventionType: "",
+  vip: false,
+  pacemaker: false,
+  pregnant: false,
+  contrastAllergy: false,
+  medicalAlerts: "",
   force: false,
 });
 
@@ -341,6 +364,10 @@ function PatientsPage() {
         nomComplet: [draft.nom, draft.prenom].filter(Boolean).join(" ").trim(),
         cin: draft.cin.trim().toUpperCase(),
         mutuelle: draft.mutuelle,
+        vip: draft.vip,
+        pacemaker: draft.pacemaker,
+        pregnant: draft.pregnant,
+        contrastAllergy: draft.contrastAllergy,
       };
       if (draft.prenom.trim()) payload.prenom = draft.prenom.trim();
       if (draft.dateNaissance) payload.dateNaissance = draft.dateNaissance;
@@ -350,6 +377,13 @@ function PatientsPage() {
       if (draft.adresse.trim()) payload.adresse = draft.adresse.trim();
       if (draft.ville.trim()) payload.ville = draft.ville.trim();
       if (draft.numAffiliation.trim()) payload.numAffiliation = draft.numAffiliation.trim();
+      if (draft.titre.trim()) payload.titre = draft.titre.trim();
+      if (draft.telephoneDomicile.trim()) payload.telephoneDomicile = draft.telephoneDomicile.trim();
+      if (draft.telephoneTravail.trim()) payload.telephoneTravail = draft.telephoneTravail.trim();
+      if (draft.fax.trim()) payload.fax = draft.fax.trim();
+      if (draft.pays.trim()) payload.pays = draft.pays.trim();
+      if (draft.conventionType.trim()) payload.conventionType = draft.conventionType.trim();
+      if (draft.medicalAlerts.trim()) payload.medicalAlerts = draft.medicalAlerts.trim();
       if (matches.length > 0) payload.force = true;
 
       const created = await createPatient(payload);
@@ -546,6 +580,96 @@ function PatientsPage() {
                           setDraft((d) => ({ ...d, numAffiliation: e.target.value }))
                         }
                       />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="pat-titre">Civilité</Label>
+                      <Input
+                        id="pat-titre"
+                        value={draft.titre}
+                        onChange={(e) => setDraft((d) => ({ ...d, titre: e.target.value }))}
+                        placeholder="M. / Mme / Dr"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="pat-convention">Type de convention</Label>
+                      <Input
+                        id="pat-convention"
+                        value={draft.conventionType}
+                        onChange={(e) =>
+                          setDraft((d) => ({ ...d, conventionType: e.target.value }))
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="pat-tel-dom">Tél. domicile</Label>
+                      <Input
+                        id="pat-tel-dom"
+                        value={draft.telephoneDomicile}
+                        onChange={(e) =>
+                          setDraft((d) => ({ ...d, telephoneDomicile: e.target.value }))
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="pat-tel-trav">Tél. travail</Label>
+                      <Input
+                        id="pat-tel-trav"
+                        value={draft.telephoneTravail}
+                        onChange={(e) =>
+                          setDraft((d) => ({ ...d, telephoneTravail: e.target.value }))
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="pat-fax">Fax</Label>
+                      <Input
+                        id="pat-fax"
+                        value={draft.fax}
+                        onChange={(e) => setDraft((d) => ({ ...d, fax: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="pat-pays">Pays</Label>
+                      <Input
+                        id="pat-pays"
+                        value={draft.pays}
+                        onChange={(e) => setDraft((d) => ({ ...d, pays: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-3 rounded-lg border border-border p-3 sm:col-span-2">
+                      <p className="text-sm font-medium">Alertes cliniques critiques</p>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        {(
+                          [
+                            ["vip", "VIP"],
+                            ["pacemaker", "Pacemaker"],
+                            ["pregnant", "Grossesse"],
+                            ["contrastAllergy", "Allergie produit de contraste"],
+                          ] as const
+                        ).map(([key, label]) => (
+                          <div key={key} className="flex items-center justify-between gap-2">
+                            <Label htmlFor={`pat-${key}`}>{label}</Label>
+                            <Switch
+                              id={`pat-${key}`}
+                              checked={draft[key]}
+                              onCheckedChange={(checked) =>
+                                setDraft((d) => ({ ...d, [key]: checked }))
+                              }
+                            />
+                          </div>
+                        ))}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="pat-alerts">Autres alertes médicales</Label>
+                        <Input
+                          id="pat-alerts"
+                          value={draft.medicalAlerts}
+                          onChange={(e) =>
+                            setDraft((d) => ({ ...d, medicalAlerts: e.target.value }))
+                          }
+                          placeholder="Ex. allergie iode, claustrophobie…"
+                        />
+                      </div>
                     </div>
                   </div>
 

@@ -6,7 +6,7 @@ import {
   History,
   Loader2,
   Save,
-  ScanLine,
+  FolderOpen,
   Receipt,
   Upload,
 } from "lucide-react";
@@ -20,6 +20,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/ui-kit";
+import { PatientLabelPrintMenu } from "@/components/patients/patient-label-print-menu";
+import { SejourBadge } from "@/components/sejour-badge";
 import {
   CompteRenduBadge,
   DossierBadge,
@@ -72,14 +74,12 @@ export function ExamenSheet({
   item,
   open,
   onOpenChange,
-  onOpenImagerie,
   onDownloadFacture,
   onUpdated,
 }: {
   item: WorklistItem | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onOpenImagerie?: (item: WorklistItem) => void;
   onDownloadFacture?: (item: WorklistItem) => void;
   onUpdated?: (item: WorklistItem) => void;
   onStatus?: (id: string, etat: WorklistItem["etatPatient"]) => void;
@@ -93,6 +93,12 @@ export function ExamenSheet({
   const [docs, setDocs] = useState<DocumentItem[]>([]);
   const [payAmount, setPayAmount] = useState("");
   const [payMode, setPayMode] = useState("especes");
+  const [weightKg, setWeightKg] = useState("");
+  const [heightCm, setHeightCm] = useState("");
+  const [urgent, setUrgent] = useState(false);
+  const [anesthesia, setAnesthesia] = useState(false);
+  const [inpatient, setInpatient] = useState(false);
+  const [technologist, setTechnologist] = useState("");
 
   useEffect(() => {
     if (!item) return;
@@ -100,6 +106,12 @@ export function ExamenSheet({
     setTechnique(item.technique ?? "");
     setResultats(item.resultats ?? "");
     setConclusion(item.conclusion ?? "");
+    setWeightKg(item.weightKg != null ? String(item.weightKg) : "");
+    setHeightCm(item.heightCm != null ? String(item.heightCm) : "");
+    setUrgent(Boolean(item.urgent));
+    setAnesthesia(Boolean(item.generalAnesthesia));
+    setInpatient(Boolean(item.inpatient));
+    setTechnologist(item.technologistName ?? "");
     fetchPaiements(item.id).then(setPaiements).catch(() => setPaiements([]));
     fetchExamenDocuments(item.id).then(setDocs).catch(() => setDocs([]));
   }, [item]);
@@ -119,8 +131,16 @@ export function ExamenSheet({
         resultats,
         conclusion,
       });
-      onUpdated?.(updated);
-      toast.success("Compte rendu enregistré.");
+      const clinical = await updateWorklistStatut(item.id, {
+        ...(weightKg.trim() ? { weightKg: Number(weightKg) } : {}),
+        ...(heightCm.trim() ? { heightCm: Number(heightCm) } : {}),
+        generalAnesthesia: anesthesia,
+        inpatient,
+        urgent,
+        ...(technologist.trim() ? { technologistName: technologist.trim() } : {}),
+      });
+      onUpdated?.({ ...updated, ...clinical });
+      toast.success("Examen et compte rendu enregistrés.");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Enregistrement impossible.");
     } finally {
@@ -133,8 +153,11 @@ export function ExamenSheet({
       <SheetContent className="flex w-full flex-col gap-4 overflow-y-auto sm:max-w-2xl">
         <SheetHeader>
           <SheetTitle className="truncate">{item.patient}</SheetTitle>
-          <SheetDescription>
-            {item.description} · {item.modalite} · séjour {item.numSejour}
+          <SheetDescription className="flex flex-wrap items-center gap-2">
+            <span>
+              {item.description} · {item.modalite}
+            </span>
+            <SejourBadge value={item.numSejour} size="sm" />
           </SheetDescription>
         </SheetHeader>
 
@@ -153,7 +176,7 @@ export function ExamenSheet({
         <ul className="grid gap-1 rounded-lg border border-border p-3 sm:grid-cols-2">
           <Check ok={Boolean(item.patient)} label="Patient" />
           <Check ok={Boolean(item.description)} label="Examen" />
-          <Check ok={docs.length > 0} label="Images / documents" />
+          <Check ok={docs.length > 0} label="Documents" />
           <Check ok={item.statutCr === "signe" || item.statutCr === "imprime"} label="Compte rendu validé" />
           <Check ok={item.paiement === "paye" || total === 0} label="Paiement" />
           <Check ok={item.dossierStatut === "remis" || item.dossierStatut === "envoye"} label="Dossier remis" />
@@ -164,7 +187,7 @@ export function ExamenSheet({
             <TabsTrigger value="patient">Patient</TabsTrigger>
             <TabsTrigger value="examen">Examen</TabsTrigger>
             <TabsTrigger value="cr">Compte rendu</TabsTrigger>
-            <TabsTrigger value="imagerie">Imagerie</TabsTrigger>
+            <TabsTrigger value="documents">Documents</TabsTrigger>
             <TabsTrigger value="facture">Facturation</TabsTrigger>
             <TabsTrigger value="dossier">Dossier</TabsTrigger>
             <TabsTrigger value="historique">Historique</TabsTrigger>
@@ -176,18 +199,95 @@ export function ExamenSheet({
             <Field label="Âge" value={item.age !== undefined ? `${item.age} ans` : undefined} />
             <Field label="Sexe" value={item.sexe} />
             <Field label="Téléphone" value={item.telephone} />
-            <Field label="N° séjour" value={item.numSejour} />
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
+                N° séjour
+              </p>
+              <div className="mt-1">
+                <SejourBadge value={item.numSejour} size="sm" />
+              </div>
+            </div>
+            {item.patientId ? (
+              <div className="sm:col-span-2">
+                <PatientLabelPrintMenu
+                  payload={{
+                    patientId: String(item.patientId),
+                    nom: item.patient,
+                    numeroDossier: item.numSejour || String(item.patientId),
+                    ...(item.cin ? { cin: item.cin } : {}),
+                    examen: item.description || item.modalite,
+                    dateHeure: item.dateExamen,
+                  }}
+                />
+              </div>
+            ) : null}
           </TabsContent>
 
-          <TabsContent value="examen" className="mt-4 grid gap-4 sm:grid-cols-2">
-            <Field label="Description" value={item.description} />
-            <Field label="Modalité" value={item.modalite} />
-            <Field label="Salle" value={item.salle} />
-            <Field label="Date d'examen" value={item.dateExamen} />
-            <Field label="Radiologue" value={item.medecin} />
-            <Field label="Prescripteur" value={item.prescripteur} />
-            <Field label="Montant" value={formatMAD(total)} />
-            <Field label="Reste" value={formatMAD(reste)} />
+          <TabsContent value="examen" className="mt-4 space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Description" value={item.description} />
+              <Field label="Modalité" value={item.modalite} />
+              <Field label="Salle" value={item.salle} />
+              <Field label="Date d'examen" value={item.dateExamen} />
+              <Field label="Arrivée" value={item.arrivedAt} />
+              <Field label="Début" value={item.startedAt} />
+              <Field label="Fin" value={item.completedAt} />
+              <Field label="Workflow" value={item.workflowStatus} />
+              <Field label="Radiologue" value={item.medecin} />
+              <Field label="Prescripteur" value={item.prescripteur} />
+              <Field label="Montant" value={formatMAD(total)} />
+              <Field label="Reste" value={formatMAD(reste)} />
+            </div>
+            <div className="grid gap-3 rounded-lg border border-border p-3 sm:grid-cols-2">
+              <div className="space-y-1">
+                <Label htmlFor="ex-weight">Poids (kg)</Label>
+                <Input
+                  id="ex-weight"
+                  type="number"
+                  step="0.1"
+                  value={weightKg}
+                  onChange={(e) => setWeightKg(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="ex-height">Taille (cm)</Label>
+                <Input
+                  id="ex-height"
+                  type="number"
+                  step="0.1"
+                  value={heightCm}
+                  onChange={(e) => setHeightCm(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1 sm:col-span-2">
+                <Label htmlFor="ex-tech">Manipulateur</Label>
+                <Input
+                  id="ex-tech"
+                  value={technologist}
+                  onChange={(e) => setTechnologist(e.target.value)}
+                />
+              </div>
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={urgent} onChange={(e) => setUrgent(e.target.checked)} />
+                Urgent
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={anesthesia}
+                  onChange={(e) => setAnesthesia(e.target.checked)}
+                />
+                Anesthésie générale
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={inpatient}
+                  onChange={(e) => setInpatient(e.target.checked)}
+                />
+                Hospitalisé
+              </label>
+            </div>
           </TabsContent>
 
           <TabsContent value="cr" className="mt-4 flex min-h-0 flex-1 flex-col gap-3">
@@ -240,14 +340,11 @@ export function ExamenSheet({
             </div>
           </TabsContent>
 
-          <TabsContent value="imagerie" className="mt-4 space-y-3">
+          <TabsContent value="documents" className="mt-4 space-y-3">
             <div className="flex flex-wrap gap-2">
-              <Button onClick={() => onOpenImagerie?.(item)} disabled={!onOpenImagerie}>
-                <ScanLine className="mr-2 size-4" /> Ouvrir la visionneuse
-              </Button>
               <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-input px-3 py-2 text-sm">
                 <Upload className="size-4" />
-                Ajouter des images
+                Ajouter un document
                 <input
                   type="file"
                   className="hidden"
@@ -263,7 +360,7 @@ export function ExamenSheet({
                       const doc = await uploadDocument({
                         patientId: item.patientId,
                         examenId: item.id,
-                        type: "imagerie",
+                        type: "document",
                         file,
                       });
                       setDocs((list) => [doc, ...list]);
@@ -277,9 +374,9 @@ export function ExamenSheet({
             </div>
             {docs.length === 0 ? (
               <EmptyState
-                icon={ScanLine}
-                title="Aucune image liée à cet examen"
-                description="Importez un fichier réellement supporté (JPG, PNG, PDF, DICOM). Aucune étude PACS n'est simulée."
+                icon={FolderOpen}
+                title="Aucun document lié à cet examen"
+                description="Importez un fichier supporté (JPG, PNG, PDF). Les fichiers restent liés au dossier patient."
                 compact
               />
             ) : (

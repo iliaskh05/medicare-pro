@@ -1,4 +1,5 @@
 import { javaApi } from "./config";
+import type { AppointmentDto } from "./appointments";
 
 export type PatientDto = {
   id: number | string;
@@ -17,6 +18,17 @@ export type PatientDto = {
   dateNaissance?: string | undefined;
   numeroDossier?: string | undefined;
   prochainRdv?: string | undefined;
+  titre?: string | undefined;
+  telephoneDomicile?: string | undefined;
+  telephoneTravail?: string | undefined;
+  fax?: string | undefined;
+  pays?: string | undefined;
+  conventionType?: string | undefined;
+  vip?: boolean | undefined;
+  pacemaker?: boolean | undefined;
+  pregnant?: boolean | undefined;
+  contrastAllergy?: boolean | undefined;
+  medicalAlerts?: string | undefined;
 };
 
 export type PatientRow = {
@@ -36,6 +48,17 @@ export type PatientRow = {
   dateNaissance?: string | undefined;
   numeroDossier?: string | undefined;
   prochainRdv?: string | undefined;
+  titre?: string | undefined;
+  telephoneDomicile?: string | undefined;
+  telephoneTravail?: string | undefined;
+  fax?: string | undefined;
+  pays?: string | undefined;
+  conventionType?: string | undefined;
+  vip?: boolean | undefined;
+  pacemaker?: boolean | undefined;
+  pregnant?: boolean | undefined;
+  contrastAllergy?: boolean | undefined;
+  medicalAlerts?: string | undefined;
 };
 
 export type HistoryItem = {
@@ -45,17 +68,6 @@ export type HistoryItem = {
   praticien: string;
   note: string;
   tone: "primary" | "warning" | "success" | "destructive" | "neutral";
-};
-
-export type PatientImaging = {
-  id: string;
-  examen: string;
-  modalite: string;
-  date: string;
-  radiologue: string;
-  statut: string;
-  tone: "success" | "warning" | "destructive" | "primary" | "neutral";
-  conclusion: string;
 };
 
 export type PatientPrescription = {
@@ -101,6 +113,17 @@ export type PatientWritePayload = {
   adresse?: string;
   dateNaissance?: string;
   age?: number;
+  titre?: string;
+  telephoneDomicile?: string;
+  telephoneTravail?: string;
+  fax?: string;
+  pays?: string;
+  conventionType?: string;
+  vip?: boolean;
+  pacemaker?: boolean;
+  pregnant?: boolean;
+  contrastAllergy?: boolean;
+  medicalAlerts?: string;
   force?: boolean;
 };
 
@@ -138,6 +161,17 @@ function mapPatient(dto: PatientDto): PatientRow {
     dateNaissance: dto.dateNaissance,
     numeroDossier: dto.numeroDossier,
     prochainRdv: dto.prochainRdv,
+    titre: dto.titre,
+    telephoneDomicile: dto.telephoneDomicile,
+    telephoneTravail: dto.telephoneTravail,
+    fax: dto.fax,
+    pays: dto.pays,
+    conventionType: dto.conventionType,
+    vip: dto.vip,
+    pacemaker: dto.pacemaker,
+    pregnant: dto.pregnant,
+    contrastAllergy: dto.contrastAllergy,
+    medicalAlerts: dto.medicalAlerts,
   };
 }
 
@@ -242,17 +276,6 @@ export async function fetchPatientHistory(
   return rows ?? [];
 }
 
-export async function fetchPatientImaging(
-  patientId: string,
-  signal?: AbortSignal,
-): Promise<PatientImaging[]> {
-  const rows = await javaApi<PatientImaging[]>(
-    `/api/patients/${encodeURIComponent(patientId)}/imagerie`,
-    signal ? { signal } : {},
-  );
-  return rows ?? [];
-}
-
 export async function fetchPatientPrescriptions(
   patientId: string,
   signal?: AbortSignal,
@@ -330,9 +353,13 @@ export async function fetchPatientReports(patientId: string, signal?: AbortSigna
   );
 }
 
-export async function fetchPatientAppointments(patientId: string, signal?: AbortSignal) {
-  return javaApi<unknown[]>(
+export async function fetchPatientAppointments(
+  patientId: string,
+  signal?: AbortSignal,
+): Promise<AppointmentDto[]> {
+  const rows = await javaApi<AppointmentDto[]>(
     `/api/patients/${encodeURIComponent(patientId)}/appointments`,
     signal ? { signal } : {},
   );
+  return rows ?? [];
 }

@@ -206,10 +206,10 @@ const rules: Rule[] = [
     ],
     build: () => ({
       intent: "consulter-examens",
-      text: "**Consulter les examens** — la page Imagerie regroupe les acquisitions par modalité (IRM, scanner, radiologie, mammographie). Chaque carte indique le patient, l'heure d'acquisition et le statut de lecture, avec un accès direct à la visionneuse.",
+      text: "**Consulter les examens** — la worklist regroupe les examens du jour par patient, salle et modalité. Ouvrez un dossier patient pour l'historique, ou la numérisation pour joindre des pièces et imprimer des étiquettes.",
       actions: [
-        { kind: "navigate", label: "Ouvrir Imagerie", to: "/imagerie" },
-        { kind: "navigate", label: "Ouvrir la visionneuse", to: "/viewer" },
+        { kind: "navigate", label: "Ouvrir la worklist", to: "/worklist" },
+        { kind: "navigate", label: "Numérisation & étiquettes", to: "/numerisation" },
       ],
     }),
   },

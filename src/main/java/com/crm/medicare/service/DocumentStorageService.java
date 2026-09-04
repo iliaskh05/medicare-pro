@@ -117,6 +117,20 @@ public class DocumentStorageService {
         }
     }
 
+    @Transactional
+    public void delete(Long id) {
+        DocumentExamen doc = load(id);
+        String path = doc.getStoragePath();
+        documentRepository.delete(doc);
+        try {
+            if (path != null && !path.isBlank()) {
+                documentStorage.delete(path);
+            }
+        } catch (IOException ignored) {
+            // DB row already removed; orphan file is acceptable for MVP
+        }
+    }
+
     /** DTO sans chemin filesystem. */
     public DocumentItemDto toDto(DocumentExamen doc) {
         return DocumentItemDto.builder()

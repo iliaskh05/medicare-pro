@@ -364,6 +364,7 @@ public class AppointmentService {
         create.setPriorite(appt.getPriorite());
         if (appt.getResource() != null) {
             create.setSalle(appt.getResource().getLibelle());
+            create.setResourceId(appt.getResource().getId());
         }
         if (appt.getPrescripteur() != null) {
             create.setPrescripteurId(String.valueOf(appt.getPrescripteur().getId()));
@@ -372,6 +373,8 @@ public class AppointmentService {
 
         WorklistItemDto examDto = worklistService.create(create);
         Long examenId = Long.valueOf(examDto.getId());
+        // Check-in = patient présent → file d'attente (ARRIVED + arrivedAt)
+        worklistService.applyWorkflowStatus(examenId, com.crm.medicare.workflow.EncounterStatus.ARRIVED);
         Examen examen =
                 examenRepository
                         .findById(examenId)
@@ -387,7 +390,7 @@ public class AppointmentService {
                 AuditService.CHECKIN,
                 "Appointment",
                 String.valueOf(saved.getId()),
-                Map.of("examenId", examenId));
+                Map.of("examenId", examenId, "workflow", "ARRIVED"));
         return toDto(saved);
     }
 

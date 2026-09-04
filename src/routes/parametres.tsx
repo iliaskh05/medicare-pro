@@ -21,11 +21,19 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { EmptyState, PageHeader, Pill } from "@/components/ui-kit";
 import { WriteGuard } from "@/components/permission-guard";
 import { useRole } from "@/hooks/use-role";
 import { useTheme } from "@/hooks/use-theme";
+import { fetchMyPreferences, saveMyPreference } from "@/lib/api/preferences";
 import { fetchSettings, saveSettings } from "@/lib/api/settings";
 import { cn } from "@/lib/utils";
 
@@ -69,8 +77,9 @@ function MonCompte() {
       return;
     }
     setForm({ actuel: "", nouveau: "", confirmation: "" });
-    toast.success("Requête envoyée", {
-      description: "La modification sera appliquée après validation par le service informatique.",
+    toast.error("Changement de mot de passe indisponible", {
+      description:
+        "Utilisez « Mot de passe oublié » sur l'écran de connexion. Aucune API de changement en session n'est exposée.",
     });
   };
 
@@ -211,15 +220,59 @@ function Preferences() {
     "comptes-rendus": true,
     messagerie: false,
   });
+  const [density, setDensity] = useState("comfortable");
+  const [refreshSec, setRefreshSec] = useState("30");
+  const [loadingPrefs, setLoadingPrefs] = useState(true);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetchMyPreferences(controller.signal)
+      .then((all) => {
+        const notif = all["notifications"] as Record<string, boolean> | undefined;
+        if (notif) setNotifications((n) => ({ ...n, ...notif }));
+        const ui = all["ui"] as { density?: string; refreshIntervalSec?: string } | undefined;
+        if (ui?.density) setDensity(ui.density);
+        if (ui?.refreshIntervalSec) setRefreshSec(String(ui.refreshIntervalSec));
+      })
+      .catch(() => {
+        /* keep defaults */
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoadingPrefs(false);
+      });
+    return () => controller.abort();
+  }, []);
+
+  const persistNotifications = (next: Record<string, boolean>) => {
+    setNotifications(next);
+    void saveMyPreference("notifications", next)
+      .then(() => toast.success("Préférence enregistrée"))
+      .catch((e: unknown) =>
+        toast.error(e instanceof Error ? e.message : "Enregistrement impossible"),
+      );
+  };
+
+  const persistUi = (nextDensity: string, nextRefresh: string) => {
+    void saveMyPreference("ui", {
+      density: nextDensity,
+      refreshIntervalSec: nextRefresh,
+    })
+      .then(() => toast.success("Préférence d'interface enregistrée"))
+      .catch((e: unknown) =>
+        toast.error(e instanceof Error ? e.message : "Enregistrement impossible"),
+      );
+  };
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Apparence</CardTitle>
-          <CardDescription>Le thème est mémorisé sur ce poste de travail.</CardDescription>
+          <CardDescription>
+            Thème local ; densité et rafraîchissement synchronisés au compte.
+          </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-3">
           <div className="flex items-center justify-between gap-4 rounded-xl border border-border bg-muted/30 px-4 py-3">
             <div className="flex items-center gap-3">
               {theme === "dark" ? (
@@ -243,13 +296,45 @@ function Preferences() {
               }}
             />
           </div>
+          <div className="space-y-1.5">
+            <Label>Densité des tableaux</Label>
+            <Select
+              value={density}
+              disabled={loadingPrefs}
+              onValueChange={(v) => {
+                setDensity(v);
+                persistUi(v, refreshSec);
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="compact">Compacte</SelectItem>
+                <SelectItem value="comfortable">Confortable</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="pref-refresh">Rafraîchissement worklist (s)</Label>
+            <Input
+              id="pref-refresh"
+              type="number"
+              min={10}
+              max={300}
+              value={refreshSec}
+              disabled={loadingPrefs}
+              onChange={(e) => setRefreshSec(e.target.value)}
+              onBlur={() => persistUi(density, refreshSec)}
+            />
+          </div>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Notifications</CardTitle>
-          <CardDescription>Choisissez les événements qui remontent à l&apos;écran.</CardDescription>
+          <CardDescription>Préférences persistées sur le serveur (compte utilisateur).</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           {notificationOptions.map((option) => (
@@ -264,9 +349,9 @@ function Preferences() {
               <Switch
                 aria-label={option.label}
                 checked={notifications[option.id] ?? false}
+                disabled={loadingPrefs}
                 onCheckedChange={(checked) => {
-                  setNotifications((n) => ({ ...n, [option.id]: checked }));
-                  toast.success("Préférence enregistrée", { description: option.label });
+                  persistNotifications({ ...notifications, [option.id]: checked });
                 }}
               />
             </div>
@@ -310,8 +395,9 @@ function Securite() {
             variant="outline"
             className="w-full"
             onClick={() =>
-              toast.info("Requête envoyée", {
-                description: "Déconnexion des autres postes demandée au service informatique.",
+              toast.info("Non disponible", {
+                description:
+                  "La révocation multi-sessions n'est pas encore implémentée côté serveur.",
               })
             }
           >

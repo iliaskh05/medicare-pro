@@ -184,8 +184,3 @@ export function saveBlob(blob: Blob, filename: string) {
   a.click();
   URL.revokeObjectURL(url);
 }
-
-/** POST {JAVA_API_BASE}/api/imagerie/{studyId}/analyse */
-export async function requestImageAnalysis(studyId: string) {
-  return javaApi(`/api/imagerie/${encodeURIComponent(studyId)}/analyse`, { method: "POST" });
-}

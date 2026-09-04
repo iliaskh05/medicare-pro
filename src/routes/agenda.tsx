@@ -4,6 +4,7 @@ import { CalendarDays } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { EmptyState, PageHeader, Pill } from "@/components/ui-kit";
 import {
   Select,
@@ -15,8 +16,11 @@ import {
 import {
   cancelAppointment,
   checkInAppointment,
+  confirmAppointment,
   fetchAppointments,
   fetchResources,
+  noShowAppointment,
+  rescheduleAppointment,
   type AppointmentDto,
   type ResourceDto,
 } from "@/lib/api/appointments";
@@ -111,6 +115,8 @@ function AgendaPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [rescheduleId, setRescheduleId] = useState<string | null>(null);
+  const [rescheduleAt, setRescheduleAt] = useState("");
 
   const range = useMemo(() => {
     if (view === "jour") return { from: cursorKey, to: cursorKey };
@@ -249,6 +255,27 @@ function AgendaPage() {
       <Pill tone={statutTone(row.statut)}>{row.statut}</Pill>
       {row.statut !== "CANCELLED" && row.statut !== "CHECKED_IN" && row.statut !== "NO_SHOW" ? (
         <WriteGuard resource="appointments">
+          {row.statut === "SCHEDULED" || row.statut === "RESCHEDULED" ? (
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={busyId === row.id}
+              onClick={async () => {
+                setBusyId(row.id);
+                try {
+                  const updated = await confirmAppointment(row.id);
+                  setRows((list) => list.map((r) => (r.id === row.id ? updated : r)));
+                  toast.success("Rendez-vous confirmé.");
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : "Confirmation impossible");
+                } finally {
+                  setBusyId(null);
+                }
+              }}
+            >
+              Confirmer
+            </Button>
+          ) : null}
           <Button
             size="sm"
             variant="outline"
@@ -270,9 +297,41 @@ function AgendaPage() {
           </Button>
           <Button
             size="sm"
+            variant="outline"
+            disabled={busyId === row.id}
+            onClick={() => {
+              setRescheduleId(row.id);
+              setRescheduleAt((row.startsAt || "").slice(0, 16).replace(" ", "T"));
+            }}
+          >
+            Reporter
+          </Button>
+          <Button
+            size="sm"
             variant="ghost"
             disabled={busyId === row.id}
             onClick={async () => {
+              if (!window.confirm(`Marquer ${row.patient} en no-show ?`)) return;
+              setBusyId(row.id);
+              try {
+                const updated = await noShowAppointment(row.id);
+                setRows((list) => list.map((r) => (r.id === row.id ? updated : r)));
+                toast.success("No-show enregistré.");
+              } catch (e) {
+                toast.error(e instanceof Error ? e.message : "No-show impossible");
+              } finally {
+                setBusyId(null);
+              }
+            }}
+          >
+            No-show
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={busyId === row.id}
+            onClick={async () => {
+              if (!window.confirm(`Annuler le RDV de ${row.patient} ?`)) return;
               setBusyId(row.id);
               try {
                 const updated = await cancelAppointment(row.id, "Annulation agenda");
@@ -650,6 +709,50 @@ function AgendaPage() {
           ))}
         </div>
       )}
+
+      {rescheduleId ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md space-y-4 rounded-xl border border-border bg-background p-5 shadow-lg">
+            <h3 className="text-base font-semibold">Reporter le rendez-vous</h3>
+            <Input
+              type="datetime-local"
+              value={rescheduleAt}
+              onChange={(e) => setRescheduleAt(e.target.value)}
+            />
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setRescheduleId(null);
+                  setRescheduleAt("");
+                }}
+              >
+                Annuler
+              </Button>
+              <Button
+                disabled={!rescheduleAt || busyId === rescheduleId}
+                onClick={async () => {
+                  const id = rescheduleId;
+                  setBusyId(id);
+                  try {
+                    const updated = await rescheduleAppointment(id, { dateHeure: rescheduleAt });
+                    setRows((list) => list.map((r) => (r.id === id ? updated : r)));
+                    toast.success("Rendez-vous reporté.");
+                    setRescheduleId(null);
+                    setRescheduleAt("");
+                  } catch (e) {
+                    toast.error(e instanceof Error ? e.message : "Report impossible");
+                  } finally {
+                    setBusyId(null);
+                  }
+                }}
+              >
+                Confirmer le report
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

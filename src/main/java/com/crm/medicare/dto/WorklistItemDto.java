@@ -88,6 +88,35 @@ public class WorklistItemDto {
 
     private String compteRendu;
 
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime arrivedAt;
+
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime startedAt;
+
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime completedAt;
+
+    private String workflowStatus;
+
+    private BigDecimal weightKg;
+
+    private BigDecimal heightCm;
+
+    private Boolean generalAnesthesia;
+
+    private Boolean inpatient;
+
+    private Boolean urgent;
+
+    private String technologistName;
+
+    private String nurseName;
+
+    private String assistantName;
+
+    private String parentExamenId;
+
     @Builder.Default
     private List<HistoriqueItemDto> historique = new ArrayList<>();
 }

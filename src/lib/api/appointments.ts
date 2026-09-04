@@ -119,6 +119,21 @@ export async function noShowAppointment(id: string): Promise<AppointmentDto> {
   });
 }
 
+export async function rescheduleAppointment(
+  id: string,
+  payload: { dateHeure: string; dureeMinutes?: number; resourceId?: number | string; note?: string },
+): Promise<AppointmentDto> {
+  return javaApi<AppointmentDto>(`/api/appointments/${encodeURIComponent(id)}/reschedule`, {
+    method: "POST",
+    body: {
+      dateHeure: payload.dateHeure,
+      ...(payload.dureeMinutes != null ? { dureeMinutes: payload.dureeMinutes } : {}),
+      ...(payload.resourceId != null ? { resourceId: Number(payload.resourceId) } : {}),
+      ...(payload.note ? { note: payload.note } : {}),
+    },
+  });
+}
+
 export async function fetchResources(signal?: AbortSignal): Promise<ResourceDto[]> {
   const rows = await javaApi<ResourceDto[]>("/api/resources", signal ? { signal } : {});
   return rows ?? [];

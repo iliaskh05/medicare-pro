@@ -243,6 +243,11 @@ public class ReportService {
                 reportVersionRepository
                         .findByReportIdAndVersionNumber(report.getId(), report.getCurrentVersion())
                         .orElse(null);
+        auditService.record(
+                AuditService.REPORT_UPDATE,
+                "Report",
+                String.valueOf(report.getId()),
+                java.util.Map.of("action", "submit", "status", next.name()));
         return toDto(report, latest);
     }
 
@@ -420,6 +425,29 @@ public class ReportService {
     public FactureService.FacturePdf pdf(Long id) {
         Report report = loadWithDetails(id);
         return factureService.genererCompteRenduPdf(report.getExamen().getId());
+    }
+
+    /** Marque le CR comme imprimé (réimpression autorisée) — sans hardware. */
+    @Transactional
+    public ReportDto markPrinted(Long id) {
+        Report report = loadWithDetails(id);
+        if (report.getStatus() != ReportStatus.VALIDATED && report.getStatus() != ReportStatus.AMENDED) {
+            throw ApiException.conflict(
+                    "report_not_validated", "Seuls les comptes rendus validés peuvent être imprimés");
+        }
+        Examen examen = report.getExamen();
+        examen.setStatutCr(StatutCr.imprime);
+        examenRepository.save(examen);
+        auditService.record(
+                AuditService.REPORT_UPDATE,
+                "Report",
+                String.valueOf(report.getId()),
+                java.util.Map.of("action", "print", "examenId", examen.getId()));
+        ReportVersion latest =
+                reportVersionRepository
+                        .findByReportIdAndVersionNumber(report.getId(), report.getCurrentVersion())
+                        .orElse(null);
+        return toDto(report, latest);
     }
 
     private Report loadWithDetails(Long id) {

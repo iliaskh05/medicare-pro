@@ -5,6 +5,13 @@ import { Loader2, MapPin, RefreshCw, Search, Send, UserRoundPlus } from "lucide-
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -20,9 +27,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ActionButton } from "@/components/action-button";
 import { EmptyState, PageHeader, Pill } from "@/components/ui-kit";
-import { fetchMedecins, sendReportToReferent } from "@/lib/api/referents";
+import { fetchMedecins, saveReferent, sendReportToReferent } from "@/lib/api/referents";
+import { toast } from "sonner";
 import type { Referent } from "@/types/referent";
 
 export const Route = createFileRoute("/medecins-referents")({
@@ -55,6 +62,11 @@ function MedecinsReferentsPage() {
   const [query, setQuery] = useState("");
   const [ville, setVille] = useState("toutes");
   const [specialite, setSpecialite] = useState("toutes");
+  const [createOpen, setCreateOpen] = useState(false);
+  const [newNom, setNewNom] = useState("");
+  const [newSpecialite, setNewSpecialite] = useState("");
+  const [newTelephone, setNewTelephone] = useState("");
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -107,15 +119,68 @@ function MedecinsReferentsPage() {
         title="Correspondants"
         subtitle={`${rows.length} médecin(s) affiché(s) sur ${medecins.length}`}
         actions={
-          <ActionButton
-            toastKind="info"
-            toastMessage="Fiche correspondant"
-            toastDescription="Création d'un médecin correspondant dans le répertoire du centre."
-          >
+          <Button onClick={() => setCreateOpen(true)}>
             <UserRoundPlus className="mr-2 size-4" /> Ajouter un médecin
-          </ActionButton>
+          </Button>
         }
       />
+
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nouveau correspondant</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label>Nom</Label>
+              <Input value={newNom} onChange={(e) => setNewNom(e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <Label>Spécialité</Label>
+              <Input
+                value={newSpecialite}
+                onChange={(e) => setNewSpecialite(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Téléphone</Label>
+              <Input
+                value={newTelephone}
+                onChange={(e) => setNewTelephone(e.target.value)}
+              />
+            </div>
+            <Button
+              disabled={creating || !newNom.trim()}
+              onClick={() => {
+                setCreating(true);
+                void saveReferent({
+                  nom: newNom.trim(),
+                  specialite: newSpecialite.trim(),
+                  telephone: newTelephone.trim(),
+                  email: "",
+                  adresse: "",
+                  ville: "",
+                  quartier: "",
+                })
+                  .then(() => {
+                    toast.success("Correspondant enregistré");
+                    setCreateOpen(false);
+                    setNewNom("");
+                    setNewSpecialite("");
+                    setNewTelephone("");
+                    setReloadKey((k) => k + 1);
+                  })
+                  .catch((e: unknown) =>
+                    toast.error(e instanceof Error ? e.message : "Enregistrement impossible"),
+                  )
+                  .finally(() => setCreating(false));
+              }}
+            >
+              Enregistrer
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Card>
         <CardContent className="grid gap-3 p-4 md:grid-cols-[1fr_13rem_13rem]">
@@ -229,18 +294,20 @@ function MedecinsReferentsPage() {
                         {m.adresse}
                       </TableCell>
                       <TableCell className="text-right">
-                        <ActionButton
+                        <Button
                           variant="outline"
                           size="sm"
                           className="size-8 p-0"
                           aria-label={`Envoyer les comptes rendus à ${m.nom}`}
-                          action={() => sendReportToReferent(m.id)}
-                          toastMessage="Comptes rendus transmis"
-                          toastDescription={`${m.nom} · ${m.ville} — ${m.email}`}
+                          onClick={() => {
+                            void sendReportToReferent(m.id)
+                              .then(() => toast.success(`Comptes rendus transmis à ${m.nom}`))
+                              .catch(() => toast.error("Envoi impossible"));
+                          }}
                         >
                           <Send className="size-4" />
                           <span className="sr-only">Envoyer les comptes rendus</span>
-                        </ActionButton>
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}

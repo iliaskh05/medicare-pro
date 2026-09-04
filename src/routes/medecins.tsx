@@ -13,14 +13,21 @@ import {
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ActionButton } from "@/components/action-button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader, Pill, ServiceNotice } from "@/components/ui-kit";
 import { fetchPrescripteurs } from "@/lib/api/dashboard";
-import { sendReportToReferent } from "@/lib/api/referents";
+import { saveReferent, sendReportToReferent } from "@/lib/api/referents";
+import { toast } from "sonner";
 import type { Medecin } from "@/types/domain";
 
 export const Route = createFileRoute("/medecins")({
@@ -58,6 +65,11 @@ function MedecinsPage() {
   const [error, setError] = useState<Error | null>(null);
   const [query, setQuery] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [newNom, setNewNom] = useState("");
+  const [newSpecialite, setNewSpecialite] = useState("");
+  const [newTelephone, setNewTelephone] = useState("");
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -93,15 +105,70 @@ function MedecinsPage() {
         title="Réseau de prescripteurs"
         subtitle={`${medecins.length} praticien(s) · ${totalReferes} patients référés`}
         actions={
-          <ActionButton
-            toastKind="info"
-            toastMessage="Formulaire d'ajout de prescripteur"
-            toastDescription="Renseignez la fiche du praticien pour l'enregistrer."
-          >
+          <Button onClick={() => setCreateOpen(true)}>
             <UserRoundPlus className="mr-2 size-4" /> Ajouter un prescripteur
-          </ActionButton>
+          </Button>
         }
       />
+
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nouveau prescripteur</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label>Nom</Label>
+              <Input value={newNom} onChange={(e) => setNewNom(e.target.value)} placeholder="Dr. …" />
+            </div>
+            <div className="space-y-1">
+              <Label>Spécialité</Label>
+              <Input
+                value={newSpecialite}
+                onChange={(e) => setNewSpecialite(e.target.value)}
+                placeholder="Radiologie, Cardiologie…"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Téléphone</Label>
+              <Input
+                value={newTelephone}
+                onChange={(e) => setNewTelephone(e.target.value)}
+                placeholder="06…"
+              />
+            </div>
+            <Button
+              disabled={creating || !newNom.trim()}
+              onClick={() => {
+                setCreating(true);
+                void saveReferent({
+                  nom: newNom.trim(),
+                  specialite: newSpecialite.trim(),
+                  telephone: newTelephone.trim(),
+                  email: "",
+                  adresse: "",
+                  ville: "",
+                  quartier: "",
+                })
+                  .then(() => {
+                    toast.success("Prescripteur enregistré");
+                    setCreateOpen(false);
+                    setNewNom("");
+                    setNewSpecialite("");
+                    setNewTelephone("");
+                    setReloadKey((k) => k + 1);
+                  })
+                  .catch((e: unknown) =>
+                    toast.error(e instanceof Error ? e.message : "Enregistrement impossible"),
+                  )
+                  .finally(() => setCreating(false));
+              }}
+            >
+              Enregistrer
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Card>
         <CardContent className="p-4">
@@ -187,16 +254,17 @@ function MedecinsPage() {
                     {m.evolution} %
                   </Pill>
                 </div>
-                <ActionButton
+                <Button
                   variant="outline"
                   className="w-full"
-                  action={() => sendReportToReferent(m.id)}
-                  toastMessage="Comptes rendus envoyés au prescripteur."
-                  toastDescription={`Destinataire : ${m.nom}`}
-                  errorMessage="Envoi impossible pour le moment"
+                  onClick={() => {
+                    void sendReportToReferent(m.id)
+                      .then(() => toast.success(`Comptes rendus envoyés à ${m.nom}`))
+                      .catch(() => toast.error("Envoi impossible pour le moment"));
+                  }}
                 >
                   <Send className="mr-2 size-4" /> Envoyer les comptes rendus
-                </ActionButton>
+                </Button>
               </CardContent>
             </Card>
           ))}

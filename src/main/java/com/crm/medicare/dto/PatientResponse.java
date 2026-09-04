@@ -30,6 +30,17 @@ public class PatientResponse {
     private String ville;
     private String quartier;
     private String adresse;
+    private String titre;
+    private String telephoneDomicile;
+    private String telephoneTravail;
+    private String fax;
+    private String pays;
+    private String conventionType;
+    private Boolean vip;
+    private Boolean pacemaker;
+    private Boolean pregnant;
+    private Boolean contrastAllergy;
+    private String medicalAlerts;
     private LocalDate dateNaissance;
     private LocalDateTime prochainRdv;
     private List<DuplicateWarning> duplicateWarnings;

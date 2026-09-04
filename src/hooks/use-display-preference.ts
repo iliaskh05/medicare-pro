@@ -1,10 +1,11 @@
 /**
  * Préférences d'affichage — défauts centre via /api/settings (display.*),
- * override personnel en localStorage clé utilisateur.
+ * override personnel en localStorage + sync serveur /api/preferences.
  */
 import { useEffect, useState } from "react";
 
 import { AUTH_USER_KEY } from "@/lib/auth-session";
+import { fetchMyPreference, saveMyPreference } from "@/lib/api/preferences";
 import { fetchSettings } from "@/lib/api/settings";
 
 export type DisplayMode = "table" | "cards" | "calendar" | "list" | "compact" | "detailed";
@@ -58,7 +59,6 @@ function readPrefs(userId: string): Prefs {
   try {
     const keyed = window.localStorage.getItem(storageKeyForUser(userId));
     if (keyed) return JSON.parse(keyed) as Prefs;
-    // Migrate legacy unscoped prefs once.
     const legacy = window.localStorage.getItem(LEGACY_STORAGE_KEY);
     if (legacy) {
       const parsed = JSON.parse(legacy) as Prefs;
@@ -89,32 +89,43 @@ export function useDisplayPreference(section: string, fallback: DisplayMode = "t
     const uid = readAuthUserId();
     const userPrefs = readPrefs(uid);
     const userMode = asMode(userPrefs[section]);
-    if (userMode) {
-      setModeState(userMode);
-      return () => {
-        cancelled = true;
-        controller.abort();
-      };
-    }
 
-    const settingKey = SECTION_SETTING_KEY[section];
-    if (!settingKey) {
-      setModeState(fallback);
-      return () => {
-        cancelled = true;
-        controller.abort();
-      };
-    }
+    void (async () => {
+      try {
+        const remote = await fetchMyPreference("display", controller.signal);
+        if (cancelled) return;
+        const remoteMode = asMode(remote?.[section]);
+        if (remoteMode) {
+          setModeState(remoteMode);
+          const all = readPrefs(uid);
+          all[section] = remoteMode;
+          writePrefs(uid, all);
+          return;
+        }
+      } catch {
+        /* offline / unauthorized — fall through */
+      }
 
-    fetchSettings("display.", controller.signal)
-      .then((settings) => {
+      if (userMode) {
+        if (!cancelled) setModeState(userMode);
+        return;
+      }
+
+      const settingKey = SECTION_SETTING_KEY[section];
+      if (!settingKey) {
+        if (!cancelled) setModeState(fallback);
+        return;
+      }
+
+      try {
+        const settings = await fetchSettings("display.", controller.signal);
         if (cancelled) return;
         const fromServer = asMode(settings[settingKey]);
         setModeState(fromServer ?? fallback);
-      })
-      .catch(() => {
+      } catch {
         if (!cancelled) setModeState(fallback);
-      });
+      }
+    })();
 
     return () => {
       cancelled = true;
@@ -128,6 +139,9 @@ export function useDisplayPreference(section: string, fallback: DisplayMode = "t
     const all = readPrefs(uid);
     all[section] = next;
     writePrefs(uid, all);
+    void saveMyPreference("display", { ...all }).catch(() => {
+      /* local cache already updated */
+    });
   };
 
   return {

@@ -36,21 +36,30 @@ function FileAttentePage() {
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  const load = () => {
-    setLoading(true);
+  const load = (silent = false) => {
+    if (!silent) setLoading(true);
     const controller = new AbortController();
     fetchWaitingRoom({}, controller.signal)
       .then(setRows)
       .catch((e: unknown) => {
         setRows([]);
-        toast.error(e instanceof Error ? e.message : "Impossible de charger la file d'attente");
+        if (!silent) {
+          toast.error(e instanceof Error ? e.message : "Impossible de charger la file d'attente");
+        }
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (!silent) setLoading(false);
+      });
     return () => controller.abort();
   };
 
   useEffect(() => {
-    return load();
+    return load(false);
+  }, []);
+
+  useEffect(() => {
+    const id = window.setInterval(() => load(true), 20_000);
+    return () => window.clearInterval(id);
   }, []);
 
   const advance = async (id: string) => {

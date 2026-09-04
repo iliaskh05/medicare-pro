@@ -61,8 +61,8 @@ export const assistantPages: AssistantPage[] = [
     ],
   },
   {
-    path: "/imagerie",
-    nom: "Imagerie",
+    path: "/worklist",
+    nom: "Worklist",
     motsCles: [
       "imagerie",
       "examen",
@@ -72,25 +72,26 @@ export const assistantPages: AssistantPage[] = [
       "échographie",
       "mammographie",
       "modalité",
+      "worklist",
+      "file",
     ],
     resume:
-      "Liste des examens acquis par modalité (IRM, scanner, radiologie, mammographie) avec leur statut de lecture.",
+      "File d'attente des examens du jour : état patient, salle, modalité, compte rendu et paiement.",
     aides: [
-      "Filtrez par modalité pour retrouver un examen précis.",
-      "Le bouton « Visionneuse IA » ouvre les images avec le calque de segmentation IA.",
+      "Filtrez par modalité, salle ou radiologue pour retrouver un examen.",
+      "Ouvrez le dossier patient pour imprimer l'étiquette liée à ce dossier.",
       "Le statut indique si le compte rendu reste à valider par le radiologue.",
     ],
   },
   {
-    path: "/viewer",
-    nom: "Visionneuse IA",
-    motsCles: ["visionneuse", "viewer", "image", "calque", "segmentation", "compte rendu", "cr"],
+    path: "/numerisation",
+    nom: "Numérisation & étiquettes",
+    motsCles: ["étiquette", "autocollant", "numérisation", "document", "impression"],
     resume:
-      "Visionneuse d'images avec calque d'analyse IA, outils de mesure et génération de compte rendu structuré.",
+      "Import de documents au dossier patient et impression d'étiquette / auto-collant liés au dossier.",
     aides: [
-      "Le commutateur « Activer le calque IA » superpose les zones détectées  .",
-      "Les résultats affichés ne constituent jamais un diagnostic : validation humaine obligatoire.",
-      "L'export PDF produit un document de conformité.",
+      "Recherchez le patient par CIN, n° dossier ou nom avant d'imprimer.",
+      "Le menu propose étiquette, auto-collant, ou les deux.",
     ],
   },
   {

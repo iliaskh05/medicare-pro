@@ -177,4 +177,12 @@ public class WorklistController {
         Long radiologueId = body != null ? body.get("radiologueId") : null;
         return worklistService.assign(id, radiologueId);
     }
+
+    @PostMapping("/{id}/complementaire")
+    @PreAuthorize("hasAuthority('" + PermissionCatalog.EXAM_CREATE + "')")
+    public ResponseEntity<WorklistItemDto> complementary(
+            @PathVariable Long id, @RequestBody WorklistCreateRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(worklistService.createComplementary(id, request));
+    }
 }

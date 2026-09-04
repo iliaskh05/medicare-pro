@@ -2,12 +2,10 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ClipboardList,
-  Eye,
   FileDown,
   FileText,
   ListFilter,
   MoreHorizontal,
-  Receipt,
   RefreshCw,
   Search,
   SlidersHorizontal,
@@ -48,7 +46,8 @@ import {
   PaiementBadge,
 } from "@/components/worklist/status-badges";
 import { ExamenSheet } from "@/components/worklist/examen-sheet";
-import { DicomViewerModal } from "@/components/worklist/dicom-viewer-modal";
+import { PatientLabelPrintMenu } from "@/components/patients/patient-label-print-menu";
+import { SejourBadge } from "@/components/sejour-badge";
 import { downloadFactureExamen } from "@/lib/api/factures";
 import { ApiError } from "@/lib/api/config";
 import {
@@ -64,6 +63,7 @@ import {
 import { fetchResources, type ResourceDto } from "@/lib/api/appointments";
 import { fetchRadiologues, type StaffRadiologue } from "@/lib/api/staff";
 import { useDisplayPreference } from "@/hooks/use-display-preference";
+import { fetchMyPreference } from "@/lib/api/preferences";
 import { toLocalDateKey } from "@/lib/date";
 import { cn } from "@/lib/utils";
 
@@ -115,14 +115,30 @@ function WorklistPage() {
 
   const [selected, setSelected] = useState<WorklistItem | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [viewerExamenId, setViewerExamenId] = useState<string | null>(null);
-  const [viewerPatient, setViewerPatient] = useState<string>("");
-  const [viewerOpen, setViewerOpen] = useState(false);
+  const [refreshSec, setRefreshSec] = useState(30);
 
   useEffect(() => {
     const t = window.setTimeout(() => setDebouncedSearch(query.trim()), 300);
     return () => window.clearTimeout(t);
   }, [query]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetchMyPreference("ui", controller.signal)
+      .then((ui) => {
+        const sec = Number(ui?.["refreshIntervalSec"]);
+        if (Number.isFinite(sec) && sec >= 10 && sec <= 300) setRefreshSec(sec);
+      })
+      .catch(() => {
+        /* keep default */
+      });
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
+    const id = window.setInterval(() => setReloadKey((k) => k + 1), refreshSec * 1000);
+    return () => window.clearInterval(id);
+  }, [refreshSec]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -188,12 +204,6 @@ function WorklistPage() {
   const openSheet = useCallback((item: WorklistItem) => {
     setSelected(item);
     setSheetOpen(true);
-  }, []);
-
-  const openImagerie = useCallback((item: WorklistItem) => {
-    setViewerExamenId(item.id);
-    setViewerPatient(item.patient);
-    setViewerOpen(true);
   }, []);
 
   const changeEtatPatient = useCallback(async (item: WorklistItem, nouveauStatut: EtatPatient) => {
@@ -507,7 +517,9 @@ function WorklistPage() {
                           />
                         </TableCell>
                         <TableCell className="font-medium">{i.patient}</TableCell>
-                        <TableCell className="font-mono text-xs">{i.numSejour}</TableCell>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <SejourBadge value={i.numSejour} size="sm" />
+                        </TableCell>
                         <TableCell className="hidden lg:table-cell">{i.medecin}</TableCell>
                         <TableCell className="whitespace-nowrap">{i.dateExamen}</TableCell>
                         <TableCell className="hidden md:table-cell">{i.modalite}</TableCell>
@@ -524,15 +536,20 @@ function WorklistPage() {
                           onClick={(e) => e.stopPropagation()}
                         >
                           <div className="flex items-center justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              aria-label={`Voir l'imagerie — ${i.patient}`}
-                              title="Voir l'imagerie"
-                              onClick={() => openImagerie(i)}
-                            >
-                              <Eye className="size-4" />
-                            </Button>
+                            {i.patientId ? (
+                              <PatientLabelPrintMenu
+                                size="icon"
+                                variant="ghost"
+                                payload={{
+                                  patientId: String(i.patientId),
+                                  nom: i.patient,
+                                  numeroDossier: i.numSejour || String(i.patientId),
+                                  ...(i.cin ? { cin: i.cin } : {}),
+                                  examen: i.description || i.modalite,
+                                  dateHeure: i.dateExamen,
+                                }}
+                              />
+                            ) : null}
                             {i.etatPatient === "arrive" ? (
                               <Button
                                 variant="ghost"
@@ -559,17 +576,11 @@ function WorklistPage() {
                                 <DropdownMenuItem onClick={() => openSheet(i)}>
                                   <ClipboardList className="mr-2 size-4" /> Détails
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => openImagerie(i)}>
-                                  <Eye className="mr-2 size-4" /> Voir l&apos;imagerie
-                                </DropdownMenuItem>
                                 {i.etatPatient === "arrive" ? (
                                   <DropdownMenuItem onClick={() => void downloadFacture(i)}>
                                     <FileDown className="mr-2 size-4" /> Facture PDF
                                   </DropdownMenuItem>
                                 ) : null}
-                                <DropdownMenuItem onClick={() => window.print()}>
-                                  <Receipt className="mr-2 size-4" /> Reçu / Facture
-                                </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => openSheet(i)}>
                                   <FileText className="mr-2 size-4" /> Ouvrir compte rendu
                                 </DropdownMenuItem>
@@ -619,23 +630,10 @@ function WorklistPage() {
         item={selected}
         open={sheetOpen}
         onOpenChange={setSheetOpen}
-        onOpenImagerie={(exam) => {
-          setSheetOpen(false);
-          openImagerie(exam);
-        }}
         onDownloadFacture={(exam) => void downloadFacture(exam)}
         onUpdated={(exam) => {
           setSelected(exam);
           setItems((prev) => prev.map((i) => (i.id === exam.id ? exam : i)));
-        }}
-      />
-      <DicomViewerModal
-        examenId={viewerExamenId}
-        patientLabel={viewerPatient}
-        open={viewerOpen}
-        onOpenChange={(open) => {
-          setViewerOpen(open);
-          if (!open) setViewerExamenId(null);
         }}
       />
     </div>

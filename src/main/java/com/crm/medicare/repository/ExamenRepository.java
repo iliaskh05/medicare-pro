@@ -116,6 +116,8 @@ public interface ExamenRepository extends JpaRepository<Examen, Long> {
 
     long countByEtatPatient(EtatPatient etatPatient);
 
+    long countByWorkflowStatus(EncounterStatus workflowStatus);
+
     long countByDateExamenGreaterThanEqualAndDateExamenLessThan(
             LocalDateTime debut, LocalDateTime fin);
 

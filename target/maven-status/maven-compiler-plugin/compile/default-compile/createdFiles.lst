@@ -13,6 +13,8 @@ com\crm\medicare\entity\ChatMessage.class
 com\crm\medicare\dto\AppointmentDto$AppointmentDtoBuilder.class
 com\crm\medicare\dto\ResetPasswordRequest.class
 com\crm\medicare\entity\Paiement.class
+com\crm\medicare\repository\DictionaryPathologyFamilyRepository.class
+com\crm\medicare\repository\DictionaryPathologyRepository.class
 com\crm\medicare\entity\StatutCr.class
 com\crm\medicare\common\ApiException.class
 com\crm\medicare\common\PageResponse$PageResponseBuilder.class
@@ -24,6 +26,7 @@ com\crm\medicare\dto\ForgotPasswordRequest.class
 com\crm\medicare\controller\CatalogueController.class
 com\crm\medicare\workflow\ReportStatus.class
 com\crm\medicare\dto\ReportAmendRequest.class
+com\crm\medicare\controller\AuditTrailController.class
 com\crm\medicare\repository\ReportValidationRepository.class
 com\crm\medicare\repository\ChatChannelRepository.class
 com\crm\medicare\entity\ReportVersion.class
@@ -74,6 +77,7 @@ com\crm\medicare\controller\SalleAttenteController.class
 com\crm\medicare\controller\ChatController.class
 com\crm\medicare\entity\HistoriqueExamen.class
 com\crm\medicare\entity\CatalogueExamen.class
+com\crm\medicare\repository\UserPreferenceRepository.class
 com\crm\medicare\common\PageResponse.class
 com\crm\medicare\controller\DocumentController.class
 com\crm\medicare\dto\PatientResponse$DuplicateWarning.class
@@ -82,6 +86,7 @@ com\crm\medicare\common\ApiErrorResponse$ApiErrorResponseBuilder.class
 com\crm\medicare\service\ReportService.class
 com\crm\medicare\controller\MedecinReferentController.class
 com\crm\medicare\dto\AlerteDto$AlerteDtoBuilder.class
+com\crm\medicare\entity\DictionaryPathology.class
 com\crm\medicare\dto\PaiementCreateRequest.class
 com\crm\medicare\controller\AssistantController.class
 com\crm\medicare\dto\AppointmentDto.class
@@ -104,9 +109,11 @@ com\crm\medicare\entity\PaiementExamen.class
 com\crm\medicare\controller\PatientController.class
 com\crm\medicare\controller\ImagingController.class
 com\crm\medicare\entity\ResourceRoom.class
+com\crm\medicare\service\UserPreferenceService.class
 com\crm\medicare\entity\AuditLog$AuditLogBuilder.class
 com\crm\medicare\dto\ImagingInstanceDto.class
 com\crm\medicare\MedicareApplication.class
+com\crm\medicare\service\DictionaryService.class
 com\crm\medicare\dto\LoginRequest.class
 com\crm\medicare\dto\MedecinReferentWriteRequest$MedecinReferentWriteRequestBuilder.class
 com\crm\medicare\dto\CatalogueExamenWriteRequest.class
@@ -142,6 +149,7 @@ com\crm\medicare\dto\ImagingSeriesDto.class
 com\crm\medicare\dto\Patient360Dtos$TimelineEvent$TimelineEventBuilder.class
 com\crm\medicare\security\PermissionCatalog.class
 com\crm\medicare\dto\AssistantChatResponse.class
+com\crm\medicare\entity\ReportTemplate.class
 com\crm\medicare\dto\Patient360Dtos$TimelineEvent.class
 com\crm\medicare\entity\InsurancePlan.class
 com\crm\medicare\repository\UtilisateurRepository.class
@@ -151,6 +159,7 @@ com\crm\medicare\repository\ImagingStudyRepository.class
 com\crm\medicare\dto\DashboardStatsDto.class
 com\crm\medicare\service\AppSettingsService.class
 com\crm\medicare\entity\MedecinReferent.class
+com\crm\medicare\controller\ReportTemplateController.class
 com\crm\medicare\workflow\WorkflowEngine.class
 com\crm\medicare\entity\Appointment.class
 com\crm\medicare\storage\DocumentStorage.class
@@ -179,6 +188,7 @@ com\crm\medicare\entity\InvoiceRefund.class
 com\crm\medicare\service\FactureService$FacturePdf.class
 com\crm\medicare\dto\InvoiceDto$InvoiceDtoBuilder.class
 com\crm\medicare\dto\InvoiceRefundRequest.class
+com\crm\medicare\entity\UserPreference.class
 com\crm\medicare\entity\AppSetting.class
 com\crm\medicare\dto\AssistantChatRequest.class
 com\crm\medicare\dto\WorklistStatusUpdateRequest.class
@@ -227,11 +237,13 @@ com\crm\medicare\repository\AppSettingRepository.class
 com\crm\medicare\service\InsuranceService.class
 com\crm\medicare\service\WaitingRoomService$1.class
 com\crm\medicare\dto\ImportPreviewDto.class
+com\crm\medicare\imaging\DbImagingProvider.class
 com\crm\medicare\dto\Patient360Dtos$BillingItem.class
 com\crm\medicare\service\AuthService.class
 com\crm\medicare\repository\DataImportJobRepository.class
 com\crm\medicare\dto\DashboardStatsDto$DashboardStatsDtoBuilder.class
 com\crm\medicare\dto\PaiementItemDto$PaiementItemDtoBuilder.class
+com\crm\medicare\repository\DictionaryAnatomicalZoneRepository.class
 com\crm\medicare\dto\InsuranceProviderWriteRequest.class
 com\crm\medicare\dto\ReportVersionDto$ReportVersionDtoBuilder.class
 com\crm\medicare\dto\AppSettingsDto.class
@@ -243,8 +255,10 @@ com\crm\medicare\dto\AnomalieCaisseCompatDto.class
 com\crm\medicare\security\JwtUtils.class
 com\crm\medicare\entity\NotificationAttempt.class
 com\crm\medicare\controller\StaffController.class
+com\crm\medicare\entity\DictionaryAnatomicalZone.class
 com\crm\medicare\common\ApiErrorResponse.class
 com\crm\medicare\service\ExcelImportService$ResourceRow.class
+com\crm\medicare\controller\DictionaryController.class
 com\crm\medicare\dto\AssistantChatRequest$AssistantChatRequestBuilder.class
 com\crm\medicare\dto\MedecinStatsDto.class
 com\crm\medicare\dto\AppointmentRescheduleRequest.class
@@ -252,8 +266,10 @@ com\crm\medicare\dto\AuditDemoExampleDto$AuditDemoExampleDtoBuilder.class
 com\crm\medicare\dto\AuthResponse.class
 com\crm\medicare\controller\AuditFraudeCompatController.class
 com\crm\medicare\dto\Patient360Dtos$PrescriptionItem.class
+com\crm\medicare\service\ReportTemplateService.class
 com\crm\medicare\dashboard\DashboardMetrics.class
 com\crm\medicare\entity\ChatChannel$ChatChannelBuilder.class
+com\crm\medicare\entity\DictionaryPathologyFamily.class
 com\crm\medicare\workflow\InvoiceStatus.class
 com\crm\medicare\entity\Modalite.class
 com\crm\medicare\service\PatientService.class
@@ -265,6 +281,8 @@ com\crm\medicare\dto\ImportRowError$ImportRowErrorBuilder.class
 com\crm\medicare\repository\DocumentExamenRepository.class
 com\crm\medicare\dto\MedecinReferentWriteRequest.class
 com\crm\medicare\ml\AnomalyFeatureBuilder$OperatorHistoricalStats.class
+com\crm\medicare\repository\ReportTemplateRepository.class
+com\crm\medicare\controller\UserPreferenceController.class
 com\crm\medicare\dto\ImagingSeriesDto$ImagingSeriesDtoBuilder.class
 com\crm\medicare\entity\InvoiceItem.class
 com\crm\medicare\entity\SecurityEvent.class

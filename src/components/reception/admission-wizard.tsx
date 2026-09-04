@@ -8,9 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ReferentCombobox } from "@/components/worklist/referent-combobox";
 import { EmptyState, Surface } from "@/components/ui-kit";
-import { fetchResources, type ResourceDto } from "@/lib/api/appointments";
+import { fetchResources, createAppointment, fetchAppointments, type AppointmentDto, type ResourceDto } from "@/lib/api/appointments";
 import { fetchCatalogue, type CatalogueActe } from "@/lib/api/catalogue";
-import { createPatient, fetchPatients, type PatientRow } from "@/lib/api/patients";
+import { createPatient, fetchPatientData, searchPatients, type PatientRow } from "@/lib/api/patients";
 import { createExamen, fetchWorklist, type WorklistItem } from "@/lib/api/worklist";
 import { formatMAD } from "@/types/domain";
 import { cn } from "@/lib/utils";
@@ -29,14 +29,15 @@ export function AdmissionWizard({
   onCreated,
 }: {
   mode: AdmissionMode;
-  initialPatientId?: string;
-  onCreated?: (item: WorklistItem) => void;
+  initialPatientId?: string | undefined;
+  onCreated?: ((item: WorklistItem) => void) | undefined;
 }) {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [patients, setPatients] = useState<PatientRow[]>([]);
-  const [loadingPatients, setLoadingPatients] = useState(true);
+  const [loadingPatients, setLoadingPatients] = useState(false);
   const [patient, setPatient] = useState<PatientRow | null>(null);
   const [creatingPatient, setCreatingPatient] = useState(false);
   const [newPatient, setNewPatient] = useState({
@@ -60,6 +61,7 @@ export function AdmissionWizard({
     nom: "",
   });
   const [dayExams, setDayExams] = useState<WorklistItem[]>([]);
+  const [dayAppointments, setDayAppointments] = useState<AppointmentDto[]>([]);
   const [saving, setSaving] = useState(false);
 
   const acte = actes.find((a) => a.id === acteId) ?? null;
@@ -68,20 +70,12 @@ export function AdmissionWizard({
   const reste = Math.max(total - avance, 0);
 
   useEffect(() => {
+    const t = window.setTimeout(() => setDebouncedQuery(query.trim()), 280);
+    return () => window.clearTimeout(t);
+  }, [query]);
+
+  useEffect(() => {
     const controller = new AbortController();
-    fetchPatients(controller.signal)
-      .then((rows) => {
-        setPatients(rows);
-        if (initialPatientId) {
-          const found = rows.find((p) => p.id === initialPatientId);
-          if (found) {
-            setPatient(found);
-            setStep(2);
-          }
-        }
-      })
-      .catch(() => setPatients([]))
-      .finally(() => setLoadingPatients(false));
     fetchCatalogue(true, controller.signal)
       .then(setActes)
       .catch(() => setActes([]));
@@ -92,7 +86,51 @@ export function AdmissionWizard({
       })
       .catch(() => setResources([]));
     return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
+    if (!initialPatientId) return;
+    const controller = new AbortController();
+    setLoadingPatients(true);
+    fetchPatientData(initialPatientId, controller.signal)
+      .then((found) => {
+        if (!controller.signal.aborted && found) {
+          setPatient(found);
+          setStep(2);
+        }
+      })
+      .catch(() => {
+        /* ignore */
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoadingPatients(false);
+      });
+    return () => controller.abort();
   }, [initialPatientId]);
+
+  useEffect(() => {
+    if (step !== 1) return;
+    const controller = new AbortController();
+    setLoadingPatients(true);
+    searchPatients(
+      {
+        ...(debouncedQuery ? { search: debouncedQuery } : {}),
+        page: 0,
+        size: 12,
+      },
+      controller.signal,
+    )
+      .then((page) => {
+        if (!controller.signal.aborted) setPatients(page.content);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setPatients([]);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoadingPatients(false);
+      });
+    return () => controller.abort();
+  }, [debouncedQuery, step]);
 
   useEffect(() => {
     if (mode === "walkin") setDateHeure(nowLocalInput());
@@ -105,27 +143,21 @@ export function AdmissionWizard({
     fetchWorklist({ date: day }, controller.signal)
       .then(setDayExams)
       .catch(() => setDayExams([]));
+    fetchAppointments({ from: day, to: day }, controller.signal)
+      .then(setDayAppointments)
+      .catch(() => setDayAppointments([]));
     return () => controller.abort();
   }, [dateHeure]);
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return patients.slice(0, 8);
-    return patients
-      .filter((p) =>
-        [p.nomComplet, p.cin, p.telephone, p.numeroDossier]
-          .filter(Boolean)
-          .some((v) => String(v).toLowerCase().includes(q)),
-      )
-      .slice(0, 12);
-  }, [patients, query]);
+  const filtered = patients;
 
   const conflict = useMemo(() => {
     if ((!resourceId && !salle) || !dateHeure || !acte) return null;
     const start = new Date(dateHeure).getTime();
     const duration = (acte.dureeMinutes ?? 30) * 60_000;
     const end = start + duration;
-    return (
+
+    const examHit =
       dayExams.find((exam) => {
         const sameResource =
           resourceId && exam.resourceId
@@ -135,9 +167,35 @@ export function AdmissionWizard({
         const other = new Date(exam.dateExamenRaw ?? exam.dateExamen.replace(" ", "T")).getTime();
         if (Number.isNaN(other)) return false;
         return other < end && other + 30 * 60_000 > start;
-      }) ?? null
-    );
-  }, [acte, dateHeure, dayExams, resourceId, salle]);
+      }) ?? null;
+    if (examHit) {
+      return {
+        label: `${examHit.patient} · ${examHit.description} · ${examHit.dateExamen}`,
+      };
+    }
+
+    const apptHit =
+      dayAppointments.find((appt) => {
+        if (appt.statut === "CANCELLED" || appt.statut === "NO_SHOW") return false;
+        const sameResource =
+          resourceId && appt.resourceId
+            ? String(appt.resourceId) === resourceId
+            : Boolean(salle && appt.salle && appt.salle === salle);
+        if (!sameResource) return false;
+        const otherStart = new Date(appt.startsAt).getTime();
+        const otherEnd = appt.endsAt
+          ? new Date(appt.endsAt).getTime()
+          : otherStart + (appt.dureeMinutes || 30) * 60_000;
+        if (Number.isNaN(otherStart)) return false;
+        return otherStart < end && otherEnd > start;
+      }) ?? null;
+    if (apptHit) {
+      return {
+        label: `${apptHit.patient} · ${apptHit.examenLibelle || apptHit.modalite} · ${apptHit.startsAt}`,
+      };
+    }
+    return null;
+  }, [acte, dateHeure, dayAppointments, dayExams, resourceId, salle]);
 
   const createNew = async () => {
     if (!newPatient.nom.trim() || !newPatient.prenom.trim() || !newPatient.cin.trim()) {
@@ -146,17 +204,19 @@ export function AdmissionWizard({
     }
     setCreatingPatient(true);
     try {
-      const created = await createPatient({
+      const payload: Parameters<typeof createPatient>[0] = {
+        nom: newPatient.nom.trim().toUpperCase(),
+        prenom: newPatient.prenom.trim(),
         nomComplet: `${newPatient.nom.trim().toUpperCase()} ${newPatient.prenom.trim()}`,
         cin: newPatient.cin.trim().toUpperCase(),
-        age: 0,
-        telephone: newPatient.telephone.trim(),
-        mutuelle: "",
+        mutuelle: "AMO",
         sexe: newPatient.sexe,
-        dateNaissance: newPatient.naissance || undefined,
-      } as never);
+      };
+      if (newPatient.telephone.trim()) payload.telephone = newPatient.telephone.trim();
+      if (newPatient.naissance) payload.dateNaissance = newPatient.naissance;
+      const created = await createPatient(payload);
       setPatient(created);
-      setPatients((rows) => [created, ...rows]);
+      setPatients((rows) => [created, ...rows.filter((r) => r.id !== created.id)]);
       setStep(2);
       toast.success("Patient enregistré.");
     } catch (e) {
@@ -183,25 +243,70 @@ export function AdmissionWizard({
       toast.error("L'avance ne peut pas dépasser le montant total.");
       return;
     }
+    if (conflict) {
+      toast.error("Créneau en conflit — choisissez un autre horaire ou une autre salle.");
+      return;
+    }
     setSaving(true);
     try {
       const selected = resources.find((r) => r.id === resourceId);
-      const created = await createExamen({
-        patientId: patient.id,
-        catalogueId: acte.id,
-        dateHeure: mode === "walkin" ? nowLocalInput() : dateHeure,
-        salle: selected?.libelle ?? salle,
-        resourceId: resourceId || null,
-        prescripteurId: prescripteur.id,
-        prescripteurNom: prescripteur.nom,
-        passageSansRdv: mode === "walkin",
-        acompte: avance,
-        typeExamen: acte.nom,
-        modalite: acte.modalite,
-      });
-      toast.success(mode === "walkin" ? "Passage enregistré — patient en file d'attente." : "Rendez-vous confirmé.");
-      onCreated?.(created);
-      navigate({ to: mode === "walkin" ? "/file-attente" : "/agenda" });
+      if (mode === "rdv") {
+        const notesParts = [
+          avance > 0 ? `Avance demandée: ${avance} MAD (à encaisser au check-in / caisse)` : null,
+          reste > 0 && avance > 0 ? `Reste prévu: ${reste} MAD` : null,
+        ].filter(Boolean);
+        const apptPayload: Parameters<typeof createAppointment>[0] = {
+          patientId: patient.id,
+          catalogueId: acte.id,
+          dateHeure,
+          dureeMinutes: acte.dureeMinutes ?? 30,
+          modalite: acte.modalite,
+          motif: acte.nom,
+        };
+        if (resourceId) apptPayload.resourceId = resourceId;
+        const salleLabel = (selected?.libelle ?? salle).trim();
+        if (salleLabel) apptPayload.salle = salleLabel;
+        if (prescripteur.id) apptPayload.prescripteurId = prescripteur.id;
+        if (notesParts.length) apptPayload.notes = notesParts.join(" · ");
+        await createAppointment(apptPayload);
+        toast.success(
+          avance > 0
+            ? "Rendez-vous créé dans l'agenda. Avance notée — encaissement au check-in / caisse."
+            : "Rendez-vous confirmé dans l'agenda.",
+        );
+        onCreated?.({
+          id: "",
+          numSejour: "",
+          patient: patient.nomComplet,
+          patientId: patient.id,
+          medecin: "",
+          dateExamen: dateHeure,
+          salle: selected?.libelle ?? salle,
+          description: acte.nom,
+          modalite: acte.modalite,
+          etatPatient: "attendu",
+          statutCr: "a_faire",
+          paiement: avance >= total && total > 0 ? "paye" : avance > 0 ? "cote" : "impaye",
+        });
+        navigate({ to: "/agenda" });
+      } else {
+        const created = await createExamen({
+          patientId: patient.id,
+          catalogueId: acte.id,
+          dateHeure: nowLocalInput(),
+          salle: selected?.libelle ?? salle,
+          resourceId: resourceId || null,
+          prescripteurId: prescripteur.id,
+          prescripteurNom: prescripteur.nom,
+          passageSansRdv: true,
+          acompte: avance,
+          typeExamen: acte.nom,
+          modalite: acte.modalite,
+        });
+        toast.success("Passage enregistré — patient en file d'attente.");
+        onCreated?.(created);
+        navigate({ to: "/file-attente" });
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Enregistrement impossible.");
     } finally {
@@ -384,7 +489,7 @@ export function AdmissionWizard({
           </div>
           {conflict ? (
             <p className="text-sm text-warning">
-              Créneau potentiellement occupé : {conflict.patient} · {conflict.description} · {conflict.dateExamen}.
+              Créneau potentiellement occupé : {conflict.label}.
             </p>
           ) : null}
           <p className="text-xs text-muted-foreground">

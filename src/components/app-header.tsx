@@ -41,7 +41,7 @@ const pageContext: { match: string; label: string }[] = [
   { match: "/facturation", label: "Facturation" },
   { match: "/dossiers", label: "Dossiers à remettre" },
   { match: "/impayes", label: "Restes à payer" },
-  { match: "/viewer", label: "Imagerie" },
+  { match: "/numerisation", label: "Numérisation" },
 ];
 
 export function AppHeader() {

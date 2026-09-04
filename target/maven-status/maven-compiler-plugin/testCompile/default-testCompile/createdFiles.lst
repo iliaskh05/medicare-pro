@@ -1,5 +1,6 @@
 com\crm\medicare\service\ExcelImportServiceTest.class
 com\crm\medicare\service\InvoiceBillingServiceTest.class
 com\crm\medicare\data\MoroccanCatalogueDefinitionsTest.class
+com\crm\medicare\imaging\DbImagingProviderTest.class
 com\crm\medicare\controller\MedecinReferentControllerStatsTest.class
 com\crm\medicare\service\DemoDatasetServiceTest.class

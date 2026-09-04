@@ -1,7 +1,27 @@
 # État actuel — MediCare Pro
 
-Date : 17 août 2026.  
-Objectif de ce document : figer la base avant toute nouvelle grosse fonctionnalité.  
+**Mise à jour 2026-09-04 (2e passe)** — voir `docs/REQUIREMENTS-MATRIX.md`.
+
+### Second pass (functional parity)
+
+- **Check-in → ARRIVED** : RDV check-in place le patient en file d'attente (`arrivedAt`)
+- Agenda : Confirmer / Check-in / Reporter / No-show / Annuler
+- Worklist : champs cliniques + timestamps + auto-refresh préférences
+- Patient 360 : onglet Rendez-vous
+- CR : modèles/trames (`report_templates` V19) + mark-printed
+- Examen complémentaire : API `POST /api/worklist/{id}/complementaire`
+- File d'attente : rafraîchissement silencieux 20s
+
+### Limitations restantes
+
+- PACS / scanner physique / imprimante thermique : frontières seulement
+- Dictionnaires pas encore branchés en combobox CR
+- PDF facture par id invoice (hors examen) : partiel
+- Avance RDV : notée sur le RDV ; encaissement au check-in/caisse
+
+---
+
+Date d’origine du document : 17 août 2026.  
 Référence frontend : `docs/FRONTEND-BACKEND-CONTRACT.md`.
 
 ## 1. Ce qui existait avant l’intervention backend (cette branche)

@@ -8,7 +8,6 @@ import {
   CalendarPlus,
   FileText,
   FolderOpen,
-  ImageIcon,
   ReceiptText,
   ScanLine,
   ShieldAlert,
@@ -16,6 +15,7 @@ import {
 } from "lucide-react";
 
 import { PatientDocumentsPanel } from "@/components/patients/documents-panel";
+import { PatientLabelPrintMenu } from "@/components/patients/patient-label-print-menu";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -49,15 +49,15 @@ import {
   fetchPatientData,
   fetchPatientFinancialStatus,
   fetchPatientHistory,
-  fetchPatientImaging,
+  fetchPatientAppointments,
   fetchPatientTimeline,
   type FinancialStatus,
   type HistoryItem,
   type PatientBilling,
-  type PatientImaging,
   type PatientRow,
   type PatientTimelineEvent,
 } from "@/lib/api/patients";
+import type { AppointmentDto } from "@/lib/api/appointments";
 import {
   fetchReports,
   REPORT_STATUS_LABEL,
@@ -70,9 +70,9 @@ import { formatMAD } from "@/types/domain";
 
 const PATIENT_TABS = [
   "apercu",
+  "rdv",
   "historique",
   "comptes-rendus",
-  "imagerie",
   "facturation",
   "documents",
   "timeline",
@@ -97,7 +97,7 @@ export const Route = createFileRoute("/patient/$patientId")({
       {
         name: "description",
         content:
-          "Dossier patient : historique, comptes-rendus, imagerie, facturation, documents et timeline.",
+          "Dossier patient : historique, comptes-rendus, facturation, documents, étiquettes et timeline.",
       },
       { property: "og:title", content: "Dossier patient — RadioCRM" },
       { property: "og:type", content: "website" },
@@ -121,16 +121,6 @@ function reportStatusTone(status: ReportStatus): Tone {
 }
 
 function historyTone(tone: HistoryItem["tone"]): Tone {
-  return tone === "primary" ||
-    tone === "warning" ||
-    tone === "success" ||
-    tone === "destructive" ||
-    tone === "neutral"
-    ? tone
-    : "neutral";
-}
-
-function imagingTone(tone: PatientImaging["tone"]): Tone {
   return tone === "primary" ||
     tone === "warning" ||
     tone === "success" ||
@@ -166,12 +156,12 @@ function PatientRecordPage() {
 
   const [patient, setPatient] = useState<PatientRow | null>(null);
   const [historique, setHistorique] = useState<HistoryItem[]>([]);
-  const [imagerie, setImagerie] = useState<PatientImaging[]>([]);
   const [billingFallback, setBillingFallback] = useState<PatientBilling[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [financier, setFinancier] = useState<FinancialStatus | null>(null);
   const [timeline, setTimeline] = useState<PatientTimelineEvent[]>([]);
   const [reports, setReports] = useState<ReportSummary[]>([]);
+  const [appointments, setAppointments] = useState<AppointmentDto[]>([]);
   const [documentsCount, setDocumentsCount] = useState<number | null>(null);
   const [anomalies, setAnomalies] = useState<Anomalie[]>([]);
 
@@ -189,7 +179,6 @@ function PatientRecordPage() {
         const [
           p,
           h,
-          i,
           billing,
           allInvoices,
           fin,
@@ -197,10 +186,10 @@ function PatientRecordPage() {
           reps,
           docs,
           al,
+          appts,
         ] = await Promise.all([
           fetchPatientData(patientId, controller.signal),
           fetchPatientHistory(patientId, controller.signal),
-          fetchPatientImaging(patientId, controller.signal),
           canSeeFinance
             ? fetchPatientBilling(patientId, controller.signal).catch(() => [])
             : Promise.resolve([] as PatientBilling[]),
@@ -216,18 +205,19 @@ function PatientRecordPage() {
           role === "directeur"
             ? fetchPatientAnomalies(patientId, controller.signal).catch(() => [])
             : Promise.resolve([] as Anomalie[]),
+          fetchPatientAppointments(patientId, controller.signal).catch(() => [] as AppointmentDto[]),
         ]);
 
         if (controller.signal.aborted) return;
 
         setPatient(p);
         setHistorique(h);
-        setImagerie(i);
         setBillingFallback(billing);
         setInvoices(allInvoices.filter((inv) => String(inv.patientId) === String(patientId)));
         setFinancier(fin);
         setTimeline(tl);
         setReports(reps);
+        setAppointments(appts);
         setDocumentsCount(docs == null ? null : docs.length);
         setAnomalies(al.filter((a) => a.statut === "pending"));
       } catch (err: unknown) {
@@ -282,15 +272,8 @@ function PatientRecordPage() {
         detail: [hist.date, hist.praticien].filter(Boolean).join(" · "),
       };
     }
-    const img = imagerie[0];
-    if (img) {
-      return {
-        title: img.examen,
-        detail: [img.date, img.modalite, img.radiologue].filter(Boolean).join(" · "),
-      };
-    }
     return null;
-  }, [historique, imagerie]);
+  }, [historique]);
 
   const timelineSnippet = timeline.slice(0, 5);
   const solde = financier?.reste ?? 0;
@@ -331,7 +314,7 @@ function PatientRecordPage() {
         <EmptyState
           icon={AlertTriangle}
           title="Aucune donnée disponible"
-          description="Les informations médicales, l'imagerie et la facturation s'afficheront dès que le service répondra."
+          description="Les informations médicales, la facturation et les documents s'afficheront dès que le service répondra."
         />
       </div>
     );
@@ -352,10 +335,22 @@ function PatientRecordPage() {
           .join(" · ")}
         actions={
           <div className="flex flex-wrap items-center gap-2">
+            {patient.vip ? <Pill tone="warning">VIP</Pill> : null}
+            {patient.pacemaker ? <Pill tone="destructive">Pacemaker</Pill> : null}
+            {patient.pregnant ? <Pill tone="warning">Grossesse</Pill> : null}
+            {patient.contrastAllergy ? <Pill tone="destructive">Allergie contraste</Pill> : null}
             {patient.mutuelle ? <Pill tone="primary">{patient.mutuelle}</Pill> : null}
             {patient.numAffiliation ? (
               <Pill tone="neutral">Affil. {patient.numAffiliation}</Pill>
             ) : null}
+            <PatientLabelPrintMenu
+              payload={{
+                patientId: String(patient.id),
+                nom: patient.nomComplet,
+                numeroDossier: patient.numeroDossier ?? String(patient.id),
+                ...(patient.cin ? { cin: patient.cin } : {}),
+              }}
+            />
             <Button variant="outline" size="sm" asChild>
               <Link to="/patients" search={{ nouveau: false }}>
                 <ArrowLeft className="mr-1.5 size-4" /> Patients
@@ -390,14 +385,14 @@ function PatientRecordPage() {
           <Tabs value={tab} onValueChange={setTab}>
             <TabsList className="h-auto w-full flex-wrap justify-start">
               <TabsTrigger value="apercu">Vue générale</TabsTrigger>
+              <TabsTrigger value="rdv">
+                <CalendarClock className="mr-2 size-4" /> Rendez-vous
+              </TabsTrigger>
               <TabsTrigger value="historique">
                 <Activity className="mr-2 size-4" /> Examens
               </TabsTrigger>
               <TabsTrigger value="comptes-rendus">
                 <FileText className="mr-2 size-4" /> Comptes-rendus
-              </TabsTrigger>
-              <TabsTrigger value="imagerie">
-                <ImageIcon className="mr-2 size-4" /> Imagerie
               </TabsTrigger>
               {canSeeFinance ? (
                 <TabsTrigger value="facturation">
@@ -413,6 +408,30 @@ function PatientRecordPage() {
             </TabsList>
 
             <TabsContent value="apercu" className="space-y-4">
+              {patient.medicalAlerts ||
+              patient.vip ||
+              patient.pacemaker ||
+              patient.pregnant ||
+              patient.contrastAllergy ? (
+                <Card className="border-destructive/30 bg-destructive/5">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="flex items-center gap-2 text-sm font-medium text-destructive">
+                      <ShieldAlert className="size-4" /> Alertes cliniques
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="flex flex-wrap gap-2 text-sm">
+                    {patient.vip ? <Pill tone="warning">VIP</Pill> : null}
+                    {patient.pacemaker ? <Pill tone="destructive">Pacemaker</Pill> : null}
+                    {patient.pregnant ? <Pill tone="warning">Grossesse</Pill> : null}
+                    {patient.contrastAllergy ? (
+                      <Pill tone="destructive">Allergie contraste</Pill>
+                    ) : null}
+                    {patient.medicalAlerts ? (
+                      <span className="text-foreground">{patient.medicalAlerts}</span>
+                    ) : null}
+                  </CardContent>
+                </Card>
+              ) : null}
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <Card>
                   <CardHeader className="pb-2">
@@ -555,6 +574,54 @@ function PatientRecordPage() {
               </Card>
             </TabsContent>
 
+            <TabsContent value="rdv" className="space-y-3">
+              {appointments.length === 0 ? (
+                <EmptyState
+                  icon={CalendarPlus}
+                  title="Aucun rendez-vous"
+                  description="Les rendez-vous planifiés pour ce patient apparaîtront ici."
+                  action={
+                    <Button size="sm" asChild>
+                      <Link to="/accueil" search={{ mode: "rdv", patientId: patient.id }}>
+                        Prendre RDV
+                      </Link>
+                    </Button>
+                  }
+                />
+              ) : (
+                <Card>
+                  <CardContent className="p-0">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Examen</TableHead>
+                          <TableHead>Salle</TableHead>
+                          <TableHead>Statut</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {appointments.map((a) => (
+                          <TableRow key={a.id}>
+                            <TableCell className="whitespace-nowrap text-sm tabular-nums">
+                              {a.startsAt ? formatCentreDateTime(a.startsAt) : "—"}
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              {a.examenLibelle || a.modalite || "—"}
+                            </TableCell>
+                            <TableCell className="text-sm">{a.salle || "—"}</TableCell>
+                            <TableCell>
+                              <Pill tone="neutral">{a.statut}</Pill>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+
             <TabsContent value="historique">
               <Card>
                 <CardHeader>
@@ -644,55 +711,6 @@ function PatientRecordPage() {
                         </li>
                       ))}
                     </ul>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="imagerie">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Imagerie</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {imagerie.length === 0 ? (
-                    <EmptyState
-                      icon={ScanLine}
-                      title="Aucune étude"
-                      description="Les examens d'imagerie de ce patient s'afficheront ici."
-                      compact
-                    />
-                  ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Date</TableHead>
-                          <TableHead>Examen</TableHead>
-                          <TableHead>Modalité</TableHead>
-                          <TableHead>Radiologue</TableHead>
-                          <TableHead>Statut</TableHead>
-                          <TableHead>Conclusion</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {imagerie.map((row) => (
-                          <TableRow key={row.id}>
-                            <TableCell className="whitespace-nowrap tabular-nums">
-                              {row.date}
-                            </TableCell>
-                            <TableCell className="font-medium">{row.examen}</TableCell>
-                            <TableCell>{row.modalite || "—"}</TableCell>
-                            <TableCell>{row.radiologue || "—"}</TableCell>
-                            <TableCell>
-                              <Pill tone={imagingTone(row.tone)}>{row.statut}</Pill>
-                            </TableCell>
-                            <TableCell className="max-w-sm truncate text-muted-foreground">
-                              {row.conclusion || "—"}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
                   )}
                 </CardContent>
               </Card>

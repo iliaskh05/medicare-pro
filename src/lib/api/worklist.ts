@@ -46,6 +46,19 @@ export type WorklistItem = {
   conclusion?: string | undefined;
   passageSansRdv?: boolean | undefined;
   compteRendu?: string | undefined;
+  arrivedAt?: string | undefined;
+  startedAt?: string | undefined;
+  completedAt?: string | undefined;
+  workflowStatus?: string | undefined;
+  weightKg?: number | undefined;
+  heightCm?: number | undefined;
+  generalAnesthesia?: boolean | undefined;
+  inpatient?: boolean | undefined;
+  urgent?: boolean | undefined;
+  technologistName?: string | undefined;
+  nurseName?: string | undefined;
+  assistantName?: string | undefined;
+  parentExamenId?: string | undefined;
   historique?: { date: string; auteur: string; action: string }[] | undefined;
 };
 
@@ -168,6 +181,19 @@ export function mapWorklistItem(row: WorklistApiRow): WorklistItem {
     conclusion: row.conclusion ?? undefined,
     passageSansRdv: Boolean(row.passageSansRdv),
     compteRendu: row.compteRendu ?? undefined,
+    arrivedAt: row.arrivedAt ? String(row.arrivedAt) : undefined,
+    startedAt: row.startedAt ? String(row.startedAt) : undefined,
+    completedAt: row.completedAt ? String(row.completedAt) : undefined,
+    workflowStatus: row.workflowStatus ?? undefined,
+    weightKg: asNumber(row.weightKg),
+    heightCm: asNumber(row.heightCm),
+    generalAnesthesia: row.generalAnesthesia ?? undefined,
+    inpatient: row.inpatient ?? undefined,
+    urgent: row.urgent ?? undefined,
+    technologistName: row.technologistName ?? undefined,
+    nurseName: row.nurseName ?? undefined,
+    assistantName: row.assistantName ?? undefined,
+    parentExamenId: row.parentExamenId ? String(row.parentExamenId) : undefined,
     historique: (row.historique ?? []).map((h) => ({
       date: formatDateExamen(h.date),
       auteur: h.auteur ?? "",
@@ -300,6 +326,14 @@ export async function updateWorklistStatut(
       | "technique"
       | "resultats"
       | "conclusion"
+      | "weightKg"
+      | "heightCm"
+      | "generalAnesthesia"
+      | "inpatient"
+      | "urgent"
+      | "technologistName"
+      | "nurseName"
+      | "assistantName"
     >
   >,
 ): Promise<WorklistItem> {

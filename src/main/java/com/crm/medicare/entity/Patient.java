@@ -72,6 +72,39 @@ public class Patient {
 
     private String adresse;
 
+    @Column(length = 16)
+    private String titre;
+
+    @Column(name = "telephone_domicile", length = 32)
+    private String telephoneDomicile;
+
+    @Column(name = "telephone_travail", length = 32)
+    private String telephoneTravail;
+
+    @Column(length = 32)
+    private String fax;
+
+    @Column(length = 64)
+    private String pays;
+
+    @Column(name = "convention_type", length = 64)
+    private String conventionType;
+
+    @Column(nullable = false)
+    private boolean vip = false;
+
+    @Column(nullable = false)
+    private boolean pacemaker = false;
+
+    @Column(nullable = false)
+    private boolean pregnant = false;
+
+    @Column(name = "contrast_allergy", nullable = false)
+    private boolean contrastAllergy = false;
+
+    @Column(name = "medical_alerts", columnDefinition = "TEXT")
+    private String medicalAlerts;
+
     @Column(name = "prochain_rdv")
     private LocalDateTime prochainRdv;
 

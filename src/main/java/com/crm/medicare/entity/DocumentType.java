@@ -20,7 +20,8 @@ public enum DocumentType {
             case "INVOICE", "FACTURE" -> INVOICE;
             case "RECEIPT", "RECU", "REÇU", "ACQUITTE" -> RECEIPT;
             case "INSURANCE", "MUTUELLE", "ASSURANCE" -> INSURANCE;
-            case "IMAGERIE", "DICOM", "IMAGE", "OTHER", "DOCUMENT" -> OTHER;
+            case "CIN", "ID", "IDENTITE", "IDENTITY" -> OTHER;
+            case "IMAGERIE", "DICOM", "IMAGE", "OTHER", "DOCUMENT", "AUTRE" -> OTHER;
             default -> {
                 try {
                     yield DocumentType.valueOf(v);

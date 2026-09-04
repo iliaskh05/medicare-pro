@@ -54,15 +54,25 @@ public class DashboardService {
                 examenRepository.countByDateExamenGreaterThanEqualAndDateExamenLessThan(debut, fin);
 
         long enAttente = examenRepository.countByEtatPatient(EtatPatient.attendu);
-        long enCours =
+        long arrives = examenRepository.countByEtatPatient(EtatPatient.arrive);
+        long retards =
                 examenRepository.countByEtatPatient(EtatPatient.retard)
                         + examenRepository.countByEtatPatient(EtatPatient.attente_longue);
-        long termines = examenRepository.countByEtatPatient(EtatPatient.arrive);
+        long enCours =
+                examenRepository.countByWorkflowStatus(EncounterStatus.IN_PROGRESS)
+                        + examenRepository.countByWorkflowStatus(EncounterStatus.PREPARING);
+        long termines =
+                examenRepository.countByWorkflowStatus(EncounterStatus.COMPLETED)
+                        + examenRepository.countByWorkflowStatus(EncounterStatus.REPORT_PENDING)
+                        + examenRepository.countByWorkflowStatus(EncounterStatus.VALIDATED)
+                        + examenRepository.countByWorkflowStatus(EncounterStatus.DISCHARGED);
 
         Map<String, Long> repartition = new LinkedHashMap<>();
         repartition.put("En attente", enAttente);
+        repartition.put("Arrivés", arrives);
+        repartition.put("Retard / attente longue", retards);
         repartition.put("En cours", enCours);
-        repartition.put("Terminé", termines);
+        repartition.put("Terminés", termines);
 
         return DashboardStatsDto.builder()
                 .totalExamens(total)

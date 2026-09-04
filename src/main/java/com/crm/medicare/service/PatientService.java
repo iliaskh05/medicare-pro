@@ -333,26 +333,34 @@ public class PatientService {
     @Transactional(readOnly = true)
     public Patient360Dtos.FinancialStatus financialStatus(Long patientId) {
         requirePatient(patientId);
-        List<Examen> exams = examenRepository.findByPatientIdOrderByDateExamenDesc(patientId);
+        List<Invoice> invoices = invoiceRepository.findByPatientId(patientId);
         BigDecimal total =
-                exams.stream()
-                        .map(e -> e.getMontant() != null ? e.getMontant() : BigDecimal.ZERO)
+                invoices.stream()
+                        .map(i -> i.getTotal() != null ? i.getTotal() : BigDecimal.ZERO)
                         .reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal paid =
-                exams.stream()
-                        .map(e -> e.getAcompte() != null ? e.getAcompte() : BigDecimal.ZERO)
+                invoices.stream()
+                        .map(i -> i.getAmountPaid() != null ? i.getAmountPaid() : BigDecimal.ZERO)
                         .reduce(BigDecimal.ZERO, BigDecimal::add);
-        String lastExam =
-                exams.isEmpty()
-                        ? ""
-                        : exams.get(0).getDescription() != null
-                                ? exams.get(0).getDescription()
-                                : exams.get(0).getNumSejour();
-        BigDecimal reste = total.subtract(paid).max(BigDecimal.ZERO);
+        BigDecimal refunded =
+                invoices.stream()
+                        .map(i -> i.getAmountRefunded() != null ? i.getAmountRefunded() : BigDecimal.ZERO)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal netPaid = paid.subtract(refunded).max(BigDecimal.ZERO);
+        BigDecimal reste = total.subtract(netPaid).max(BigDecimal.ZERO);
+        String lastRef =
+                invoices.stream()
+                        .sorted(
+                                Comparator.comparing(
+                                        Invoice::getCreatedAt,
+                                        Comparator.nullsLast(Comparator.reverseOrder())))
+                        .map(Invoice::getReference)
+                        .findFirst()
+                        .orElse("");
         return Patient360Dtos.FinancialStatus.builder()
-                .examen(lastExam)
+                .examen(lastRef)
                 .total(total)
-                .acompte(paid)
+                .acompte(netPaid)
                 .statutImpression(reste.signum() == 0 && total.signum() > 0 ? "soldé" : "ouvert")
                 .reste(reste)
                 .build();
@@ -617,6 +625,27 @@ public class PatientService {
         patient.setVille(blankToNull(request.getVille()));
         patient.setQuartier(blankToNull(request.getQuartier()));
         patient.setAdresse(blankToNull(request.getAdresse()));
+        patient.setTitre(blankToNull(request.getTitre()));
+        patient.setTelephoneDomicile(blankToNull(request.getTelephoneDomicile()));
+        patient.setTelephoneTravail(blankToNull(request.getTelephoneTravail()));
+        patient.setFax(blankToNull(request.getFax()));
+        patient.setPays(blankToNull(request.getPays()) != null ? blankToNull(request.getPays()) : "Maroc");
+        patient.setConventionType(blankToNull(request.getConventionType()));
+        if (request.getVip() != null) {
+            patient.setVip(request.getVip());
+        }
+        if (request.getPacemaker() != null) {
+            patient.setPacemaker(request.getPacemaker());
+        }
+        if (request.getPregnant() != null) {
+            patient.setPregnant(request.getPregnant());
+        }
+        if (request.getContrastAllergy() != null) {
+            patient.setContrastAllergy(request.getContrastAllergy());
+        }
+        if (request.getMedicalAlerts() != null) {
+            patient.setMedicalAlerts(blankToNull(request.getMedicalAlerts()));
+        }
         LocalDate dob = resolveBirthDate(request);
         if (dob != null) {
             patient.setDateNaissance(dob);
@@ -744,6 +773,17 @@ public class PatientService {
                 .ville(patient.getVille())
                 .quartier(patient.getQuartier())
                 .adresse(patient.getAdresse())
+                .titre(patient.getTitre())
+                .telephoneDomicile(patient.getTelephoneDomicile())
+                .telephoneTravail(patient.getTelephoneTravail())
+                .fax(patient.getFax())
+                .pays(patient.getPays())
+                .conventionType(patient.getConventionType())
+                .vip(patient.isVip())
+                .pacemaker(patient.isPacemaker())
+                .pregnant(patient.isPregnant())
+                .contrastAllergy(patient.isContrastAllergy())
+                .medicalAlerts(patient.getMedicalAlerts())
                 .dateNaissance(patient.getDateNaissance())
                 .prochainRdv(patient.getProchainRdv())
                 .duplicateWarnings(warnings)

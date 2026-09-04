@@ -133,6 +133,42 @@ public class Examen {
     @Column(name = "arrived_at")
     private LocalDateTime arrivedAt;
 
+    @Column(name = "started_at")
+    private LocalDateTime startedAt;
+
+    @Column(name = "completed_at")
+    private LocalDateTime completedAt;
+
+    @Column(name = "promised_at")
+    private LocalDateTime promisedAt;
+
+    @Column(name = "weight_kg", precision = 6, scale = 2)
+    private java.math.BigDecimal weightKg;
+
+    @Column(name = "height_cm", precision = 6, scale = 2)
+    private java.math.BigDecimal heightCm;
+
+    @Column(name = "general_anesthesia", nullable = false)
+    private boolean generalAnesthesia = false;
+
+    @Column(nullable = false)
+    private boolean inpatient = false;
+
+    @Column(nullable = false)
+    private boolean urgent = false;
+
+    @Column(name = "technologist_name", length = 120)
+    private String technologistName;
+
+    @Column(name = "nurse_name", length = 120)
+    private String nurseName;
+
+    @Column(name = "assistant_name", length = 120)
+    private String assistantName;
+
+    @Column(name = "parent_examen_id")
+    private Long parentExamenId;
+
     @Column(name = "compte_rendu", columnDefinition = "TEXT")
     private String compteRendu;
 

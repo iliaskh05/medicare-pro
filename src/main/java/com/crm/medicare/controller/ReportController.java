@@ -92,4 +92,10 @@ public class ReportController {
                 .contentLength(pdf.content().length)
                 .body(pdf.content());
     }
+
+    @PostMapping("/{id}/mark-printed")
+    @PreAuthorize("hasAuthority('" + PermissionCatalog.REPORT_READ + "')")
+    public ReportDto markPrinted(@PathVariable Long id) {
+        return reportService.markPrinted(id);
+    }
 }

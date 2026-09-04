@@ -1,21 +1,32 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { CalendarPlus, ClipboardList, UserRoundSearch, Footprints } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PageHeader, Surface } from "@/components/ui-kit";
 import { AdmissionWizard } from "@/components/reception/admission-wizard";
-import { useState } from "react";
-import { fetchPatients, type PatientRow } from "@/lib/api/patients";
-import { fetchWorklist } from "@/lib/api/worklist";
+import { fetchAppointments } from "@/lib/api/appointments";
+import { searchPatients, type PatientRow } from "@/lib/api/patients";
 import { toLocalDateKey } from "@/lib/date";
-import { useEffect } from "react";
+
+/** Search params for /accueil — kept loose for TanStack Link + exactOptionalPropertyTypes. */
+export type AccueilSearch = {
+  mode?: "walkin" | "rdv";
+  patientId?: string;
+};
 
 export const Route = createFileRoute("/accueil")({
-  validateSearch: (search: Record<string, unknown>) => ({
-    mode: search.mode === "walkin" || search.mode === "rdv" ? search.mode : undefined,
-    patientId: typeof search.patientId === "string" ? search.patientId : undefined,
-  }),
+  validateSearch: (search: Record<string, unknown>): AccueilSearch => {
+    const next: AccueilSearch = {};
+    if (search["mode"] === "walkin" || search["mode"] === "rdv") {
+      next.mode = search["mode"];
+    }
+    if (typeof search["patientId"] === "string" && search["patientId"].trim() !== "") {
+      next.patientId = search["patientId"];
+    }
+    return next;
+  },
   head: () => ({
     meta: [{ title: "Accueil patient — RadioCRM" }],
   }),
@@ -25,31 +36,36 @@ export const Route = createFileRoute("/accueil")({
 function AccueilPage() {
   const { mode, patientId } = Route.useSearch();
   const [query, setQuery] = useState("");
+  const [debounced, setDebounced] = useState("");
   const [hits, setHits] = useState<PatientRow[]>([]);
+  const [searching, setSearching] = useState(false);
   const [examHint, setExamHint] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!query.trim()) {
+    const t = window.setTimeout(() => setDebounced(query.trim()), 280);
+    return () => window.clearTimeout(t);
+  }, [query]);
+
+  useEffect(() => {
+    if (!debounced) {
       setHits([]);
+      setSearching(false);
       return;
     }
     const controller = new AbortController();
-    fetchPatients(controller.signal)
-      .then((rows) => {
-        const q = query.trim().toLowerCase();
-        setHits(
-          rows
-            .filter((p) =>
-              [p.nomComplet, p.cin, p.telephone, p.numeroDossier]
-                .filter(Boolean)
-                .some((v) => String(v).toLowerCase().includes(q)),
-            )
-            .slice(0, 8),
-        );
+    setSearching(true);
+    searchPatients({ search: debounced, page: 0, size: 8 }, controller.signal)
+      .then((page) => {
+        if (!controller.signal.aborted) setHits(page.content);
       })
-      .catch(() => setHits([]));
+      .catch(() => {
+        if (!controller.signal.aborted) setHits([]);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setSearching(false);
+      });
     return () => controller.abort();
-  }, [query]);
+  }, [debounced]);
 
   if (mode === "rdv" || mode === "walkin") {
     return (
@@ -84,7 +100,7 @@ function AccueilPage() {
       <div className="grid gap-4 lg:grid-cols-2">
         <Link
           to="/accueil"
-          search={{ mode: "rdv" }}
+          search={{ mode: "rdv" } as AccueilSearch}
           className="app-surface group p-5 transition-colors hover:border-primary/35"
         >
           <CalendarPlus className="size-5 text-primary" />
@@ -95,7 +111,7 @@ function AccueilPage() {
         </Link>
         <Link
           to="/accueil"
-          search={{ mode: "walkin" }}
+          search={{ mode: "walkin" } as AccueilSearch}
           className="app-surface group p-5 transition-colors hover:border-primary/35"
         >
           <Footprints className="size-5 text-primary" />
@@ -118,6 +134,9 @@ function AccueilPage() {
             }}
           />
         </div>
+        {searching ? (
+          <p className="mt-3 text-sm text-muted-foreground">Recherche…</p>
+        ) : null}
         {hits.length > 0 ? (
           <ul className="mt-4 divide-y divide-border">
             {hits.map((p) => (
@@ -135,11 +154,21 @@ function AccueilPage() {
                     onClick={async () => {
                       try {
                         const today = toLocalDateKey();
-                        const rows = await fetchWorklist({ date: today, search: p.nomComplet });
-                        const mine = rows.filter((r) => r.patientId === p.id || r.patient === p.nomComplet);
+                        const rows = await fetchAppointments({ from: today, to: today });
+                        const mine = rows.filter(
+                          (r) =>
+                            String(r.patientId) === p.id &&
+                            r.statut !== "CANCELLED" &&
+                            r.statut !== "NO_SHOW",
+                        );
                         setExamHint(
                           mine.length
-                            ? `${mine.length} examen(s) aujourd'hui — ${mine.map((m) => m.description || m.modalite).join(", ")}`
+                            ? `${mine.length} RDV aujourd'hui — ${mine
+                                .map(
+                                  (m) =>
+                                    `${m.examenLibelle || m.modalite} (${(m.startsAt || "").slice(11, 16) || "—"})`,
+                                )
+                                .join(", ")}`
                             : "Aucun rendez-vous aujourd'hui pour ce patient.",
                         );
                       } catch {
@@ -147,15 +176,23 @@ function AccueilPage() {
                       }
                     }}
                   >
-                    Rendez-vous du jour
+                    RDV du jour
                   </Button>
                   <Button size="sm" variant="outline" asChild>
                     <Link to="/patient/$patientId" params={{ patientId: p.id }}>
                       Dossier
                     </Link>
                   </Button>
+                  <Button size="sm" variant="outline" asChild>
+                    <Link to="/accueil" search={{ mode: "rdv", patientId: p.id } as AccueilSearch}>
+                      RDV
+                    </Link>
+                  </Button>
                   <Button size="sm" asChild>
-                    <Link to="/accueil" search={{ mode: "walkin", patientId: p.id }}>
+                    <Link
+                      to="/accueil"
+                      search={{ mode: "walkin", patientId: p.id } as AccueilSearch}
+                    >
                       Passage
                     </Link>
                   </Button>
@@ -163,6 +200,8 @@ function AccueilPage() {
               </li>
             ))}
           </ul>
+        ) : debounced && !searching ? (
+          <p className="mt-3 text-sm text-muted-foreground">Aucun dossier trouvé.</p>
         ) : null}
         {examHint ? <p className="mt-3 text-sm text-muted-foreground">{examHint}</p> : null}
       </Surface>
@@ -170,7 +209,7 @@ function AccueilPage() {
       <div className="flex flex-wrap gap-2">
         <Button variant="outline" asChild>
           <Link to="/file-attente">
-            <ClipboardList className="mr-2 size-4" /> File d'attente
+            <ClipboardList className="mr-2 size-4" /> File d&apos;attente
           </Link>
         </Button>
         <Button variant="outline" asChild>

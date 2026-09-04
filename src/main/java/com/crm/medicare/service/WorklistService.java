@@ -244,6 +244,17 @@ public class WorklistService {
         if (to == EncounterStatus.ARRIVED && examen.getArrivedAt() == null) {
             examen.setArrivedAt(LocalDateTime.now(ZONE));
         }
+        if ((to == EncounterStatus.IN_PROGRESS || to == EncounterStatus.PREPARING)
+                && examen.getStartedAt() == null) {
+            examen.setStartedAt(LocalDateTime.now(ZONE));
+        }
+        if ((to == EncounterStatus.COMPLETED
+                        || to == EncounterStatus.REPORT_PENDING
+                        || to == EncounterStatus.VALIDATED
+                        || to == EncounterStatus.DISCHARGED)
+                && examen.getCompletedAt() == null) {
+            examen.setCompletedAt(LocalDateTime.now(ZONE));
+        }
         if (to == EncounterStatus.CANCELLED || to == EncounterStatus.NO_SHOW) {
             examen.setCancelledAt(LocalDateTime.now(ZONE));
         }
@@ -296,6 +307,17 @@ public class WorklistService {
         examen.setEtatPatient(workflowEngine.toEtatPatient(to));
         if (to == EncounterStatus.ARRIVED && examen.getArrivedAt() == null) {
             examen.setArrivedAt(LocalDateTime.now(ZONE));
+        }
+        if ((to == EncounterStatus.IN_PROGRESS || to == EncounterStatus.PREPARING)
+                && examen.getStartedAt() == null) {
+            examen.setStartedAt(LocalDateTime.now(ZONE));
+        }
+        if ((to == EncounterStatus.COMPLETED
+                        || to == EncounterStatus.REPORT_PENDING
+                        || to == EncounterStatus.VALIDATED
+                        || to == EncounterStatus.DISCHARGED)
+                && examen.getCompletedAt() == null) {
+            examen.setCompletedAt(LocalDateTime.now(ZONE));
         }
         if (to == EncounterStatus.CANCELLED || to == EncounterStatus.NO_SHOW) {
             examen.setCancelledAt(LocalDateTime.now(ZONE));
@@ -499,6 +521,41 @@ public class WorklistService {
         if (request.getConclusion() != null) {
             examen.setConclusion(blankToNull(request.getConclusion()));
         }
+        if (request.getWeightKg() != null) {
+            examen.setWeightKg(request.getWeightKg());
+        }
+        if (request.getHeightCm() != null) {
+            examen.setHeightCm(request.getHeightCm());
+        }
+        if (request.getGeneralAnesthesia() != null) {
+            examen.setGeneralAnesthesia(request.getGeneralAnesthesia());
+        }
+        if (request.getInpatient() != null) {
+            examen.setInpatient(request.getInpatient());
+        }
+        if (request.getUrgent() != null) {
+            examen.setUrgent(request.getUrgent());
+            if (Boolean.TRUE.equals(request.getUrgent())
+                    && (examen.getPriorite() == null || "ROUTINE".equalsIgnoreCase(examen.getPriorite()))) {
+                examen.setPriorite("URGENT");
+            }
+        }
+        if (request.getTechnologistName() != null) {
+            examen.setTechnologistName(blankToNull(request.getTechnologistName()));
+        }
+        if (request.getNurseName() != null) {
+            examen.setNurseName(blankToNull(request.getNurseName()));
+        }
+        if (request.getAssistantName() != null) {
+            examen.setAssistantName(blankToNull(request.getAssistantName()));
+        }
+        if (request.getResourceId() != null) {
+            ResourceRoom resource = resolveResource(request.getResourceId());
+            if (resource != null) {
+                examen.setResource(resource);
+                examen.setSalle(resource.getLibelle());
+            }
+        }
         composeCompteRendu(examen);
         Examen saved = examenRepository.save(examen);
         if (request.getIndication() != null
@@ -514,6 +571,48 @@ public class WorklistService {
                     saved.getCompteRendu());
         }
         auditService.record(AuditService.EXAM_UPDATE, "Examen", String.valueOf(id), java.util.Map.of());
+        return toDto(saved, true);
+    }
+
+    /** Examen complémentaire lié au même patient / séjour parent. */
+    @Transactional
+    public WorklistItemDto createComplementary(Long parentId, WorklistCreateRequest request) {
+        Examen parent = load(parentId);
+        if (request == null || request.getCatalogueId() == null) {
+            throw ApiException.badRequest("catalogueId obligatoire pour un examen complémentaire");
+        }
+        if (parent.getPatient() == null || parent.getPatient().getId() == null) {
+            throw ApiException.badRequest("Patient parent introuvable");
+        }
+        request.setPatientId(parent.getPatient().getId());
+        if (request.getPrescripteurId() == null && parent.getPrescripteur() != null) {
+            request.setPrescripteurId(String.valueOf(parent.getPrescripteur().getId()));
+            request.setPrescripteurNom(parent.getPrescripteur().getNom());
+        }
+        if (request.getSalle() == null || request.getSalle().isBlank()) {
+            request.setSalle(parent.getSalle());
+        }
+        if (request.getResourceId() == null && parent.getResource() != null) {
+            request.setResourceId(parent.getResource().getId());
+        }
+        if (request.getPassageSansRdv() == null) {
+            request.setPassageSansRdv(true);
+        }
+        WorklistItemDto created = create(request);
+        Examen child = load(Long.valueOf(created.getId()));
+        child.setParentExamenId(parentId);
+        HistoriqueExamen hist = new HistoriqueExamen();
+        hist.setExamen(child);
+        hist.setDate(LocalDateTime.now(ZONE));
+        hist.setAuteur("Worklist");
+        hist.setAction("Examen complémentaire de #" + parentId);
+        child.getHistorique().add(hist);
+        Examen saved = examenRepository.save(child);
+        auditService.record(
+                AuditService.EXAM_CREATE,
+                "Examen",
+                String.valueOf(saved.getId()),
+                java.util.Map.of("parentExamenId", parentId, "complementary", true));
         return toDto(saved, true);
     }
 
@@ -698,6 +797,23 @@ public class WorklistService {
                 .conclusion(examen.getConclusion())
                 .passageSansRdv(examen.isPassageSansRdv())
                 .compteRendu(examen.getCompteRendu())
+                .arrivedAt(examen.getArrivedAt())
+                .startedAt(examen.getStartedAt())
+                .completedAt(examen.getCompletedAt())
+                .workflowStatus(
+                        examen.getWorkflowStatus() != null ? examen.getWorkflowStatus().name() : null)
+                .weightKg(examen.getWeightKg())
+                .heightCm(examen.getHeightCm())
+                .generalAnesthesia(examen.isGeneralAnesthesia())
+                .inpatient(examen.isInpatient())
+                .urgent(examen.isUrgent())
+                .technologistName(examen.getTechnologistName())
+                .nurseName(examen.getNurseName())
+                .assistantName(examen.getAssistantName())
+                .parentExamenId(
+                        examen.getParentExamenId() != null
+                                ? String.valueOf(examen.getParentExamenId())
+                                : null)
                 .historique(historique)
                 .build();
     }

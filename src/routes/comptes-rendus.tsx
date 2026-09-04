@@ -40,6 +40,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { EmptyState, PageHeader, Pill, type Tone } from "@/components/ui-kit";
 import { useRole } from "@/hooks/use-role";
 import {
+  fetchReportTemplates,
+  markReportPrinted,
+  type ReportTemplate,
+} from "@/lib/api/report-templates";
+import {
   amendReport,
   downloadReportPdf,
   fetchReports,
@@ -220,6 +225,8 @@ function ComptesRendusPage() {
   const [versionsLoading, setVersionsLoading] = useState(false);
 
   const [fields, setFields] = useState<EditorFields>(EMPTY_FIELDS);
+  const [templates, setTemplates] = useState<ReportTemplate[]>([]);
+  const [templateId, setTemplateId] = useState("");
   const [previewVersion, setPreviewVersion] = useState<ReportVersion | null>(null);
   const [actionBusy, setActionBusy] = useState(false);
 
@@ -297,6 +304,15 @@ function ComptesRendusPage() {
 
     return () => controller.abort();
   }, [selectedId, allowed, reloadKey]);
+
+  useEffect(() => {
+    if (!allowed) return;
+    const controller = new AbortController();
+    void fetchReportTemplates({ signal: controller.signal })
+      .then(setTemplates)
+      .catch(() => setTemplates([]));
+    return () => controller.abort();
+  }, [allowed]);
 
   const counts = useMemo(() => {
     const base: Record<StatusFilter, number> = {
@@ -450,7 +466,12 @@ function ComptesRendusPage() {
         .slice(0, 48);
       saveBlob(blob, `CR_${safeName}_v${selected.currentVersion ?? 1}.pdf`);
       setPreviewOpen(false);
-      toast.success("PDF téléchargé");
+      try {
+        await markReportPrinted(selected.id);
+      } catch {
+        /* print mark best-effort */
+      }
+      toast.success("PDF téléchargé (impression enregistrée)");
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Téléchargement PDF impossible");
     } finally {
@@ -784,6 +805,46 @@ function ComptesRendusPage() {
                     </div>
                   ) : (
                     <>
+                      {!readOnly && templates.length > 0 ? (
+                        <div className="flex flex-wrap items-end gap-2 rounded-lg border border-border p-3">
+                          <div className="min-w-[12rem] flex-1 space-y-1">
+                            <Label>Modèle / trame</Label>
+                            <Select value={templateId || "none"} onValueChange={setTemplateId}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Choisir un modèle" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">Aucun</SelectItem>
+                                {templates.map((t) => (
+                                  <SelectItem key={t.id} value={String(t.id)}>
+                                    {t.label}
+                                    {t.modalite ? ` · ${t.modalite}` : ""}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={!templateId || templateId === "none"}
+                            onClick={() => {
+                              const t = templates.find((x) => String(x.id) === templateId);
+                              if (!t) return;
+                              setFields({
+                                indication: t.indication ?? "",
+                                technique: t.technique ?? "",
+                                resultats: t.resultats ?? "",
+                                conclusion: t.conclusion ?? "",
+                              });
+                              toast.success(`Modèle « ${t.label} » appliqué`);
+                            }}
+                          >
+                            Appliquer
+                          </Button>
+                        </div>
+                      ) : null}
                       {(
                         [
                           ["indication", "Indication"],
