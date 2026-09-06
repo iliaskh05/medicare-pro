@@ -159,6 +159,64 @@ function AsyncSection({
   return <>{children}</>;
 }
 
+function PeriodKpiCard({
+  title,
+  icon: Icon,
+  period,
+  onPeriodChange,
+  value,
+  hint,
+}: {
+  title: string;
+  icon: typeof Wallet;
+  period: "jour" | "semaine" | "mois";
+  onPeriodChange: (p: "jour" | "semaine" | "mois") => void;
+  value: string;
+  hint: string;
+}) {
+  const periods = [
+    { id: "jour" as const, label: "Jour" },
+    { id: "semaine" as const, label: "Semaine" },
+    { id: "mois" as const, label: "Mois" },
+  ];
+  return (
+    <div className="app-surface flex flex-col gap-3 px-5 py-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <div className="flex size-8 items-center justify-center rounded-md bg-primary/10 text-primary">
+            <Icon className="size-4" />
+          </div>
+          <p className="text-sm font-semibold tracking-tight">{title}</p>
+        </div>
+        <div
+          className="inline-flex rounded-md border border-border bg-muted/40 p-0.5"
+          role="tablist"
+          aria-label={`Période ${title}`}
+        >
+          {periods.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              role="tab"
+              aria-selected={period === p.id}
+              onClick={() => onPeriodChange(p.id)}
+              className={`rounded px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                period === p.id
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <p className="text-2xl font-semibold tracking-tight tabular-nums">{value}</p>
+      <p className="text-xs text-muted-foreground">{hint}</p>
+    </div>
+  );
+}
+
 function Dashboard() {
   const { profile } = useRole();
   const hour = new Date().getHours();
@@ -197,6 +255,8 @@ function Dashboard() {
 
   const [reloadKey, setReloadKey] = useState(0);
   const reload = () => setReloadKey((k) => k + 1);
+  const [gainsPeriod, setGainsPeriod] = useState<"jour" | "semaine" | "mois">("jour");
+  const [patientsPeriod, setPatientsPeriod] = useState<"jour" | "semaine" | "mois">("jour");
 
   useEffect(() => {
     const controller = new AbortController();
@@ -389,6 +449,63 @@ function Dashboard() {
           </>
         )}
       </div>
+
+      {profile.canSeeFinance ? (
+        <section className="space-y-3">
+          <div>
+            <h2 className="text-sm font-semibold tracking-tight">Pilotage</h2>
+            <p className="text-xs text-muted-foreground">
+              Encaissements et patients distincts — agrégats factures / examens
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <PeriodKpiCard
+              title="Gains"
+              icon={Wallet}
+              period={gainsPeriod}
+              onPeriodChange={setGainsPeriod}
+              value={kpiValue(
+                formatMAD(
+                  gainsPeriod === "jour"
+                    ? (kpis.chiffreAffairesJour ?? 0)
+                    : gainsPeriod === "semaine"
+                      ? (kpis.chiffreAffairesSemaine ?? 0)
+                      : (kpis.chiffreAffairesMois ?? kpis.chiffreAffaires),
+                ),
+              )}
+              hint={
+                gainsPeriod === "jour"
+                  ? "Encaissements enregistrés aujourd'hui"
+                  : gainsPeriod === "semaine"
+                    ? "Encaissements depuis lundi"
+                    : "Encaissements du mois en cours"
+              }
+            />
+            <PeriodKpiCard
+              title="Patients"
+              icon={Users}
+              period={patientsPeriod}
+              onPeriodChange={setPatientsPeriod}
+              value={kpiValue(
+                String(
+                  patientsPeriod === "jour"
+                    ? kpis.patientsDuJour
+                    : patientsPeriod === "semaine"
+                      ? (kpis.patientsSemaine ?? 0)
+                      : (kpis.patientsMois ?? 0),
+                ),
+              )}
+              hint={
+                patientsPeriod === "jour"
+                  ? "Patients distincts aujourd'hui"
+                  : patientsPeriod === "semaine"
+                    ? "Patients distincts depuis lundi"
+                    : "Patients distincts ce mois"
+              }
+            />
+          </div>
+        </section>
+      ) : null}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="app-surface overflow-hidden">

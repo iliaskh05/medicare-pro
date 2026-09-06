@@ -349,6 +349,10 @@ function PatientRecordPage() {
                 nom: patient.nomComplet,
                 numeroDossier: patient.numeroDossier ?? String(patient.id),
                 ...(patient.cin ? { cin: patient.cin } : {}),
+                ...(patient.dateNaissance ? { dateNaissance: patient.dateNaissance } : {}),
+                ...(patient.sexe ? { sexe: patient.sexe } : {}),
+                ...(patient.telephone ? { telephone: patient.telephone } : {}),
+                ...(patient.mutuelle ? { mutuelle: patient.mutuelle } : {}),
               }}
             />
             <Button variant="outline" size="sm" asChild>

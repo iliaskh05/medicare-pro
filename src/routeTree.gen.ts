@@ -31,6 +31,7 @@ import { Route as NumerisationRouteImport } from './routes/numerisation'
 import { Route as ParametresRouteImport } from './routes/parametres'
 import { Route as PatientsRouteImport } from './routes/patients'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as SallesRouteImport } from './routes/salles'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as WhatsappRouteImport } from './routes/whatsapp'
 import { Route as WorklistRouteImport } from './routes/worklist'
@@ -146,6 +147,11 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
   path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SallesRoute = SallesRouteImport.update({
+  id: '/salles',
+  path: '/salles',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
@@ -190,6 +196,7 @@ export interface FileRoutesByFullPath {
   '/parametres': typeof ParametresRoute
   '/patients': typeof PatientsRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/salles': typeof SallesRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/whatsapp': typeof WhatsappRoute
   '/worklist': typeof WorklistRoute
@@ -218,6 +225,7 @@ export interface FileRoutesByTo {
   '/parametres': typeof ParametresRoute
   '/patients': typeof PatientsRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/salles': typeof SallesRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/whatsapp': typeof WhatsappRoute
   '/worklist': typeof WorklistRoute
@@ -247,6 +255,7 @@ export interface FileRoutesById {
   '/parametres': typeof ParametresRoute
   '/patients': typeof PatientsRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/salles': typeof SallesRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/whatsapp': typeof WhatsappRoute
   '/worklist': typeof WorklistRoute
@@ -277,6 +286,7 @@ export interface FileRouteTypes {
     | '/parametres'
     | '/patients'
     | '/reset-password'
+    | '/salles'
     | '/sitemap.xml'
     | '/whatsapp'
     | '/worklist'
@@ -305,6 +315,7 @@ export interface FileRouteTypes {
     | '/parametres'
     | '/patients'
     | '/reset-password'
+    | '/salles'
     | '/sitemap.xml'
     | '/whatsapp'
     | '/worklist'
@@ -333,6 +344,7 @@ export interface FileRouteTypes {
     | '/parametres'
     | '/patients'
     | '/reset-password'
+    | '/salles'
     | '/sitemap.xml'
     | '/whatsapp'
     | '/worklist'
@@ -362,6 +374,7 @@ export interface RootRouteChildren {
   ParametresRoute: typeof ParametresRoute
   PatientsRoute: typeof PatientsRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  SallesRoute: typeof SallesRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   WhatsappRoute: typeof WhatsappRoute
   WorklistRoute: typeof WorklistRoute
@@ -524,6 +537,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/salles': {
+      id: '/salles'
+      path: '/salles'
+      fullPath: '/salles'
+      preLoaderRoute: typeof SallesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sitemap.xml': {
       id: '/sitemap.xml'
       path: '/sitemap.xml'
@@ -578,6 +598,7 @@ const rootRouteChildren: RootRouteChildren = {
   ParametresRoute: ParametresRoute,
   PatientsRoute: PatientsRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  SallesRoute: SallesRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   WhatsappRoute: WhatsappRoute,
   WorklistRoute: WorklistRoute,

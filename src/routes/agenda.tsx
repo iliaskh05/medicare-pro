@@ -1,11 +1,21 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { CalendarDays } from "lucide-react";
 import { toast } from "sonner";
 
+import { NouveauRdvDialog } from "@/components/appointments/nouveau-rdv-dialog";
+import { WriteGuard } from "@/components/permission-guard";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { EmptyState, PageHeader, Pill } from "@/components/ui-kit";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -13,6 +23,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { EmptyState, PageHeader, Pill } from "@/components/ui-kit";
+import { useDisplayPreference } from "@/hooks/use-display-preference";
 import {
   cancelAppointment,
   checkInAppointment,
@@ -25,8 +37,12 @@ import {
   type ResourceDto,
 } from "@/lib/api/appointments";
 import { MODALITES } from "@/lib/api/worklist";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useDisplayPreference } from "@/hooks/use-display-preference";
+import {
+  appointmentDayKey,
+  appointmentTime,
+  generateDaySlots,
+  timeToMinutes,
+} from "@/lib/appointment-slots";
 import {
   addDaysToKey,
   addMonthsToKey,
@@ -35,16 +51,17 @@ import {
   startOfWeekKey,
   toLocalDateKey,
 } from "@/lib/date";
-import { WriteGuard } from "@/components/permission-guard";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/agenda")({
-  head: () => ({ meta: [{ title: "Agenda — RadioCRM" }] }),
+  head: () => ({ meta: [{ title: "Prise de rendez-vous — RadioCRM" }] }),
   component: AgendaPage,
 });
 
 type View = "jour" | "semaine" | "mois" | "liste";
 
 const WEEKDAY_HEADERS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"] as const;
+const DAY_SLOTS = generateDaySlots();
 
 function shortPatient(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -54,36 +71,14 @@ function shortPatient(name: string): string {
   return `${parts[0]} ${last[0] ?? ""}.`;
 }
 
-function appointmentDayKey(row: AppointmentDto): string {
-  return (row.startsAt ?? "").slice(0, 10);
-}
-
-/** HH:mm depuis startsAt (ISO, espace, ou tableau Jackson rare). */
-function appointmentTime(startsAt: string | null | undefined): string {
-  if (!startsAt) return "—:—";
-  if (typeof startsAt !== "string") {
-    const arr = startsAt as unknown;
-    if (Array.isArray(arr) && arr.length >= 5) {
-      return `${String(arr[3]).padStart(2, "0")}:${String(arr[4]).padStart(2, "0")}`;
-    }
-    return "—:—";
-  }
-  const m = startsAt.match(/T(\d{2}):(\d{2})/) ?? startsAt.match(/\s(\d{2}):(\d{2})/);
-  if (m) return `${m[1]}:${m[2]}`;
-  const d = new Date(startsAt);
-  if (!Number.isNaN(d.getTime())) {
-    return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-  }
-  return "—:—";
-}
-
 function appointmentEndTime(row: AppointmentDto): string {
   if (row.endsAt) return appointmentTime(row.endsAt);
   const start = appointmentTime(row.startsAt);
   if (start === "—:—") return start;
-  const [h, m] = start.split(":").map(Number);
-  const total = (h ?? 0) * 60 + (m ?? 0) + (row.dureeMinutes || 30);
-  return `${String(Math.floor(total / 60) % 24).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+  const total = timeToMinutes(start) + (row.dureeMinutes || 30);
+  const h = Math.floor(total / 60) % 24;
+  const m = total % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
 function statutTone(statut: string): "primary" | "success" | "warning" | "destructive" | "neutral" {
@@ -101,11 +96,47 @@ function statutTone(statut: string): "primary" | "success" | "warning" | "destru
   }
 }
 
+function statutLabel(statut: string): string {
+  switch (statut) {
+    case "CONFIRMED":
+      return "Confirmé";
+    case "CHECKED_IN":
+      return "Enregistré";
+    case "SCHEDULED":
+      return "Réservé";
+    case "RESCHEDULED":
+      return "Reporté";
+    case "CANCELLED":
+      return "Annulé";
+    case "NO_SHOW":
+      return "No-show";
+    default:
+      return statut;
+  }
+}
+
+function slotVisualClass(statut: string | null): string {
+  if (!statut) {
+    return "border-dashed border-border/70 bg-muted/10 text-muted-foreground hover:border-primary/40 hover:bg-primary/5";
+  }
+  switch (statut) {
+    case "CONFIRMED":
+    case "CHECKED_IN":
+      return "border-emerald-500/40 bg-emerald-500/10";
+    case "SCHEDULED":
+    case "RESCHEDULED":
+      return "border-sky-500/40 bg-sky-500/10";
+    case "CANCELLED":
+    case "NO_SHOW":
+      return "border-destructive/40 bg-destructive/10 opacity-80 line-through decoration-destructive/50";
+    default:
+      return "border-border bg-background";
+  }
+}
+
 function AgendaPage() {
   const { mode, setMode } = useDisplayPreference("agenda", "calendar");
-  const [view, setView] = useState<View>(() =>
-    mode === "list" ? "liste" : "mois",
-  );
+  const [view, setView] = useState<View>(() => (mode === "list" ? "liste" : "jour"));
   const [cursorKey, setCursorKey] = useState(() => toLocalDateKey());
   const [modalite, setModalite] = useState("toutes");
   const [status, setStatus] = useState("tous");
@@ -117,6 +148,9 @@ function AgendaPage() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [rescheduleId, setRescheduleId] = useState<string | null>(null);
   const [rescheduleAt, setRescheduleAt] = useState("");
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createDefaults, setCreateDefaults] = useState<{ date?: string; time?: string }>({});
+  const [cancelTarget, setCancelTarget] = useState<AppointmentDto | null>(null);
 
   const range = useMemo(() => {
     if (view === "jour") return { from: cursorKey, to: cursorKey };
@@ -171,7 +205,7 @@ function AgendaPage() {
     const map = new Map<string, AppointmentDto[]>();
     for (const day of weekDays) map.set(day, []);
     for (const row of rows) {
-      const key = appointmentDayKey(row);
+      const key = appointmentDayKey(row.startsAt);
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(row);
     }
@@ -181,7 +215,6 @@ function AgendaPage() {
     return map;
   }, [rows, weekDays]);
 
-  /** Calendar cells for mois: null = padding outside month, string = YYYY-MM-DD. */
   const monthCells = useMemo(() => {
     if (view !== "mois") return [] as (string | null)[];
     const parts = cursorKey.split("-").map(Number);
@@ -204,7 +237,7 @@ function AgendaPage() {
       if (cell) map.set(cell, []);
     }
     for (const row of rows) {
-      const key = appointmentDayKey(row);
+      const key = appointmentDayKey(row.startsAt);
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(row);
     }
@@ -216,23 +249,28 @@ function AgendaPage() {
 
   const dayRows = useMemo(() => {
     return rows
-      .filter((r) => appointmentDayKey(r) === cursorKey)
+      .filter((r) => appointmentDayKey(r.startsAt) === cursorKey)
       .sort((a, b) => (a.startsAt ?? "").localeCompare(b.startsAt ?? ""));
   }, [rows, cursorKey]);
 
-  /** Créneaux horaires 7h–20h pour la vue jour. */
   const dayTimeline = useMemo(() => {
-    const hours = Array.from({ length: 14 }, (_, i) => i + 7); // 07 → 20
-    return hours.map((hour) => {
-      const label = `${String(hour).padStart(2, "0")}:00`;
+    return DAY_SLOTS.map((label) => {
+      const slotMin = timeToMinutes(label);
       const items = dayRows.filter((r) => {
         const t = appointmentTime(r.startsAt);
         if (t === "—:—") return false;
-        return Number(t.slice(0, 2)) === hour;
+        return timeToMinutes(t) === slotMin;
       });
-      return { hour, label, items };
+      return { label, items };
     });
   }, [dayRows]);
+
+  const dayOffGrid = useMemo(() => {
+    const slotted = new Set(
+      dayTimeline.flatMap((s) => s.items.map((r) => r.id)),
+    );
+    return dayRows.filter((r) => !slotted.has(r.id));
+  }, [dayRows, dayTimeline]);
 
   const periodLabel = useMemo(() => {
     if (view === "mois") return formatMonthYear(cursorKey);
@@ -250,9 +288,17 @@ function AgendaPage() {
     changeView("jour");
   };
 
+  const openCreate = (date?: string, time?: string) => {
+    setCreateDefaults({
+      ...(date ? { date } : { date: cursorKey }),
+      ...(time ? { time } : {}),
+    });
+    setCreateOpen(true);
+  };
+
   const rowActions = (row: AppointmentDto) => (
     <div className="flex flex-wrap items-center gap-2">
-      <Pill tone={statutTone(row.statut)}>{row.statut}</Pill>
+      <Pill tone={statutTone(row.statut)}>{statutLabel(row.statut)}</Pill>
       {row.statut !== "CANCELLED" && row.statut !== "CHECKED_IN" && row.statut !== "NO_SHOW" ? (
         <WriteGuard resource="appointments">
           {row.statut === "SCHEDULED" || row.statut === "RESCHEDULED" ? (
@@ -330,19 +376,7 @@ function AgendaPage() {
             size="sm"
             variant="ghost"
             disabled={busyId === row.id}
-            onClick={async () => {
-              if (!window.confirm(`Annuler le RDV de ${row.patient} ?`)) return;
-              setBusyId(row.id);
-              try {
-                const updated = await cancelAppointment(row.id, "Annulation agenda");
-                setRows((list) => list.map((r) => (r.id === row.id ? updated : r)));
-                toast.success("Rendez-vous annulé.");
-              } catch (e) {
-                toast.error(e instanceof Error ? e.message : "Annulation impossible");
-              } finally {
-                setBusyId(null);
-              }
-            }}
+            onClick={() => setCancelTarget(row)}
           >
             Annuler
           </Button>
@@ -352,18 +386,18 @@ function AgendaPage() {
   );
 
   return (
-    <div className="page-shell">
+    <div className="page-shell gap-3">
       <PageHeader
         eyebrow="Activité"
-        title="Agenda"
-        subtitle={`Rendez-vous réels · ${periodLabel}`}
+        title="Prise de rendez-vous"
+        subtitle={periodLabel}
         actions={
           <div className="flex flex-wrap gap-2">
-            <Button size="sm" asChild>
-              <Link to="/accueil" search={{ mode: "rdv" }}>
-                Nouveau RDV
-              </Link>
-            </Button>
+            <WriteGuard resource="appointments">
+              <Button size="sm" onClick={() => openCreate(cursorKey)}>
+                + Nouveau rendez-vous
+              </Button>
+            </WriteGuard>
             {(
               [
                 { id: "jour" as const, label: "Jour" },
@@ -384,6 +418,7 @@ function AgendaPage() {
           </div>
         }
       />
+
       <div className="flex flex-wrap items-center gap-2">
         <Button
           variant="outline"
@@ -414,9 +449,8 @@ function AgendaPage() {
         >
           Suivant
         </Button>
-        <span className="px-1 text-sm font-medium text-muted-foreground">{periodLabel}</span>
         <Select value={modalite} onValueChange={setModalite}>
-          <SelectTrigger className="w-44">
+          <SelectTrigger className="w-40">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -429,8 +463,8 @@ function AgendaPage() {
           </SelectContent>
         </Select>
         <Select value={resourceId} onValueChange={setResourceId}>
-          <SelectTrigger className="w-52">
-            <SelectValue placeholder="Salle / machine" />
+          <SelectTrigger className="w-44">
+            <SelectValue placeholder="Salle" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="toutes">Toutes salles</SelectItem>
@@ -442,12 +476,12 @@ function AgendaPage() {
           </SelectContent>
         </Select>
         <Select value={status} onValueChange={setStatus}>
-          <SelectTrigger className="w-44">
+          <SelectTrigger className="w-40">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="tous">Tous statuts</SelectItem>
-            <SelectItem value="SCHEDULED">Planifié</SelectItem>
+            <SelectItem value="SCHEDULED">Réservé</SelectItem>
             <SelectItem value="CONFIRMED">Confirmé</SelectItem>
             <SelectItem value="RESCHEDULED">Reporté</SelectItem>
             <SelectItem value="CHECKED_IN">Enregistré</SelectItem>
@@ -456,10 +490,101 @@ function AgendaPage() {
           </SelectContent>
         </Select>
       </div>
+
       {loading ? (
         <Skeleton className="h-80" />
       ) : error ? (
         <EmptyState icon={CalendarDays} title="Impossible de charger les données." />
+      ) : view === "jour" ? (
+        <div className="app-surface overflow-hidden">
+          <div className="flex items-center justify-between border-b border-border px-3 py-2">
+            <p className="text-sm font-semibold">{cursorKey}</p>
+            <p className="text-xs text-muted-foreground">
+              {dayRows.length} RDV · 08:30–18:30
+            </p>
+          </div>
+          <div className="divide-y divide-border">
+            {dayTimeline.map((slot) => (
+              <div key={slot.label} className="grid grid-cols-[4rem_1fr] gap-2 px-3 py-1.5">
+                <div className="pt-1.5 text-right">
+                  <span className="font-mono text-xs font-semibold tabular-nums text-muted-foreground">
+                    {slot.label}
+                  </span>
+                </div>
+                <div className="min-w-0 space-y-1.5">
+                  {slot.items.length === 0 ? (
+                    <button
+                      type="button"
+                      className={cn(
+                        "flex h-9 w-full items-center rounded-md border px-3 text-left text-xs transition-colors",
+                        slotVisualClass(null),
+                      )}
+                      onClick={() => openCreate(cursorKey, slot.label)}
+                    >
+                      Disponible — cliquer pour réserver
+                    </button>
+                  ) : (
+                    slot.items.map((row) => (
+                      <div
+                        key={row.id}
+                        className={cn(
+                          "flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2",
+                          slotVisualClass(String(row.statut)),
+                        )}
+                      >
+                        <div className="min-w-0 text-sm">
+                          <p className="font-semibold">
+                            <span className="tabular-nums text-primary">
+                              {appointmentTime(row.startsAt)}–{appointmentEndTime(row)}
+                            </span>{" "}
+                            · {row.patient}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {row.examenLibelle || row.modalite} · {row.salle || "Salle —"} ·{" "}
+                            {statutLabel(String(row.statut))}
+                          </p>
+                        </div>
+                        {rowActions(row)}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+          {dayOffGrid.length > 0 ? (
+            <div className="border-t border-border px-3 py-3">
+              <p className="mb-2 text-xs font-semibold text-muted-foreground">
+                Hors grille 30 min / hors plage 08:30–18:30
+              </p>
+              <div className="space-y-1.5">
+                {dayOffGrid.map((row) => (
+                  <div
+                    key={row.id}
+                    className={cn(
+                      "flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2",
+                      slotVisualClass(String(row.statut)),
+                    )}
+                  >
+                    <div className="min-w-0 text-sm">
+                      <p className="font-semibold">
+                        <span className="tabular-nums text-primary">
+                          {appointmentTime(row.startsAt)}–{appointmentEndTime(row)}
+                        </span>{" "}
+                        · {row.patient}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {row.examenLibelle || row.modalite} · {row.salle || "Salle —"} ·{" "}
+                        {statutLabel(String(row.statut))}
+                      </p>
+                    </div>
+                    {rowActions(row)}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </div>
       ) : view === "semaine" ? (
         <div className="grid gap-2 md:grid-cols-7">
           {weekDays.map((day) => (
@@ -494,106 +619,12 @@ function AgendaPage() {
             </div>
           ))}
         </div>
-      ) : view === "jour" ? (
-        <div className="app-surface overflow-hidden">
-          <div className="flex items-center justify-between border-b border-border px-4 py-3">
-            <p className="text-sm font-semibold">{cursorKey}</p>
-            <p className="text-xs text-muted-foreground">
-              {dayRows.length} rendez-vous · planning horaire 07:00–20:00
-            </p>
-          </div>
-          {dayRows.length === 0 ? (
-            <EmptyState
-              icon={CalendarDays}
-              title="Aucun rendez-vous ce jour"
-              description={cursorKey}
-              action={
-                <Button size="sm" asChild>
-                  <Link to="/accueil" search={{ mode: "rdv" }}>
-                    Prendre rendez-vous
-                  </Link>
-                </Button>
-              }
-            />
-          ) : (
-            <div className="divide-y divide-border">
-              {dayTimeline.map((slot) => (
-                <div key={slot.label} className="grid grid-cols-[4.5rem_1fr] gap-3 px-4 py-2.5">
-                  <div className="pt-1 text-right">
-                    <span className="font-mono text-xs font-semibold tabular-nums text-muted-foreground">
-                      {slot.label}
-                    </span>
-                  </div>
-                  <div className="min-w-0 space-y-2">
-                    {slot.items.length === 0 ? (
-                      <div className="h-7 rounded border border-dashed border-border/70 bg-muted/10" />
-                    ) : (
-                      slot.items.map((row) => (
-                        <div
-                          key={row.id}
-                          className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-background px-3 py-2"
-                        >
-                          <div className="min-w-0">
-                            <p className="text-sm font-semibold">
-                              <span className="tabular-nums text-primary">
-                                {appointmentTime(row.startsAt)}–{appointmentEndTime(row)}
-                              </span>{" "}
-                              · {row.patient}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {row.examenLibelle || row.modalite} · {row.salle || "Salle non précisée"} ·{" "}
-                              {row.dureeMinutes} min
-                            </p>
-                          </div>
-                          {rowActions(row)}
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              ))}
-              {/* RDV hors plage 7–20h */}
-              {dayRows.some((r) => {
-                const h = Number(appointmentTime(r.startsAt).slice(0, 2));
-                return Number.isFinite(h) && (h < 7 || h > 20);
-              }) ? (
-                <div className="space-y-2 px-4 py-3">
-                  <p className="text-xs font-semibold text-muted-foreground">Hors plage 07–20h</p>
-                  {dayRows
-                    .filter((r) => {
-                      const h = Number(appointmentTime(r.startsAt).slice(0, 2));
-                      return Number.isFinite(h) && (h < 7 || h > 20);
-                    })
-                    .map((row) => (
-                      <div
-                        key={row.id}
-                        className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border px-3 py-2"
-                      >
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold">
-                            <span className="tabular-nums text-primary">
-                              {appointmentTime(row.startsAt)}–{appointmentEndTime(row)}
-                            </span>{" "}
-                            · {row.patient}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {row.examenLibelle || row.modalite} · {row.salle || "—"}
-                          </p>
-                        </div>
-                        {rowActions(row)}
-                      </div>
-                    ))}
-                </div>
-              ) : null}
-            </div>
-          )}
-        </div>
       ) : view === "mois" ? (
         <div className="app-surface overflow-hidden">
           <div className="flex items-center justify-between border-b border-border px-4 py-3">
             <p className="text-sm font-semibold">{periodLabel}</p>
             <p className="text-xs text-muted-foreground">
-              {rows.length} rendez-vous · heure + patient par jour · clic → vue horaire
+              {rows.length} rendez-vous · clic → vue jour
             </p>
           </div>
           <div className="grid grid-cols-7 border-b border-border">
@@ -653,16 +684,12 @@ function AgendaPage() {
                           e.stopPropagation();
                           openDay(day);
                         }}
-                        title={`${appointmentTime(row.startsAt)}–${appointmentEndTime(row)} · ${row.patient} · ${row.examenLibelle || row.modalite} · ${row.salle || "—"}`}
+                        title={`${appointmentTime(row.startsAt)}–${appointmentEndTime(row)} · ${row.patient}`}
                       >
                         <span className="inline-block rounded bg-primary/10 px-1 font-semibold tabular-nums text-primary">
                           {appointmentTime(row.startsAt)}
                         </span>{" "}
                         <span className="truncate font-medium">{shortPatient(row.patient)}</span>
-                        <span className="mt-0.5 block truncate text-muted-foreground">
-                          →{appointmentEndTime(row)} · {row.modalite || row.examenLibelle || "—"}
-                          {row.salle ? ` · ${row.salle}` : ""}
-                        </span>
                       </button>
                     ))}
                     {extra > 0 ? (
@@ -680,10 +707,8 @@ function AgendaPage() {
           title="Aucun rendez-vous sur cette période"
           description={periodLabel}
           action={
-            <Button size="sm" asChild>
-              <Link to="/accueil" search={{ mode: "rdv" }}>
-                Prendre rendez-vous
-              </Link>
+            <Button size="sm" onClick={() => openCreate()}>
+              + Nouveau rendez-vous
             </Button>
           }
         />
@@ -701,7 +726,7 @@ function AgendaPage() {
                     {appointmentTime(row.startsAt)}–{appointmentEndTime(row)}
                   </span>{" "}
                   · {row.startsAt?.slice(0, 10)} · {row.examenLibelle || row.modalite} ·{" "}
-                  {row.salle || "Salle non précisée"} · {row.dureeMinutes} min
+                  {row.salle || "Salle non précisée"}
                 </p>
               </div>
               {rowActions(row)}
@@ -709,6 +734,58 @@ function AgendaPage() {
           ))}
         </div>
       )}
+
+      <NouveauRdvDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        defaults={createDefaults}
+        onCreated={(created) => {
+          setRows((list) => [...list, created]);
+          if (created.startsAt) {
+            setCursorKey(appointmentDayKey(created.startsAt));
+            changeView("jour");
+          }
+        }}
+      />
+
+      <Dialog open={Boolean(cancelTarget)} onOpenChange={(o) => !o && setCancelTarget(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Annuler le rendez-vous ?</DialogTitle>
+            <DialogDescription>
+              {cancelTarget
+                ? `Le RDV de ${cancelTarget.patient} (${appointmentTime(cancelTarget.startsAt)}) sera annulé.`
+                : null}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setCancelTarget(null)}>
+              Retour
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={!cancelTarget || busyId === cancelTarget?.id}
+              onClick={async () => {
+                if (!cancelTarget) return;
+                setBusyId(cancelTarget.id);
+                try {
+                  const updated = await cancelAppointment(cancelTarget.id, "Annulation agenda");
+                  setRows((list) => list.map((r) => (r.id === cancelTarget.id ? updated : r)));
+                  toast.success("Rendez-vous annulé.");
+                  setCancelTarget(null);
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : "Annulation impossible");
+                } finally {
+                  setBusyId(null);
+                }
+              }}
+            >
+              Confirmer l&apos;annulation
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {rescheduleId ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">

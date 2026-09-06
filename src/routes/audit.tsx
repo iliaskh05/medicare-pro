@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
+  Activity,
   AlertTriangle,
   Ban,
   CalendarDays,
@@ -8,28 +9,19 @@ import {
   ChevronRight,
   Download,
   FileDown,
-  ExternalLink,
   FileText,
   Gauge,
+  History,
+  Loader2,
   Lock,
   RefreshCw,
-  ShieldAlert,
-  ShieldCheck,
   Search,
   SearchX,
+  ShieldAlert,
+  ShieldCheck,
   SlidersHorizontal,
-  Stethoscope,
-  TrendingUp,
+  Sparkles,
 } from "lucide-react";
-import {
-  CartesianGrid,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip as ReTooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 import { toast } from "sonner";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,12 +31,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -68,9 +60,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeader, Pill, IconTile, EmptyState } from "@/components/ui-kit";
-import { DirectionStats } from "@/components/direction-stats";
-import { useRole } from "@/hooks/use-role";
 import { FraudDashboard } from "@/components/fraude/fraud-dashboard";
 import { AuditDemoPanel } from "@/components/fraude/audit-demo-panel";
 import { AuditTrailPanel } from "@/components/audit/audit-trail-panel";
@@ -80,40 +71,42 @@ import {
   typesExamen,
   type Anomalie,
   type AuditKpis,
+  type MotifSuspect,
   type StatutAnomalie,
-  type TendanceAnomalie,
 } from "@/types/audit";
 import {
   EMPTY_AUDIT_KPIS,
   fetchAnomalies,
   fetchAuditKpis,
-  fetchAuditTrend,
   updateAnomalieStatut,
 } from "@/lib/api/audit";
+import { fetchFraudClustering } from "@/lib/api/fraud";
+import { fetchAuditTrail, type AuditTrailItem } from "@/lib/api/audit-trail";
+import { formatCentreDateTime } from "@/lib/date";
+import type { FraudClusteringResponse } from "@/types/fraud";
+import { useRole } from "@/hooks/use-role";
 import {
-  anomalyRiskLabel,
   anomalyRiskLevel,
-  anomalyRiskTone,
   RISK_THRESHOLDS,
 } from "@/utils/anomalyDetection";
 
 export const Route = createFileRoute("/audit")({
   head: () => ({
     meta: [
-      { title: "Audit & Conformité — Détection d'anomalies | RadioCRM" },
+      { title: "Audit & Conformité — Analyse de fraude | RadioCRM" },
       {
         name: "description",
         content:
-          "Détection d'anomalies de facturation par clustering : scores de risque, motifs suspects, validation humaine et export vers l'expertise comptable.",
+          "Espace d'analyse de fraude pour la direction : vue modèle, cas signalés, détail dossier et journal d'audit.",
       },
       {
         property: "og:title",
-        content: "Audit & Conformité — Détection d'anomalies | RadioCRM",
+        content: "Audit & Conformité — Analyse de fraude | RadioCRM",
       },
       {
         property: "og:description",
         content:
-          "Tableau de bord de conformité pour centre d'imagerie : scores IA, filtres par risque et export CSV/PDF.",
+          "Tableau de bord de détection de fraude : scores de risque, cas signalés et export comptable.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -122,34 +115,154 @@ export const Route = createFileRoute("/audit")({
   component: AuditPage,
 });
 
-const PAGE_SIZE = 6;
-
-const riskTone = anomalyRiskTone;
-const riskLabel = anomalyRiskLabel;
-
-const riskBarClass: Record<"destructive" | "warning" | "success", string> = {
-  destructive: "bg-destructive",
-  warning: "bg-warning",
-  success: "bg-success",
-};
+const PAGE_SIZE = 8;
 
 const periodDays: Record<string, number> = { "7": 7, "30": 30, "90": 90, all: 9999 };
 
+/** Niveaux métier affichés (Faible → Critique). */
+type BusinessRiskLevel = "faible" | "moyen" | "eleve" | "critique";
+
+type RiskVisual = {
+  label: string;
+  tone: "success" | "warning" | "destructive" | "neutral";
+  barClass: string;
+  chipClass: string;
+};
+
+const RISK_VISUAL: Record<BusinessRiskLevel, RiskVisual> = {
+  faible: {
+    label: "Faible",
+    tone: "success",
+    barClass: "bg-success",
+    chipClass: "border-success/30 bg-success/10 text-success",
+  },
+  moyen: {
+    label: "Moyen",
+    tone: "neutral",
+    barClass: "bg-muted-foreground/60",
+    chipClass: "border-border bg-muted text-foreground",
+  },
+  eleve: {
+    label: "Élevé",
+    tone: "warning",
+    barClass: "bg-warning",
+    chipClass: "border-warning/30 bg-warning/10 text-warning",
+  },
+  critique: {
+    label: "Critique",
+    tone: "destructive",
+    barClass: "bg-destructive",
+    chipClass: "border-destructive/30 bg-destructive/10 text-destructive",
+  },
+};
+
+function businessRiskLevel(score: number): BusinessRiskLevel {
+  if (score > RISK_THRESHOLDS.critique) return "critique";
+  if (score > RISK_THRESHOLDS.eleve) return "eleve";
+  if (score > 40) return "moyen";
+  return "faible";
+}
+
+/** Traduction des signaux techniques en langage métier. */
+const MOTIF_BUSINESS: Record<MotifSuspect | string, string> = {
+  "Montant atypique": "Montant facturé nettement supérieur au barème conventionnel",
+  "Fréquence rapprochée": "Plusieurs actes similaires enregistrés à intervalles très courts",
+  "Fréquence anormale": "Volume d'examens inhabituel pour ce patient sur une courte période",
+  "Horaire atypique": "Saisie réalisée hors plage d'ouverture habituelle du centre",
+  "Doublon de saisie": "Possible double facturation du même acte",
+  "Acte non prescrit": "Acte sans prescription clairement associée au dossier",
+  "Incohérence dossier": "Informations patient / acte / mutuelle incohérentes",
+  "Mutuelle expirée": "Couverture mutuelle expirée ou non valide à la date de l'acte",
+  "Signal faible": "Écart mineur détecté — à surveiller",
+  "Comportement nominal": "Comportement conforme aux patterns habituels",
+};
+
+function humanizeMotifs(motifs: string[]): string {
+  if (!motifs.length) return "—";
+  return motifs.map((m) => MOTIF_BUSINESS[m] ?? m).join(" · ");
+}
+
+function statutLabel(statut: StatutAnomalie): string {
+  if (statut === "confirmed") return "Fraude confirmée";
+  if (statut === "dismissed") return "Classé conforme";
+  return "En revue";
+}
+
+function statutTone(statut: StatutAnomalie): "destructive" | "success" | "warning" {
+  if (statut === "confirmed") return "destructive";
+  if (statut === "dismissed") return "success";
+  return "warning";
+}
+
+/** Statut de paiement : non fourni par l'API anomalies → N/A explicite. */
+function paymentStatusLabel(_a: Anomalie): string {
+  return "Non renseigné";
+}
+
+function formatDateFr(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString("fr-MA", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+function formatDateTimeFr(iso: string | undefined): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleString("fr-MA", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function displayOrDash(value: string | number | null | undefined): string {
+  if (value === null || value === undefined || value === "") return "—";
+  return String(value);
+}
+
 function ScoreMeter({ score }: { score: number }) {
-  const tone = riskTone(score);
+  const level = businessRiskLevel(score);
+  const visual = RISK_VISUAL[level];
   return (
-    <div className="flex items-center gap-3">
-      <div className="h-1.5 w-16 overflow-hidden rounded-full bg-muted">
+    <div className="flex items-center gap-2">
+      <div className="h-1.5 w-14 overflow-hidden rounded-full bg-muted">
         <div
-          className={`h-full rounded-full transition-all duration-500 ${riskBarClass[tone]}`}
-          style={{ width: `${score}%` }}
+          className={`h-full rounded-full transition-all duration-500 ${visual.barClass}`}
+          style={{ width: `${Math.min(100, Math.max(0, score))}%` }}
         />
       </div>
-      <Pill tone={tone}>
-        {score}% · {riskLabel(score)}
-      </Pill>
+      <span className="font-mono text-xs font-semibold tabular-nums">{score}%</span>
     </div>
   );
+}
+
+function RiskLevelBadge({ score }: { score: number }) {
+  const level = businessRiskLevel(score);
+  const visual = RISK_VISUAL[level];
+  return (
+    <span
+      className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-semibold ${visual.chipClass}`}
+    >
+      {visual.label}
+    </span>
+  );
+}
+
+function modelExplanation(a: Anomalie): string {
+  const ecart = a.montant - a.bareme;
+  const level = RISK_VISUAL[businessRiskLevel(a.score)].label.toLowerCase();
+  const motifs = humanizeMotifs(a.motifs);
+  const clusterPart = a.cluster
+    ? ` Le modèle l'a rapproché du groupe « ${a.cluster} ».`
+    : "";
+  const ecartPart =
+    ecart !== 0
+      ? ` Écart au barème : ${formatMAD(ecart)} (facturé ${formatMAD(a.montant)} vs barème ${formatMAD(a.bareme)}).`
+      : ` Montant aligné sur le barème (${formatMAD(a.montant)}).`;
+  return `Score de risque ${a.score}% (niveau ${level}). Motifs : ${motifs}.${clusterPart}${ecartPart} Toute décision humaine est journalisée et peut alimenter le réentraînement supervisé.`;
 }
 
 function dossierAnomalie(a: Anomalie) {
@@ -157,20 +270,22 @@ function dossierAnomalie(a: Anomalie) {
     titre: "Dossier d'audit de facturation",
     reference: a.id,
     lignes: [
-      { label: "Patient", valeur: `${a.patient} (CIN ${a.cin})` },
+      { label: "Patient", valeur: `${a.patient} (réf. ${a.cin})` },
       { label: "Acte réalisé", valeur: `${a.acte} — ${a.typeExamen}` },
-      { label: "Date de l'acte", valeur: new Date(a.date).toLocaleDateString("fr-MA") },
+      { label: "Date de l'acte", valeur: formatDateFr(a.date) },
       { label: "Montant facturé", valeur: formatMAD(a.montant) },
       { label: "Barème conventionnel", valeur: formatMAD(a.bareme) },
       { label: "Écart au barème", valeur: formatMAD(a.montant - a.bareme) },
-      { label: "Score de risque IA", valeur: `${a.score}%` },
-      { label: "Cluster détecté", valeur: a.cluster },
+      { label: "Score de risque", valeur: `${a.score}%` },
+      { label: "Niveau de risque", valeur: RISK_VISUAL[businessRiskLevel(a.score)].label },
+      { label: "Cluster détecté", valeur: a.cluster || "—" },
       { label: "Prescripteur", valeur: a.prescripteur },
       { label: "Mutuelle", valeur: a.mutuelle },
-      { label: "Statut de traitement", valeur: a.statut },
+      { label: "Statut de traitement", valeur: statutLabel(a.statut) },
     ],
     blocs: [
-      { titre: "Motifs suspects", contenu: a.motifs.join(" · ") },
+      { titre: "Motifs (langage métier)", contenu: humanizeMotifs(a.motifs) },
+      { titre: "Explication du modèle", contenu: modelExplanation(a) },
       {
         titre: "Recommandation",
         contenu:
@@ -213,9 +328,11 @@ function FraudAuditModule() {
 
   const [anomalies, setAnomalies] = useState<Anomalie[]>([]);
   const [kpis, setKpis] = useState<AuditKpis>(EMPTY_AUDIT_KPIS);
-  const [tendance, setTendance] = useState<TendanceAnomalie[]>([]);
+  const [fraudModel, setFraudModel] = useState<FraudClusteringResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [fraudLoading, setFraudLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [fraudError, setFraudError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
 
   const [seuil, setSeuil] = useState<number>(RISK_THRESHOLDS.eleve);
@@ -225,22 +342,22 @@ function FraudAuditModule() {
   const [periode, setPeriode] = useState("30");
   const [page, setPage] = useState(1);
   const [detail, setDetail] = useState<Anomalie | null>(null);
+  const [relatedEvents, setRelatedEvents] = useState<AuditTrailItem[]>([]);
+  const [relatedLoading, setRelatedLoading] = useState(false);
 
-  const chargerDonnees = useCallback((signal?: AbortSignal) => {
+  const chargerAudit = useCallback((signal?: AbortSignal) => {
     setIsLoading(true);
     setError(null);
-    return Promise.all([fetchAnomalies(signal), fetchAuditKpis(signal), fetchAuditTrend(signal)])
-      .then(([anomaliesRows, kpisRows, tendanceRows]) => {
+    return Promise.all([fetchAnomalies(signal), fetchAuditKpis(signal)])
+      .then(([anomaliesRows, kpisRows]) => {
         if (signal?.aborted) return;
         setAnomalies(anomaliesRows);
         setKpis(kpisRows);
-        setTendance(tendanceRows);
       })
       .catch((e: unknown) => {
         if (signal?.aborted) return;
         setAnomalies([]);
         setKpis(EMPTY_AUDIT_KPIS);
-        setTendance([]);
         setError(e instanceof Error ? e.message : "Service d'audit indisponible");
       })
       .finally(() => {
@@ -248,11 +365,63 @@ function FraudAuditModule() {
       });
   }, []);
 
+  const chargerFraudModel = useCallback(
+    (signal?: AbortSignal) => {
+      setFraudLoading(true);
+      setFraudError(null);
+      return fetchFraudClustering({ sensitivity: seuil })
+        .then((res) => {
+          if (signal?.aborted) return;
+          setFraudModel(res);
+        })
+        .catch((e: unknown) => {
+          if (signal?.aborted) return;
+          setFraudModel(null);
+          setFraudError(e instanceof Error ? e.message : "Service de clustering indisponible");
+        })
+        .finally(() => {
+          if (!signal?.aborted) setFraudLoading(false);
+        });
+    },
+    [seuil],
+  );
+
   useEffect(() => {
     const controller = new AbortController();
-    void chargerDonnees(controller.signal);
+    void chargerAudit(controller.signal);
     return () => controller.abort();
-  }, [chargerDonnees, reloadKey]);
+  }, [chargerAudit, reloadKey]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void chargerFraudModel(controller.signal);
+    return () => controller.abort();
+  }, [chargerFraudModel, reloadKey]);
+
+  useEffect(() => {
+    if (!detail) {
+      setRelatedEvents([]);
+      return;
+    }
+    const controller = new AbortController();
+    setRelatedLoading(true);
+    void fetchAuditTrail({
+      entityId: detail.id,
+      page: 0,
+      size: 20,
+      signal: controller.signal,
+    })
+      .then((pageRes) => {
+        if (!controller.signal.aborted) setRelatedEvents(pageRes.content ?? []);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setRelatedEvents([]);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setRelatedLoading(false);
+      });
+    return () => controller.abort();
+  }, [detail]);
 
   const now = Date.now();
 
@@ -263,11 +432,18 @@ function FraudAuditModule() {
       if (a.score < seuil) return false;
       if (now - new Date(a.date).getTime() > maxAge) return false;
       if (examen !== "tous" && a.typeExamen !== examen) return false;
-      if (niveau !== "tous" && anomalyRiskLevel(a.score) !== niveau) return false;
+      if (niveau !== "tous") {
+        if (niveau === "faible" || niveau === "eleve" || niveau === "critique") {
+          if (anomalyRiskLevel(a.score) !== niveau) return false;
+        } else if (niveau === "moyen") {
+          if (businessRiskLevel(a.score) !== "moyen") return false;
+        }
+      }
       if (
         q &&
         !a.patient.toLowerCase().includes(q) &&
         !a.id.toLowerCase().includes(q) &&
+        !a.cin.toLowerCase().includes(q) &&
         !a.acte.toLowerCase().includes(q)
       )
         return false;
@@ -279,9 +455,20 @@ function FraudAuditModule() {
   const current = Math.min(page, pageCount);
   const rows = filtered.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE);
 
-  const enAttente = anomalies.filter((a) => a.statut === "pending" && a.score >= seuil).length;
-  const montantEnJeu = filtered.reduce((s, a) => s + (a.montant - a.bareme), 0);
   const confirmees = anomalies.filter((a) => a.statut === "confirmed");
+
+  const riskDistribution = useMemo(() => {
+    const counts: Record<BusinessRiskLevel, number> = {
+      faible: 0,
+      moyen: 0,
+      eleve: 0,
+      critique: 0,
+    };
+    for (const a of anomalies) {
+      counts[businessRiskLevel(a.score)] += 1;
+    }
+    return counts;
+  }, [anomalies]);
 
   const hasActiveFilters =
     query.trim() !== "" || niveau !== "tous" || examen !== "tous" || periode !== "30";
@@ -299,6 +486,7 @@ function FraudAuditModule() {
     updateAnomalieStatut(id, statut)
       .then(() => {
         setAnomalies((prev) => prev.map((a) => (a.id === id ? { ...a, statut } : a)));
+        setDetail((prev) => (prev?.id === id ? { ...prev, statut } : prev));
         if (statut === "confirmed") {
           toast.success(`${id} confirmée comme fraude — envoyée au réentraînement supervisé`);
         } else {
@@ -321,7 +509,7 @@ function FraudAuditModule() {
     const header = [
       "id_dossier",
       "patient",
-      "cin",
+      "reference_patient",
       "acte",
       "type_examen",
       "date",
@@ -329,7 +517,8 @@ function FraudAuditModule() {
       "bareme_mad",
       "ecart_mad",
       "score_risque",
-      "motifs",
+      "niveau_risque",
+      "motif",
       "cluster",
       "prescripteur",
       "mutuelle",
@@ -347,11 +536,12 @@ function FraudAuditModule() {
         a.bareme,
         a.montant - a.bareme,
         a.score,
-        a.motifs.join(" | "),
+        RISK_VISUAL[businessRiskLevel(a.score)].label,
+        humanizeMotifs(a.motifs),
         a.cluster,
         a.prescripteur,
         a.mutuelle,
-        a.statut,
+        statutLabel(a.statut),
       ]
         .map((v) => `"${String(v).replace(/"/g, '""')}"`)
         .join(";"),
@@ -377,35 +567,63 @@ function FraudAuditModule() {
     window.print();
   };
 
+  const modelStatusLabel = fraudLoading
+    ? "Analyse en cours…"
+    : fraudError
+      ? "Service indisponible"
+      : fraudModel
+        ? "Opérationnel"
+        : "—";
+
+  const recordsAnalyzed =
+    fraudModel?.analyzed_count ?? (isLoading ? null : kpis.dossiersAnalyses || null);
+  const anomaliesDetected =
+    fraudModel?.alert_count ?? (isLoading ? null : anomalies.length);
+
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Administration"
-        title="Audit"
-        subtitle="Anomalies de facturation et validation humaine"
+        eyebrow="Direction"
+        title="Analyse de fraude"
+        subtitle="Espace de travail : vue modèle, cas signalés et validation humaine"
         actions={
-          profile.canExportCompta ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button className="shadow-sm">
-                  <Download className="mr-2 size-4" />
-                  Exporter les fraudes validées
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-64">
-                <DropdownMenuLabel>Transmission expertise comptable</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={exportCsv}>
-                  <FileText className="mr-2 size-4" /> CSV — import comptable
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={exportPdf}>
-                  <FileText className="mr-2 size-4" /> PDF — rapport signé
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <Pill tone="neutral">Export comptable réservé à la direction</Pill>
-          )
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isLoading || fraudLoading}
+              onClick={() => setReloadKey((k) => k + 1)}
+            >
+              {isLoading || fraudLoading ? (
+                <Loader2 className="mr-2 size-4 animate-spin" />
+              ) : (
+                <RefreshCw className="mr-2 size-4" />
+              )}
+              Actualiser
+            </Button>
+            {profile.canExportCompta ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button className="shadow-sm">
+                    <Download className="mr-2 size-4" />
+                    Exporter
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-64">
+                  <DropdownMenuLabel>Transmission expertise comptable</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={exportCsv}>
+                    <FileText className="mr-2 size-4" /> CSV — import comptable
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={exportPdf}>
+                    <FileText className="mr-2 size-4" /> PDF — rapport signé
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Pill tone="neutral">Export comptable réservé à la direction</Pill>
+            )}
+          </div>
         }
       />
 
@@ -421,481 +639,612 @@ function FraudAuditModule() {
         </Card>
       ) : null}
 
-      <AuditDemoPanel
-        canManage={profile.canValiderAnomalie}
-        onLoaded={() => setReloadKey((k) => k + 1)}
-      />
+      <Tabs defaultValue="fraude" className="gap-5">
+        <TabsList>
+          <TabsTrigger value="fraude" className="gap-1.5">
+            <ShieldAlert className="size-4" />
+            Cas de fraude
+          </TabsTrigger>
+          <TabsTrigger value="journal" className="gap-1.5">
+            <History className="size-4" />
+            Journal d'audit
+          </TabsTrigger>
+          <TabsTrigger value="demo" className="gap-1.5">
+            <Sparkles className="size-4" />
+            Scénarios démo
+          </TabsTrigger>
+        </TabsList>
 
-      <AuditTrailPanel />
-
-      <DirectionStats anomaliesCount={anomalies.length} showFinance={profile.canSeeFinance} />
-
-      <FraudDashboard sensitivity={seuil} />
-
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card>
-          <CardContent className="flex items-start gap-4 p-5">
-            <IconTile tone="primary">
-              <ShieldCheck className="size-5" />
-            </IconTile>
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Dossiers analysés (30 j)
-              </p>
-              {isLoading ? (
-                <Skeleton className="mt-2 h-7 w-16" />
-              ) : (
-                <>
-                  <p className="mt-1 text-2xl font-bold tracking-tight">
-                    {kpis.dossiersAnalyses.toLocaleString("fr-MA")}
-                  </p>
-                  <p className="mt-1 text-xs text-success">
-                    {kpis.dossiersAnalysesDelta >= 0 ? "+" : ""}
-                    {kpis.dossiersAnalysesDelta}% vs période précédente
-                  </p>
-                </>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="ring-1 ring-inset ring-destructive/20">
-          <CardContent className="flex items-start gap-4 p-5">
-            <IconTile tone="destructive">
-              <ShieldAlert className="size-5" />
-            </IconTile>
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Alertes en attente
-              </p>
-              <p className="mt-1 flex items-center gap-2 text-2xl font-bold tracking-tight text-destructive">
-                {enAttente}
-                <span className="relative flex size-2.5">
-                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-destructive/60" />
-                  <span className="relative inline-flex size-2.5 rounded-full bg-destructive" />
-                </span>
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {formatMAD(Math.max(0, montantEnJeu))} d'écart au barème
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="flex items-start gap-4 p-5">
-            <IconTile tone="success">
-              <Gauge className="size-5" />
-            </IconTile>
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Taux de conformité
-              </p>
-              {isLoading ? (
-                <Skeleton className="mt-2 h-7 w-16" />
-              ) : (
-                <>
-                  <p className="mt-1 text-2xl font-bold tracking-tight text-success">
-                    {kpis.tauxConformite}%
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {kpis.tauxConformiteDelta >= 0 ? "+" : ""}
-                    {kpis.tauxConformiteDelta} pt sur 30 jours
-                  </p>
-                </>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader className="flex-row items-center justify-between">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <TrendingUp className="size-4 text-primary" /> Anomalies détectées par semaine
-            </CardTitle>
-            <p className="text-xs text-muted-foreground">8 dernières semaines</p>
-          </CardHeader>
-          <CardContent className="h-[180px] pr-4">
-            {isLoading ? (
-              <Skeleton className="h-full w-full" />
-            ) : tendance.length === 0 ? (
-              <EmptyState icon={TrendingUp} title="Aucune donnée disponible" compact />
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={tendance} margin={{ top: 5, right: 8, bottom: 0, left: -20 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                  <XAxis
-                    dataKey="semaine"
-                    tickLine={false}
-                    axisLine={false}
-                    tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
-                  />
-                  <YAxis
-                    tickLine={false}
-                    axisLine={false}
-                    tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
-                  />
-                  <ReTooltip
-                    contentStyle={{
-                      background: "var(--card)",
-                      border: "1px solid var(--border)",
-                      borderRadius: 12,
-                      fontSize: 12,
+        <TabsContent value="fraude" className="space-y-6">
+          {/* A. Vue d'ensemble du modèle */}
+          <section aria-labelledby="fraud-model-overview" className="space-y-3">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <h2 id="fraud-model-overview" className="text-lg font-bold tracking-tight">
+                  Vue d'ensemble du modèle
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Indicateurs issus des APIs audit et clustering — aucune valeur inventée.
+                </p>
+              </div>
+              <div className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-2">
+                <SlidersHorizontal className="size-4 text-muted-foreground" />
+                <div className="min-w-[160px]">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span className="text-xs text-muted-foreground">Seuil d'alerte</span>
+                    <span className="text-sm font-bold tabular-nums">{seuil}%</span>
+                  </div>
+                  <Slider
+                    value={[seuil]}
+                    min={30}
+                    max={95}
+                    step={5}
+                    onValueChange={(v) => {
+                      setSeuil(v[0] ?? RISK_THRESHOLDS.eleve);
+                      setPage(1);
                     }}
+                    aria-label="Seuil de sensibilité de l'IA"
+                    className="mt-1"
                   />
-                  <Line
-                    type="monotone"
-                    dataKey="anomalies"
-                    name="Anomalies"
-                    stroke="var(--primary)"
-                    strokeWidth={2.5}
-                    dot={{ r: 3 }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="confirmees"
-                    name="Confirmées"
-                    stroke="var(--destructive)"
-                    strokeWidth={2}
-                    strokeDasharray="4 4"
-                    dot={false}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <SlidersHorizontal className="size-4 text-primary" /> Sensibilité de l'IA
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-baseline justify-between">
-              <p className="text-sm text-muted-foreground">Seuil d'alerte</p>
-              <p className="text-2xl font-bold tracking-tight">{seuil}%</p>
+                </div>
+              </div>
             </div>
-            <Slider
-              value={[seuil]}
-              min={30}
-              max={95}
-              step={5}
-              onValueChange={(v) => {
-                setSeuil(v[0] ?? RISK_THRESHOLDS.eleve);
-                setPage(1);
-              }}
-              aria-label="Seuil de sensibilité de l'IA"
-            />
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>Large (30%)</span>
-              <span>Strict (95%)</span>
-            </div>
-            <Separator />
-            <p className="text-xs text-muted-foreground">
-              {filtered.length} dossier(s) au-dessus du seuil — {confirmees.length} fraude(s)
-              confirmée(s) prête(s) à l'export.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
 
-      <Card>
-        <CardHeader className="flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <CardTitle className="text-base">Dossiers signalés</CardTitle>
-          <div className="grid gap-2 sm:grid-cols-2 lg:flex lg:flex-row">
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={query}
-                onChange={(e) => {
-                  setQuery(e.target.value);
-                  setPage(1);
-                }}
-                aria-label="Rechercher un dossier, un patient ou un acte"
-                placeholder="Dossier, patient ou acte…"
-                className="pl-9 lg:w-52"
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+              <OverviewStat
+                icon={<Activity className="size-5" />}
+                label="Statut du modèle"
+                value={modelStatusLabel}
+                hint={fraudModel?.model_version ? `v. ${fraudModel.model_version}` : "Version N/A"}
+                loading={fraudLoading}
+                tone={fraudError ? "destructive" : "primary"}
               />
-            </div>
-            <Select
-              value={niveau}
-              onValueChange={(v) => {
-                setNiveau(v);
-                setPage(1);
-              }}
-            >
-              <SelectTrigger className="lg:w-40">
-                <SelectValue placeholder="Niveau de risque" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="tous">Tous les risques</SelectItem>
-                <SelectItem value="critique">Critique (&gt; {RISK_THRESHOLDS.critique})</SelectItem>
-                <SelectItem value="eleve">
-                  Élevé ({RISK_THRESHOLDS.eleve + 1}-{RISK_THRESHOLDS.critique})
-                </SelectItem>
-                <SelectItem value="faible">Faible (&le; {RISK_THRESHOLDS.eleve})</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select
-              value={examen}
-              onValueChange={(v) => {
-                setExamen(v);
-                setPage(1);
-              }}
-            >
-              <SelectTrigger className="lg:w-40">
-                <SelectValue placeholder="Type d'examen" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="tous">Tous les examens</SelectItem>
-                {typesExamen.map((t) => (
-                  <SelectItem key={t} value={t}>
-                    {t}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select
-              value={periode}
-              onValueChange={(v) => {
-                setPeriode(v);
-                setPage(1);
-              }}
-            >
-              <SelectTrigger className="lg:w-36">
-                <CalendarDays className="mr-1 size-4 text-muted-foreground" />
-                <SelectValue placeholder="Période" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="7">7 derniers jours</SelectItem>
-                <SelectItem value="30">30 derniers jours</SelectItem>
-                <SelectItem value="90">90 derniers jours</SelectItem>
-                <SelectItem value="all">Tout l'historique</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardHeader>
-
-        <CardContent className="px-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="pl-6">Dossier & patient</TableHead>
-                  <TableHead>Acte & date</TableHead>
-                  <TableHead className="text-right">Montant facturé</TableHead>
-                  <TableHead>Score de risque</TableHead>
-                  <TableHead>Motif suspect</TableHead>
-                  <TableHead>Dossier</TableHead>
-                  <TableHead className="pr-6 text-right">Décision</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  Array.from({ length: 3 }).map((_, i) => (
-                    <TableRow key={i}>
-                      <TableCell colSpan={7} className="p-4">
-                        <Skeleton className="h-10 w-full" />
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <>
-                    {rows.map((a) => (
-                      <TableRow key={a.id} className={a.statut !== "pending" ? "opacity-60" : ""}>
-                        <TableCell className="pl-6">
-                          <p className="font-mono text-xs font-semibold">{a.id}</p>
-                          <p className="text-sm font-medium">{a.patient}</p>
-                          <p className="text-xs text-muted-foreground">CIN {a.cin}</p>
-                        </TableCell>
-                        <TableCell>
-                          <p className="text-sm">{a.acte}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {a.typeExamen} ·{" "}
-                            {new Date(a.date).toLocaleDateString("fr-MA", {
-                              day: "2-digit",
-                              month: "short",
-                              year: "numeric",
-                            })}
-                          </p>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <p className="text-sm font-semibold">{formatMAD(a.montant)}</p>
-                          <p className="text-xs text-muted-foreground">
-                            barème {formatMAD(a.bareme)}
-                          </p>
-                        </TableCell>
-                        <TableCell>
-                          <ScoreMeter score={a.score} />
-                        </TableCell>
-                        <TableCell className="max-w-[200px]">
-                          <div className="flex flex-wrap gap-1.5">
-                            {a.motifs.map((m) => (
-                              <Pill key={m} tone={riskTone(a.score)}>
-                                {m}
-                              </Pill>
-                            ))}
+              <OverviewStat
+                icon={<CalendarDays className="size-5" />}
+                label="Dernière analyse"
+                value={formatDateTimeFr(fraudModel?.generated_at)}
+                hint="Horodatage clustering"
+                loading={fraudLoading}
+              />
+              <OverviewStat
+                icon={<ShieldCheck className="size-5" />}
+                label="Dossiers analysés"
+                value={
+                  recordsAnalyzed === null
+                    ? "—"
+                    : recordsAnalyzed.toLocaleString("fr-MA")
+                }
+                hint={
+                  kpis.dossiersAnalysesDelta !== 0
+                    ? `${kpis.dossiersAnalysesDelta >= 0 ? "+" : ""}${kpis.dossiersAnalysesDelta}% vs période préc.`
+                    : "Source API"
+                }
+                loading={isLoading && fraudLoading}
+              />
+              <OverviewStat
+                icon={<ShieldAlert className="size-5" />}
+                label="Anomalies détectées"
+                value={
+                  anomaliesDetected === null
+                    ? "—"
+                    : anomaliesDetected.toLocaleString("fr-MA")
+                }
+                hint={`${filtered.length} au-dessus du seuil`}
+                loading={isLoading && fraudLoading}
+                tone="destructive"
+              />
+              <OverviewStat
+                icon={<Gauge className="size-5" />}
+                label="Confiance modèle"
+                value="N/A"
+                hint="Champ non fourni par l'API"
+                loading={false}
+              />
+              <Card>
+                <CardContent className="space-y-3 p-4">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Distribution du risque
+                  </p>
+                  {isLoading ? (
+                    <Skeleton className="h-16 w-full" />
+                  ) : anomalies.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">—</p>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {(Object.keys(RISK_VISUAL) as BusinessRiskLevel[]).map((key) => {
+                        const total = anomalies.length || 1;
+                        const count = riskDistribution[key];
+                        const pct = Math.round((count / total) * 100);
+                        return (
+                          <div key={key} className="flex items-center gap-2 text-xs">
+                            <span className="w-14 shrink-0 font-medium">
+                              {RISK_VISUAL[key].label}
+                            </span>
+                            <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-muted">
+                              <div
+                                className={`h-full rounded-full ${RISK_VISUAL[key].barClass}`}
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                            <span className="w-10 shrink-0 text-right tabular-nums text-muted-foreground">
+                              {count}
+                            </span>
                           </div>
-                          <p className="mt-1 text-[11px] text-muted-foreground">{a.cluster}</p>
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="gap-1.5 border-primary/25 bg-primary/5 font-semibold text-primary shadow-sm transition-shadow hover:bg-primary/10 hover:shadow-md"
-                            onClick={() => void telechargerDossierPdf(dossierAnomalie(a))}
+                        );
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {fraudError ? (
+              <p className="text-xs text-muted-foreground">
+                Clustering indisponible ({fraudError}) — les KPIs d'audit restent affichés lorsqu'ils
+                sont disponibles.
+              </p>
+            ) : null}
+          </section>
+
+          <FraudDashboard sensitivity={seuil} />
+
+          {/* B. Table des cas de fraude */}
+          <Card>
+            <CardHeader className="flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <CardTitle className="text-base">Cas de fraude</CardTitle>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Cliquez une ligne pour ouvrir le détail structuré du dossier.
+                </p>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2 lg:flex lg:flex-row">
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={query}
+                    onChange={(e) => {
+                      setQuery(e.target.value);
+                      setPage(1);
+                    }}
+                    aria-label="Rechercher un dossier, un patient ou un acte"
+                    placeholder="Patient, réf. ou acte…"
+                    className="pl-9 lg:w-52"
+                  />
+                </div>
+                <Select
+                  value={niveau}
+                  onValueChange={(v) => {
+                    setNiveau(v);
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger className="lg:w-40">
+                    <SelectValue placeholder="Niveau de risque" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="tous">Tous les risques</SelectItem>
+                    <SelectItem value="critique">Critique</SelectItem>
+                    <SelectItem value="eleve">Élevé</SelectItem>
+                    <SelectItem value="moyen">Moyen</SelectItem>
+                    <SelectItem value="faible">Faible</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={examen}
+                  onValueChange={(v) => {
+                    setExamen(v);
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger className="lg:w-40">
+                    <SelectValue placeholder="Type d'examen" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="tous">Tous les examens</SelectItem>
+                    {typesExamen.map((t) => (
+                      <SelectItem key={t} value={t}>
+                        {t}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={periode}
+                  onValueChange={(v) => {
+                    setPeriode(v);
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger className="lg:w-36">
+                    <CalendarDays className="mr-1 size-4 text-muted-foreground" />
+                    <SelectValue placeholder="Période" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="7">7 derniers jours</SelectItem>
+                    <SelectItem value="30">30 derniers jours</SelectItem>
+                    <SelectItem value="90">90 derniers jours</SelectItem>
+                    <SelectItem value="all">Tout l'historique</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardHeader>
+
+            <CardContent className="px-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="pl-6">Patient</TableHead>
+                      <TableHead>Réf. patient</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Examen</TableHead>
+                      <TableHead className="text-right">Montant</TableHead>
+                      <TableHead>Paiement</TableHead>
+                      <TableHead>Score</TableHead>
+                      <TableHead>Niveau</TableHead>
+                      <TableHead>Motif</TableHead>
+                      <TableHead>Statut</TableHead>
+                      <TableHead className="pr-6 text-right">Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {isLoading ? (
+                      Array.from({ length: 4 }).map((_, i) => (
+                        <TableRow key={i}>
+                          <TableCell colSpan={11} className="p-4">
+                            <Skeleton className="h-10 w-full" />
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <>
+                        {rows.map((a) => (
+                          <TableRow
+                            key={a.id}
+                            className={`cursor-pointer ${a.statut !== "pending" ? "opacity-70" : ""}`}
+                            onClick={() => setDetail(a)}
                           >
-                            <FileDown className="size-4" />
-                            Télécharger (PDF)
-                          </Button>
-                        </TableCell>
-                        <TableCell className="pr-6">
-                          <div className="flex items-center justify-end gap-1.5">
-                            {profile.canValiderAnomalie ? (
-                              <>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  disabled={a.statut === "confirmed"}
-                                  onClick={() => setStatut(a.id, "confirmed")}
-                                >
-                                  <ShieldAlert className="mr-1.5 size-4 text-destructive" />
-                                  Valider l'anomalie
-                                </Button>
+                            <TableCell className="pl-6">
+                              <p className="text-sm font-medium">{displayOrDash(a.patient)}</p>
+                              <p className="font-mono text-[11px] text-muted-foreground">{a.id}</p>
+                            </TableCell>
+                            <TableCell className="font-mono text-xs">
+                              {displayOrDash(a.cin)}
+                            </TableCell>
+                            <TableCell className="whitespace-nowrap text-sm">
+                              {formatDateFr(a.date)}
+                            </TableCell>
+                            <TableCell>
+                              <p className="text-sm">{displayOrDash(a.acte)}</p>
+                              <p className="text-xs text-muted-foreground">{a.typeExamen}</p>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <p className="text-sm font-semibold tabular-nums">
+                                {formatMAD(a.montant)}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                barème {formatMAD(a.bareme)}
+                              </p>
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-xs text-muted-foreground">
+                                {paymentStatusLabel(a)}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              <ScoreMeter score={a.score} />
+                            </TableCell>
+                            <TableCell>
+                              <RiskLevelBadge score={a.score} />
+                            </TableCell>
+                            <TableCell className="max-w-[220px]">
+                              <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+                                {humanizeMotifs(a.motifs)}
+                              </p>
+                            </TableCell>
+                            <TableCell>
+                              <Pill tone={statutTone(a.statut)}>{statutLabel(a.statut)}</Pill>
+                            </TableCell>
+                            <TableCell className="pr-6" onClick={(e) => e.stopPropagation()}>
+                              <div className="flex items-center justify-end gap-1">
+                                {profile.canValiderAnomalie ? (
+                                  <>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      disabled={a.statut === "confirmed"}
+                                      onClick={() => setStatut(a.id, "confirmed")}
+                                    >
+                                      <ShieldAlert className="mr-1 size-3.5 text-destructive" />
+                                      Confirmer
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      disabled={a.statut === "dismissed"}
+                                      onClick={() => setStatut(a.id, "dismissed")}
+                                    >
+                                      <Ban className="mr-1 size-3.5" />
+                                      Conforme
+                                    </Button>
+                                  </>
+                                ) : null}
                                 <Button
                                   variant="ghost"
-                                  size="sm"
-                                  disabled={a.statut === "dismissed"}
-                                  onClick={() => setStatut(a.id, "dismissed")}
+                                  size="icon"
+                                  aria-label={`Télécharger le PDF ${a.id}`}
+                                  onClick={() => void telechargerDossierPdf(dossierAnomalie(a))}
                                 >
-                                  <Ban className="mr-1.5 size-4" />
-                                  Normal
+                                  <FileDown className="size-4" />
                                 </Button>
-                              </>
-                            ) : null}
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              aria-label={`Ouvrir le dossier complet ${a.id}`}
-                              onClick={() => setDetail(a)}
-                            >
-                              <ExternalLink className="size-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    {rows.length === 0 ? (
-                      <TableRow className="hover:bg-transparent">
-                        <TableCell colSpan={7} className="p-0">
-                          <EmptyState
-                            icon={hasActiveFilters ? SearchX : ShieldCheck}
-                            title={
-                              hasActiveFilters
-                                ? "Aucun dossier ne correspond aux filtres"
-                                : "Aucune donnée disponible"
-                            }
-                            description={
-                              hasActiveFilters
-                                ? `Aucun dossier au-dessus de ${seuil} % avec ces critères. Élargissez la période ou abaissez le seuil de sensibilité.`
-                                : `Le moteur de clustering ne signale aucun dossier au-delà de ${seuil} % de risque sur la période analysée.`
-                            }
-                            action={
-                              hasActiveFilters ? (
-                                <Button variant="outline" size="sm" onClick={resetFilters}>
-                                  Réinitialiser les filtres
-                                </Button>
-                              ) : null
-                            }
-                          />
-                        </TableCell>
-                      </TableRow>
-                    ) : null}
-                  </>
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                        {rows.length === 0 ? (
+                          <TableRow className="hover:bg-transparent">
+                            <TableCell colSpan={11} className="p-0">
+                              <EmptyState
+                                icon={hasActiveFilters ? SearchX : ShieldCheck}
+                                title={
+                                  hasActiveFilters
+                                    ? "Aucun dossier ne correspond aux filtres"
+                                    : "Aucune donnée disponible"
+                                }
+                                description={
+                                  hasActiveFilters
+                                    ? `Aucun dossier au-dessus de ${seuil} % avec ces critères.`
+                                    : `Le moteur ne signale aucun dossier au-delà de ${seuil} % de risque.`
+                                }
+                                action={
+                                  hasActiveFilters ? (
+                                    <Button variant="outline" size="sm" onClick={resetFilters}>
+                                      Réinitialiser les filtres
+                                    </Button>
+                                  ) : null
+                                }
+                              />
+                            </TableCell>
+                          </TableRow>
+                        ) : null}
+                      </>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
 
-          <div className="flex flex-col items-center justify-between gap-3 border-t border-border px-6 pt-4 sm:flex-row">
-            <p className="text-sm text-muted-foreground">
-              {filtered.length} dossier(s) · page {current} / {pageCount}
-            </p>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={current === 1}
-                onClick={() => setPage(current - 1)}
-              >
-                <ChevronLeft className="mr-1 size-4" /> Précédent
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={current === pageCount}
-                onClick={() => setPage(current + 1)}
-              >
-                Suivant <ChevronRight className="ml-1 size-4" />
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+              <div className="flex flex-col items-center justify-between gap-3 border-t border-border px-6 pt-4 sm:flex-row">
+                <p className="text-sm text-muted-foreground">
+                  {filtered.length} dossier(s) · page {current} / {pageCount}
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={current === 1}
+                    onClick={() => setPage(current - 1)}
+                  >
+                    <ChevronLeft className="mr-1 size-4" /> Précédent
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={current === pageCount}
+                    onClick={() => setPage(current + 1)}
+                  >
+                    Suivant <ChevronRight className="ml-1 size-4" />
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-      <Dialog open={!!detail} onOpenChange={(o) => !o && setDetail(null)}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Stethoscope className="size-4 text-primary" />
-              Dossier {detail?.id}
-            </DialogTitle>
-            <DialogDescription>
-              Vue consolidée de l'acte, du prescripteur et des signaux du modèle.
-            </DialogDescription>
-          </DialogHeader>
+        <TabsContent value="journal">
+          <AuditTrailPanel />
+        </TabsContent>
+
+        <TabsContent value="demo">
+          <AuditDemoPanel
+            canManage={profile.canValiderAnomalie}
+            onLoaded={() => setReloadKey((k) => k + 1)}
+          />
+        </TabsContent>
+      </Tabs>
+
+      {/* C. Détail du cas */}
+      <Sheet open={!!detail} onOpenChange={(o) => !o && setDetail(null)}>
+        <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-xl">
+          <SheetHeader>
+            <SheetTitle className="pr-8">Dossier {detail?.id ?? ""}</SheetTitle>
+            <SheetDescription>
+              Analyse structurée du cas — sans dump technique brut.
+            </SheetDescription>
+          </SheetHeader>
+
           {detail ? (
-            <div className="space-y-4 text-sm">
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Patient" value={`${detail.patient} · CIN ${detail.cin}`} />
-                <Field label="Mutuelle" value={detail.mutuelle} />
-                <Field label="Acte" value={detail.acte} />
-                <Field label="Prescripteur" value={detail.prescripteur} />
-                <Field label="Montant facturé" value={formatMAD(detail.montant)} />
-                <Field label="Barème conventionné" value={formatMAD(detail.bareme)} />
-              </div>
+            <div className="mt-6 space-y-6 text-sm">
+              <DetailSection title="Patient">
+                <DetailGrid>
+                  <Field label="Nom" value={displayOrDash(detail.patient)} />
+                  <Field label="Référence (CIN)" value={displayOrDash(detail.cin)} />
+                  <Field label="Mutuelle" value={displayOrDash(detail.mutuelle)} />
+                  <Field label="Prescripteur" value={displayOrDash(detail.prescripteur)} />
+                </DetailGrid>
+              </DetailSection>
+
+              <DetailSection title="Examen">
+                <DetailGrid>
+                  <Field label="Acte" value={displayOrDash(detail.acte)} />
+                  <Field label="Type" value={displayOrDash(detail.typeExamen)} />
+                  <Field label="Date" value={formatDateFr(detail.date)} />
+                  <Field label="Groupe modèle" value={displayOrDash(detail.cluster)} />
+                </DetailGrid>
+              </DetailSection>
+
+              <DetailSection title="Financier">
+                <DetailGrid>
+                  <Field label="Montant facturé" value={formatMAD(detail.montant)} />
+                  <Field label="Barème attendu" value={formatMAD(detail.bareme)} />
+                  <Field
+                    label="Écart / reste estimé"
+                    value={formatMAD(detail.montant - detail.bareme)}
+                  />
+                  <Field label="Statut de paiement" value={paymentStatusLabel(detail)} />
+                </DetailGrid>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Les montants « payé » / « reste à charge » ne sont pas fournis par l'API anomalies —
+                  l'écart affiché compare facturé et barème.
+                </p>
+              </DetailSection>
+
+              <DetailSection title="Anomalie détectée">
+                <div className="flex flex-wrap gap-1.5">
+                  {detail.motifs.map((m) => (
+                    <Pill key={m} tone={RISK_VISUAL[businessRiskLevel(detail.score)].tone}>
+                      {m}
+                    </Pill>
+                  ))}
+                </div>
+                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                  {humanizeMotifs(detail.motifs)}
+                </p>
+              </DetailSection>
+
+              <DetailSection title="Score de risque">
+                <div className="flex flex-wrap items-center gap-3">
+                  <ScoreMeter score={detail.score} />
+                  <RiskLevelBadge score={detail.score} />
+                  <Pill tone={statutTone(detail.statut)}>{statutLabel(detail.statut)}</Pill>
+                </div>
+              </DetailSection>
+
+              <DetailSection title="Explication du modèle">
+                <p className="rounded-lg bg-muted/60 p-3 text-sm leading-relaxed text-muted-foreground">
+                  {modelExplanation(detail)}
+                </p>
+              </DetailSection>
+
+              <DetailSection title="Événements liés / historique">
+                {relatedLoading ? (
+                  <Skeleton className="h-20 w-full" />
+                ) : relatedEvents.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    Aucun événement d'audit lié à ce dossier pour le moment.
+                  </p>
+                ) : (
+                  <ul className="space-y-2">
+                    {relatedEvents.map((ev) => (
+                      <li
+                        key={ev.id}
+                        className="rounded-lg border border-border px-3 py-2 text-xs"
+                      >
+                        <p className="font-medium">{ev.action}</p>
+                        <p className="mt-0.5 text-muted-foreground">
+                          {ev.createdAt ? formatCentreDateTime(ev.createdAt) : "—"}
+                          {ev.userEmail || ev.userId
+                            ? ` · ${ev.userEmail ?? ev.userId}`
+                            : ""}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </DetailSection>
+
               <Separator />
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Score de risque</span>
-                <ScoreMeter score={detail.score} />
+
+              <div className="flex flex-wrap gap-2">
+                {profile.canValiderAnomalie ? (
+                  <>
+                    <Button
+                      variant="outline"
+                      disabled={detail.statut === "confirmed"}
+                      onClick={() => setStatut(detail.id, "confirmed")}
+                    >
+                      <ShieldAlert className="mr-2 size-4 text-destructive" />
+                      Confirmer la fraude
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      disabled={detail.statut === "dismissed"}
+                      onClick={() => setStatut(detail.id, "dismissed")}
+                    >
+                      <Ban className="mr-2 size-4" />
+                      Classer conforme
+                    </Button>
+                  </>
+                ) : null}
+                <Button
+                  variant="secondary"
+                  onClick={() => void telechargerDossierPdf(dossierAnomalie(detail))}
+                >
+                  <FileDown className="mr-2 size-4" />
+                  Télécharger PDF
+                </Button>
               </div>
-              <div className="flex flex-wrap gap-1.5">
-                {detail.motifs.map((m) => (
-                  <Pill key={m} tone={riskTone(detail.score)}>
-                    {m}
-                  </Pill>
-                ))}
-              </div>
-              <p className="rounded-lg bg-muted/60 p-3 text-xs text-muted-foreground">
-                Groupe détecté : <strong>{detail.cluster}</strong>. Écart au barème de{" "}
-                {formatMAD(detail.montant - detail.bareme)}. Toute décision est journalisée et
-                alimente le réentraînement du modèle supervisé.
-              </p>
             </div>
           ) : null}
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
     </div>
   );
+}
+
+function OverviewStat({
+  icon,
+  label,
+  value,
+  hint,
+  loading,
+  tone = "primary",
+}: {
+  icon: ReactNode;
+  label: string;
+  value: string;
+  hint?: string;
+  loading?: boolean;
+  tone?: "primary" | "destructive";
+}) {
+  return (
+    <Card>
+      <CardContent className="flex items-start gap-3 p-4">
+        <IconTile tone={tone}>{icon}</IconTile>
+        <div className="min-w-0">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            {label}
+          </p>
+          {loading ? (
+            <Skeleton className="mt-2 h-6 w-20" />
+          ) : (
+            <p className="mt-1 truncate text-lg font-bold tracking-tight">{value}</p>
+          )}
+          {hint ? <p className="mt-0.5 text-[11px] text-muted-foreground">{hint}</p> : null}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function DetailSection({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="space-y-2">
+      <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        {title}
+      </h3>
+      {children}
+    </section>
+  );
+}
+
+function DetailGrid({ children }: { children: ReactNode }) {
+  return <div className="grid grid-cols-2 gap-3">{children}</div>;
 }
 
 function Field({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className="mt-0.5 font-medium">{value}</p>
     </div>
   );

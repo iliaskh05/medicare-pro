@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/user-avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -115,11 +115,11 @@ export function AppHeader() {
               type="button"
               className="flex items-center gap-2 rounded-md px-1.5 py-1 transition-colors hover:bg-muted/70"
             >
-              <Avatar className="size-8">
-                <AvatarFallback className="bg-primary-soft text-[11px] font-semibold text-primary">
-                  {profile.initiales}
-                </AvatarFallback>
-              </Avatar>
+              <UserAvatar
+                initiales={profile.initiales}
+                className="size-8"
+                fallbackClassName="bg-primary-soft text-[11px] font-semibold text-primary"
+              />
               <div className="hidden text-left leading-tight sm:block">
                 <p className="text-sm font-semibold">{profile.nom}</p>
                 <p className="text-[11px] text-muted-foreground">{profile.fonction}</p>

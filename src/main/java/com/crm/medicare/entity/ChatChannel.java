@@ -2,6 +2,8 @@ package com.crm.medicare.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
@@ -30,6 +32,14 @@ public class ChatChannel {
     private String description;
 
     @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(name = "channel_type", nullable = false, length = 16)
+    private ChatChannelType channelType = ChatChannelType.GROUP;
+
+    @Column(name = "created_by")
+    private Long createdBy;
+
+    @Builder.Default
     @Column(name = "members_count", nullable = false)
     private Integer membersCount = 0;
 
@@ -46,6 +56,9 @@ public class ChatChannel {
         }
         if (membersCount == null) {
             membersCount = 0;
+        }
+        if (channelType == null) {
+            channelType = ChatChannelType.GROUP;
         }
     }
 }

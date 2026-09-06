@@ -185,6 +185,10 @@ public class AuthService {
 
     private AuthResponse toAuthResponse(Utilisateur utilisateur) {
         String token = jwtUtils.generateToken(utilisateur);
+        String avatarUrl =
+                utilisateur.getAvatarStorageKey() != null && !utilisateur.getAvatarStorageKey().isBlank()
+                        ? "/api/me/avatar"
+                        : null;
         return AuthResponse.builder()
                 .token(token)
                 .utilisateur(
@@ -192,6 +196,7 @@ public class AuthService {
                                 .id(utilisateur.getId())
                                 .nom(utilisateur.getNomComplet())
                                 .role(utilisateur.getRole())
+                                .avatarUrl(avatarUrl)
                                 .build())
                 .build();
     }

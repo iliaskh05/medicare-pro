@@ -16,8 +16,15 @@ import lombok.NoArgsConstructor;
 public class DashboardKpisDto {
 
     private long patientsDuJour;
+    private long patientsSemaine;
+    private long patientsMois;
     private long actesRealises;
+    /** CA du mois (rétrocompat FE). */
     private BigDecimal chiffreAffaires;
+    private BigDecimal chiffreAffairesJour;
+    private BigDecimal chiffreAffairesSemaine;
+    private BigDecimal chiffreAffairesMois;
+    private BigDecimal chiffreAffairesAnnee;
     private int tauxOccupation;
     /** Minutes ; {@code null} si aucun {@code arrived_at} exploitable. */
     private Double tempsAttenteMoyenMinutes;

@@ -3,29 +3,32 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   chatSocketUrl,
   fetchChannelMessages,
+  markChannelRead,
   postChannelMessage,
-  type ChannelId,
+  uploadChannelMessage,
   type ChatMessageDto,
 } from "@/lib/api/chat";
+import { refreshChatUnread } from "@/hooks/use-chat-unread";
 
 export type SocketStatus = "connecting" | "open" | "closed" | "polling";
 
-const POLL_MS = 3500;
+const POLL_MS = 2500;
 
 /**
  * Canal de messagerie interne :
- * - historique + envoi via API Java sécurisée (auteur = JWT),
- * - WebSocket si `VITE_WS_URL` est configuré,
- * - sinon polling léger pour rester à jour.
+ * - historique + envoi via API Java (auteur = JWT),
+ * - WebSocket pour push immédiat,
+ * - polling de secours.
  */
 export function useChatChannel(
-  channelId: ChannelId,
+  channelId: string,
   author: { id: string; name: string; role: string },
 ) {
   const [messages, setMessages] = useState<ChatMessageDto[]>([]);
-  const [status, setStatus] = useState<SocketStatus>("closed");
+  const [status, setStatus] = useState<SocketStatus>("polling");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<string | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
   const sendingRef = useRef(false);
 
@@ -51,6 +54,11 @@ export function useChatChannel(
     fetchChannelMessages(channelId)
       .then((remote) => {
         if (!cancelled && remote) setMessages(remote);
+        if (!cancelled) {
+          void markChannelRead(channelId)
+            .then(() => refreshChatUnread())
+            .catch(() => undefined);
+        }
       })
       .catch((e: unknown) => {
         if (!cancelled) setError(e instanceof Error ? e : new Error("Historique indisponible"));
@@ -65,16 +73,25 @@ export function useChatChannel(
   }, [channelId]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const wsConfigured = Boolean(import.meta.env?.["VITE_WS_URL"]);
-    if (wsConfigured) {
-      const url = chatSocketUrl(channelId);
-      setStatus("connecting");
-      const socket = new WebSocket(url);
+    if (typeof window === "undefined" || !channelId) return;
+
+    setStatus("connecting");
+    let wsOpen = false;
+
+    try {
+      const socket = new WebSocket(chatSocketUrl());
       socketRef.current = socket;
-      socket.onopen = () => setStatus("open");
-      socket.onclose = () => setStatus("closed");
-      socket.onerror = () => setStatus("closed");
+      socket.onopen = () => {
+        wsOpen = true;
+        setStatus("open");
+      };
+      socket.onclose = () => {
+        wsOpen = false;
+        setStatus("polling");
+      };
+      socket.onerror = () => {
+        socket.close();
+      };
       socket.onmessage = (event) => {
         try {
           const incoming = JSON.parse(event.data as string) as ChatMessageDto;
@@ -84,29 +101,33 @@ export function useChatChannel(
             );
           }
         } catch {
-          /* trame non JSON ignorée */
+          /* ignore */
         }
       };
-      return () => {
-        socketRef.current = null;
-        socket.close();
-      };
+    } catch {
+      setStatus("polling");
     }
 
-    setStatus("polling");
-    const tick = () => {
+    const pollId = window.setInterval(() => {
       if (document.visibilityState === "hidden" || sendingRef.current) return;
+      // Si WS ouvert, poll moins critique mais on garde un filet léger
       fetchChannelMessages(channelId)
         .then((remote) => {
           if (remote) mergeMessages(remote);
           setError(null);
+          if (!wsOpen) setStatus("polling");
         })
         .catch(() => {
-          /* silencieux en polling pour éviter le bruit UI */
+          /* silencieux */
         });
+    }, POLL_MS);
+
+    return () => {
+      window.clearInterval(pollId);
+      const s = socketRef.current;
+      socketRef.current = null;
+      s?.close();
     };
-    const id = window.setInterval(tick, POLL_MS);
-    return () => window.clearInterval(id);
   }, [channelId, mergeMessages]);
 
   const sendMessage = useCallback(
@@ -120,6 +141,7 @@ export function useChatChannel(
         authorId: author.id,
         authorName: author.name,
         authorRole: author.role,
+        messageType: "TEXT",
         body: trimmed,
         createdAt: new Date().toISOString(),
       };
@@ -139,6 +161,7 @@ export function useChatChannel(
       } catch (e) {
         setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
         setError(e instanceof Error ? e : new Error("Envoi impossible"));
+        throw e;
       } finally {
         sendingRef.current = false;
       }
@@ -146,5 +169,30 @@ export function useChatChannel(
     [channelId, author.id, author.name, author.role],
   );
 
-  return { messages, status, isLoading, error, sendMessage };
+  const sendFile = useCallback(
+    async (file: File, caption?: string, durationSeconds?: number) => {
+      sendingRef.current = true;
+      setUploadProgress(file.name);
+      try {
+        const saved = await uploadChannelMessage(channelId, file, caption, {
+          durationSeconds,
+        });
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === saved.id)) return prev;
+          return [...prev, saved];
+        });
+        setError(null);
+        return saved;
+      } catch (e) {
+        setError(e instanceof Error ? e : new Error("Upload impossible"));
+        throw e;
+      } finally {
+        sendingRef.current = false;
+        setUploadProgress(null);
+      }
+    },
+    [channelId],
+  );
+
+  return { messages, status, isLoading, error, uploadProgress, sendMessage, sendFile };
 }

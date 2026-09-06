@@ -120,7 +120,7 @@ function LoginPage() {
 
       const data = (await response.json()) as {
         token?: string;
-        utilisateur?: { id?: number; nom?: string; role?: string };
+        utilisateur?: { id?: number; nom?: string; role?: string; avatarUrl?: string };
       };
 
       if (!data.token) {
@@ -139,6 +139,11 @@ function LoginPage() {
           nomComplet: data.utilisateur.nom ?? "",
         };
         window.localStorage.setItem(AUTH_USER_KEY, JSON.stringify(utilisateur));
+        if (utilisateur.avatarUrl) {
+          window.dispatchEvent(
+            new CustomEvent("radiocrm:avatar", { detail: utilisateur.avatarUrl }),
+          );
+        }
       }
 
       // 2) Navigation uniquement après stockage confirmé

@@ -546,7 +546,10 @@ function WorklistPage() {
                                   numeroDossier: i.numSejour || String(i.patientId),
                                   ...(i.cin ? { cin: i.cin } : {}),
                                   examen: i.description || i.modalite,
-                                  dateHeure: i.dateExamen,
+                                  ...(i.salle ? { salle: i.salle } : {}),
+                                  ...(i.dateExamen
+                                    ? { dateHeure: i.dateExamen, heure: i.dateExamen.slice(11, 16) }
+                                    : {}),
                                 }}
                               />
                             ) : null}

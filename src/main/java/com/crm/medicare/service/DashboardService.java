@@ -86,10 +86,32 @@ public class DashboardService {
     public DashboardKpisDto getKpis() {
         LocalDate today = LocalDate.now(ZONE);
         List<Examen> todayExams = examsOfDay(today);
-        BigDecimal ca = canReadInvoice() ? monthRecordedRevenue(today) : BigDecimal.ZERO;
+        BigDecimal caMois = canReadInvoice() ? recordedRevenueBetween(
+                today.withDayOfMonth(1),
+                today.plusMonths(1).withDayOfMonth(1)) : BigDecimal.ZERO;
+        BigDecimal caJour =
+                canReadInvoice() ? recordedRevenueBetween(today, today.plusDays(1)) : BigDecimal.ZERO;
+        BigDecimal caAnnee =
+                canReadInvoice()
+                        ? recordedRevenueBetween(today.withDayOfYear(1), today.plusYears(1).withDayOfYear(1))
+                        : BigDecimal.ZERO;
         Double wait = DashboardMetrics.averageWaitMinutes(todayExams);
         Integer occupationOverride = resourceOccupationPercent(today);
-        return DashboardMetrics.kpis(todayExams, ca, wait, occupationOverride);
+        DashboardKpisDto dto = DashboardMetrics.kpis(todayExams, caMois, wait, occupationOverride);
+
+        LocalDate weekStart = today.minusDays(today.getDayOfWeek().getValue() - 1L);
+        BigDecimal caSemaine =
+                canReadInvoice() ? recordedRevenueBetween(weekStart, today.plusDays(1)) : BigDecimal.ZERO;
+        long patientsSemaine = countDistinctPatients(weekStart, today.plusDays(1));
+        long patientsMois = countDistinctPatients(today.withDayOfMonth(1), today.plusDays(1));
+
+        dto.setChiffreAffairesJour(caJour);
+        dto.setChiffreAffairesSemaine(caSemaine);
+        dto.setChiffreAffairesMois(caMois);
+        dto.setChiffreAffairesAnnee(caAnnee);
+        dto.setPatientsSemaine(patientsSemaine);
+        dto.setPatientsMois(patientsMois);
+        return dto;
     }
 
     @Transactional(readOnly = true)
@@ -121,8 +143,13 @@ public class DashboardService {
      * Si aucune facture dans la période → 0 (jamais inventé).
      */
     private BigDecimal monthRecordedRevenue(LocalDate today) {
-        LocalDateTime debut = today.withDayOfMonth(1).atStartOfDay();
-        LocalDateTime fin = today.plusMonths(1).withDayOfMonth(1).atStartOfDay();
+        return recordedRevenueBetween(
+                today.withDayOfMonth(1), today.plusMonths(1).withDayOfMonth(1));
+    }
+
+    private BigDecimal recordedRevenueBetween(LocalDate startInclusive, LocalDate endExclusive) {
+        LocalDateTime debut = startInclusive.atStartOfDay();
+        LocalDateTime fin = endExclusive.atStartOfDay();
         BigDecimal fromInvoices =
                 invoiceRepository.sumAmountPaidBetween(
                         debut,
@@ -134,7 +161,6 @@ public class DashboardService {
         if (fromInvoices != null && fromInvoices.compareTo(BigDecimal.ZERO) > 0) {
             return fromInvoices;
         }
-        // fallback examens.montant uniquement si aucune encaissement facture
         if (fromInvoices != null && invoiceRepository.count() == 0) {
             BigDecimal sum =
                     examenRepository.sumRecordedMontantBetween(
@@ -144,6 +170,13 @@ public class DashboardService {
             return sum != null ? sum : BigDecimal.ZERO;
         }
         return fromInvoices != null ? fromInvoices : BigDecimal.ZERO;
+    }
+
+    private long countDistinctPatients(LocalDate startInclusive, LocalDate endExclusive) {
+        return examenRepository.countDistinctPatientsBetween(
+                startInclusive.atStartOfDay(),
+                endExclusive.atStartOfDay(),
+                EnumSet.of(EncounterStatus.CANCELLED, EncounterStatus.NO_SHOW));
     }
 
     /**

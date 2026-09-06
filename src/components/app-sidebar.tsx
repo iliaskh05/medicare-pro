@@ -5,9 +5,11 @@ import {
   Clock,
   Contact,
   Database,
+  DoorOpen,
   FileText,
   FolderOpen,
   LayoutDashboard,
+  MessageSquare,
   ReceiptText,
   ScanLine,
   Settings,
@@ -29,11 +31,13 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import logoRadioCrm from "@/assets/logo-radiocrm.png";
 import { useRole } from "@/hooks/use-role";
+import { useChatUnread } from "@/hooks/use-chat-unread";
 
 type NavItem = {
   title: string;
@@ -41,6 +45,7 @@ type NavItem = {
   icon: typeof Users;
   finance?: boolean;
   fraude?: boolean;
+  chat?: boolean;
 };
 
 const navGroups: { label: string; items: NavItem[] }[] = [
@@ -57,11 +62,16 @@ const navGroups: { label: string; items: NavItem[] }[] = [
     items: [
       { title: "Accueil / Admissions", url: "/accueil", icon: UserRound },
       { title: "Rendez-vous", url: "/agenda", icon: CalendarDays },
+      { title: "Salles", url: "/salles", icon: DoorOpen },
       { title: "File d'attente", url: "/file-attente", icon: Clock },
       { title: "Examens", url: "/worklist", icon: ClipboardList },
       { title: "Comptes rendus", url: "/comptes-rendus", icon: FileText },
       { title: "Numérisation", url: "/numerisation", icon: ScanLine },
     ],
+  },
+  {
+    label: "Communication",
+    items: [{ title: "Messagerie interne", url: "/chat", icon: MessageSquare, chat: true }],
   },
   {
     label: "Catalogue",
@@ -100,6 +110,7 @@ const navGroups: { label: string; items: NavItem[] }[] = [
 export function AppSidebar() {
   const currentPath = useRouterState({ select: (r) => r.location.pathname });
   const { profile } = useRole();
+  const { totalUnread } = useChatUnread({ enabled: true });
   const visibleGroups = navGroups
     .map((group) => ({
       ...group,
@@ -143,6 +154,11 @@ export function AppSidebar() {
                         <span>{item.title}</span>
                       </Link>
                     </SidebarMenuButton>
+                    {item.chat && totalUnread > 0 ? (
+                      <SidebarMenuBadge className="bg-destructive text-destructive-foreground">
+                        {totalUnread > 99 ? "99+" : totalUnread}
+                      </SidebarMenuBadge>
+                    ) : null}
                   </SidebarMenuItem>
                 ))}
               </SidebarMenu>
@@ -160,3 +176,4 @@ export function AppSidebar() {
     </Sidebar>
   );
 }
+

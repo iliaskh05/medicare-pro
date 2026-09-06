@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
   BadgeCheck,
   Bell,
   Building2,
+  Camera,
   History,
   KeyRound,
   Loader2,
@@ -28,12 +29,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { EmptyState, PageHeader, Pill } from "@/components/ui-kit";
 import { WriteGuard } from "@/components/permission-guard";
+import { UserAvatar } from "@/components/user-avatar";
 import { useRole } from "@/hooks/use-role";
 import { useTheme } from "@/hooks/use-theme";
 import { fetchMyPreferences, saveMyPreference } from "@/lib/api/preferences";
+import { uploadMyAvatar } from "@/lib/api/profile";
 import { fetchSettings, saveSettings } from "@/lib/api/settings";
 import { cn } from "@/lib/utils";
 
@@ -64,7 +66,23 @@ function MonCompte() {
   const { profile, user } = useRole();
   const [form, setForm] = useState({ actuel: "", nouveau: "", confirmation: "" });
   const [errors, setErrors] = useState<PasswordErrors>({});
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
+  const onAvatarPick = (file: File | undefined) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Formats acceptés : JPEG, PNG, WebP, GIF");
+      return;
+    }
+    setUploadingAvatar(true);
+    void uploadMyAvatar(file)
+      .then(() => toast.success("Photo de profil mise à jour"))
+      .catch((e: unknown) =>
+        toast.error(e instanceof Error ? e.message : "Upload photo impossible"),
+      )
+      .finally(() => setUploadingAvatar(false));
+  };
   const submit = () => {
     const next: PasswordErrors = {};
     if (!form.actuel.trim()) next.actuel = "Champ obligatoire";
@@ -95,14 +113,42 @@ function MonCompte() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center gap-3">
-            <Avatar className="size-12">
-              <AvatarFallback className="bg-primary font-semibold text-primary-foreground">
-                {profile.initiales}
-              </AvatarFallback>
-            </Avatar>
+            <div className="relative">
+              <UserAvatar
+                initiales={profile.initiales}
+                className="size-12"
+                fallbackClassName="bg-primary font-semibold text-primary-foreground"
+              />
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                className="hidden"
+                onChange={(e) => {
+                  onAvatarPick(e.target.files?.[0]);
+                  e.target.value = "";
+                }}
+              />
+              <Button
+                type="button"
+                size="icon"
+                variant="secondary"
+                className="absolute -bottom-1 -right-1 size-7 rounded-full"
+                disabled={uploadingAvatar}
+                aria-label="Changer la photo de profil"
+                onClick={() => fileRef.current?.click()}
+              >
+                {uploadingAvatar ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : (
+                  <Camera className="size-3.5" />
+                )}
+              </Button>
+            </div>
             <div className="min-w-0">
               <p className="truncate font-semibold">{profile.nom}</p>
               <p className="truncate text-xs text-muted-foreground">{profile.fonction}</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">JPEG, PNG, WebP ou GIF · max 2 Mo</p>
             </div>
           </div>
           <Separator />

@@ -297,19 +297,21 @@ export function RoleProvider({ children }: { children: ReactNode }) {
 export function useRole(): RoleContextValue {
   const ctx = useContext(RoleContext);
   if (!ctx) {
+    // Hors provider : ne jamais exposer les droits direction (évite le lien Audit fantôme).
+    const safe = roleProfiles.accueil;
     return {
-      role: "directeur",
-      backendRole: "DIRECTEUR",
+      role: "accueil",
+      backendRole: "SECRETARIAT",
       userId: null,
-      profile: roleProfiles.directeur,
-      user: toUser(roleProfiles.directeur),
-      can: (permission) => rbacHasPermission("DIRECTEUR", permission),
-      canAccess: (resource) => rbacCanAccess("DIRECTEUR", resource),
-      canCreate: (resource) => rbacCanCreate("DIRECTEUR", resource),
-      canEdit: (resource) => rbacCanEdit("DIRECTEUR", resource),
-      canValidate: (resource) => rbacCanValidate("DIRECTEUR", resource),
-      canExport: (resource) => rbacCanExport("DIRECTEUR", resource),
-      hasPermission: (permission) => roleProfiles.directeur[permission],
+      profile: { ...safe, canSeeFraudModule: false },
+      user: toUser(safe),
+      can: (permission) => rbacHasPermission("SECRETARIAT", permission),
+      canAccess: (resource) => rbacCanAccess("SECRETARIAT", resource),
+      canCreate: (resource) => rbacCanCreate("SECRETARIAT", resource),
+      canEdit: (resource) => rbacCanEdit("SECRETARIAT", resource),
+      canValidate: (resource) => rbacCanValidate("SECRETARIAT", resource),
+      canExport: (resource) => rbacCanExport("SECRETARIAT", resource),
+      hasPermission: (permission) => safe[permission],
     };
   }
   return ctx;

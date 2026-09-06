@@ -86,7 +86,8 @@ function isAbortError(error: unknown): boolean {
 
 /**
  * Point d'entrée HTTP unique. Attache le JWT Bearer.
- * 401/403 Java : nettoyage de session + redirection login (contrat frontend).
+ * 401 Java : nettoyage de session + redirection login.
+ * 403 : Accès refusé sans déconnexion.
  */
 export async function httpRequest<T>(
   base: string | undefined,
@@ -123,12 +124,14 @@ export async function httpRequest<T>(
       throw new ApiError("Requête annulée", 0, "aborted");
     }
 
-    if (isJavaApi && (res.status === 401 || res.status === 403)) {
-      const payload = await parseErrorPayload(
-        res,
-        res.status === 401 ? "Session expirée — reconnexion requise" : "Accès refusé",
-      );
+    if (isJavaApi && res.status === 401) {
+      const payload = await parseErrorPayload(res, "Session expirée — reconnexion requise");
       clearSessionAndRedirectToLogin();
+      throw new ApiError(payload.message, res.status, payload.code);
+    }
+
+    if (isJavaApi && res.status === 403) {
+      const payload = await parseErrorPayload(res, "Accès refusé");
       throw new ApiError(payload.message, res.status, payload.code);
     }
 
@@ -195,12 +198,14 @@ export async function javaApiForm<T>(
       throw new ApiError("Requête annulée", 0, "aborted");
     }
 
-    if (res.status === 401 || res.status === 403) {
-      const payload = await parseErrorPayload(
-        res,
-        res.status === 401 ? "Session expirée — reconnexion requise" : "Accès refusé",
-      );
+    if (res.status === 401) {
+      const payload = await parseErrorPayload(res, "Session expirée — reconnexion requise");
       clearSessionAndRedirectToLogin();
+      throw new ApiError(payload.message, res.status, payload.code);
+    }
+
+    if (res.status === 403) {
+      const payload = await parseErrorPayload(res, "Accès refusé");
       throw new ApiError(payload.message, res.status, payload.code);
     }
 
@@ -260,12 +265,14 @@ export async function javaApiBlob(
       throw new ApiError("Requête annulée", 0, "aborted");
     }
 
-    if (res.status === 401 || res.status === 403) {
-      const payload = await parseErrorPayload(
-        res,
-        res.status === 401 ? "Session expirée — reconnexion requise" : "Accès refusé",
-      );
+    if (res.status === 401) {
+      const payload = await parseErrorPayload(res, "Session expirée — reconnexion requise");
       clearSessionAndRedirectToLogin();
+      throw new ApiError(payload.message, res.status, payload.code);
+    }
+
+    if (res.status === 403) {
+      const payload = await parseErrorPayload(res, "Accès refusé");
       throw new ApiError(payload.message, res.status, payload.code);
     }
 

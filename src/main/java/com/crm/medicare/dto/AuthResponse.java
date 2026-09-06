@@ -24,5 +24,7 @@ public class AuthResponse {
         private Long id;
         private String nom;
         private RoleUtilisateur role;
+        /** Présent si une photo de profil est stockée ; URL relative API (JWT). */
+        private String avatarUrl;
     }
 }

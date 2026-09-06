@@ -48,7 +48,9 @@ class FlywayMigrationConventionTest {
                         "V16__chat_messaging.sql",
                         "V17__anomaly_operations.sql",
                         "V18__patient_clinical_dictionaries_prefs.sql",
-                        "V19__report_templates_complementary.sql");
+                        "V19__report_templates_complementary.sql",
+                        "V20__chat_direct_attachments.sql",
+                        "V21__chat_audio_reads_avatar.sql");
 
         String v3 = read(resources, "V3__schema_hardening.sql");
         assertThat(v3)

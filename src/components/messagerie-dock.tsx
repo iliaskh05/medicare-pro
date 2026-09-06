@@ -1,19 +1,31 @@
-import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, ChevronDown, MessageSquare, Minus, Send, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  ArrowLeft,
+  ChevronDown,
+  Loader2,
+  MessageSquare,
+  Minus,
+  Search,
+  X,
+} from "lucide-react";
+import { toast } from "sonner";
 
+import { MessageInput } from "@/components/chat/message-input";
+import { MessageList } from "@/components/chat/message-list";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/empty-state";
-import { cn } from "@/lib/utils";
-import { channels } from "@/data/chat-channels";
 import { useChatChannel } from "@/hooks/use-chat-channel";
+import { useChatUnread, setChatActiveChannel } from "@/hooks/use-chat-unread";
 import { useRole } from "@/hooks/use-role";
-import type { ChannelId } from "@/lib/api/chat";
+import {
+  openDirectChat,
+  searchChatDirectory,
+  type ChatDirectoryUserDto,
+} from "@/lib/api/chat";
 
-/** Initiales d'un nom pour l'avatar (aucune donnée stockée). */
 function initiales(name: string) {
   return name
     .split(/[\s-]+/)
@@ -23,109 +35,97 @@ function initiales(name: string) {
     .join("");
 }
 
-function heure(iso: string) {
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime())
-    ? ""
-    : d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
-}
-
-/** Fil actif : historique chargé depuis le backend et envoi temps réel. */
-function ChannelThread({ channelId }: { channelId: ChannelId }) {
+function ChannelThread({ channelId, channelName }: { channelId: string; channelName: string }) {
   const { profile, userId, backendRole } = useRole();
   const authorId = userId ?? "anonymous";
-  const { messages, isLoading, error, sendMessage } = useChatChannel(channelId, {
-    id: authorId,
-    name: profile.nom,
-    role: backendRole,
-  });
-  const [draft, setDraft] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    inputRef.current?.focus();
-    bottomRef.current?.scrollIntoView({ block: "end" });
-  }, [channelId, messages.length]);
+  const { messages, isLoading, error, uploadProgress, sendMessage, sendFile } = useChatChannel(
+    channelId,
+    {
+      id: authorId,
+      name: profile.nom,
+      role: backendRole,
+    },
+  );
 
   return (
     <>
-      <ScrollArea className="flex-1">
-        <div className="space-y-3 p-3">
-          {isLoading ? (
-            <div className="space-y-3">
-              <Skeleton className="h-10 w-3/4" />
-              <Skeleton className="ml-auto h-10 w-2/3" />
-              <Skeleton className="h-10 w-1/2" />
-            </div>
-          ) : error ? (
-            <p className="py-6 text-center text-sm text-muted-foreground">
-              Historique indisponible.
-            </p>
-          ) : messages.length === 0 ? (
-            <p className="py-6 text-center text-sm text-muted-foreground">
-              Aucune donnée disponible
-            </p>
-          ) : (
-            messages.map((m) => {
-              const mine = m.authorId === authorId;
-              return (
-                <div key={m.id} className={cn("flex flex-col", mine ? "items-end" : "items-start")}>
-                  {!mine ? (
-                    <span className="mb-1 text-[11px] font-semibold text-muted-foreground">
-                      {m.authorName}
-                    </span>
-                  ) : null}
-                  <div
-                    className={cn(
-                      "max-w-[85%] rounded-2xl px-3 py-2 text-sm",
-                      mine ? "bg-primary text-primary-foreground" : "bg-muted text-foreground",
-                    )}
-                  >
-                    {m.body}
-                  </div>
-                  <span className="mt-1 text-[11px] text-muted-foreground">
-                    {heure(m.createdAt)}
-                  </span>
-                </div>
-              );
-            })
-          )}
-          <div ref={bottomRef} />
-        </div>
-      </ScrollArea>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          const texte = draft.trim();
-          if (!texte) return;
-          setDraft("");
-          void sendMessage(texte);
-        }}
-        className="flex items-center gap-2 border-t border-border p-2"
-      >
-        <Input
-          ref={inputRef}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          placeholder="Écrire un message…"
-          className="h-9"
-          aria-label="Nouveau message"
+      {error ? (
+        <p className="px-3 py-2 text-center text-xs text-muted-foreground">{error.message}</p>
+      ) : null}
+      <div className="flex min-h-0 flex-1 flex-col">
+        <MessageList messages={messages} currentAuthorId={authorId} isLoading={isLoading} />
+        <MessageInput
+          channelName={channelName}
+          onSend={sendMessage}
+          onSendFile={sendFile}
+          uploadProgress={uploadProgress}
         />
-        <Button type="submit" size="icon" className="size-9 shrink-0" disabled={!draft.trim()}>
-          <Send className="size-4" />
-          <span className="sr-only">Envoyer</span>
-        </Button>
-      </form>
+      </div>
     </>
   );
 }
 
-/** Fenêtre de messagerie interne rétractable, disponible sur toute la plateforme. */
+/** Fenêtre de messagerie interne rétractable. */
 export function MessagerieDock() {
   const [open, setOpen] = useState(false);
-  const [activeId, setActiveId] = useState<ChannelId | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const [hits, setHits] = useState<ChatDirectoryUserDto[]>([]);
+  const [searching, setSearching] = useState(false);
+  const { channels, totalUnread, refresh } = useChatUnread({
+    activeChannelId: open ? activeId : null,
+    enabled: true,
+  });
+
   const active = channels.find((c) => c.id === activeId) ?? null;
+
+  useEffect(() => {
+    setChatActiveChannel(open ? activeId : null);
+    return () => setChatActiveChannel(null);
+  }, [open, activeId]);
+
+  useEffect(() => {
+    if (open) void refresh();
+  }, [open, refresh]);
+
+  useEffect(() => {
+    const q = query.trim();
+    if (q.length < 2) {
+      setHits([]);
+      return;
+    }
+    const controller = new AbortController();
+    setSearching(true);
+    const t = window.setTimeout(() => {
+      searchChatDirectory(q, controller.signal)
+        .then(setHits)
+        .catch(() => setHits([]))
+        .finally(() => setSearching(false));
+    }, 280);
+    return () => {
+      window.clearTimeout(t);
+      controller.abort();
+    };
+  }, [query]);
+
+  const groups = useMemo(
+    () => channels.filter((c) => (c.type ?? "GROUP") === "GROUP"),
+    [channels],
+  );
+  const directs = useMemo(() => channels.filter((c) => c.type === "DIRECT"), [channels]);
+
+  const startDirect = async (user: ChatDirectoryUserDto) => {
+    try {
+      const ch = await openDirectChat(user.id);
+      setQuery("");
+      setHits([]);
+      refresh();
+      setActiveId(ch.id);
+      toast.success(`Discussion avec ${user.nomComplet}`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Impossible d'ouvrir la discussion");
+    }
+  };
 
   if (!open) {
     return (
@@ -133,7 +133,14 @@ export function MessagerieDock() {
         onClick={() => setOpen(true)}
         className="fixed bottom-[4.75rem] right-5 z-40 h-11 gap-2 rounded-full pl-4 pr-5 shadow-elevated"
       >
-        <MessageSquare className="size-5" />
+        <span className="relative">
+          <MessageSquare className="size-5" />
+          {totalUnread > 0 ? (
+            <span className="absolute -right-1.5 -top-1.5 flex size-4 items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-destructive-foreground">
+              {totalUnread > 9 ? "9+" : totalUnread}
+            </span>
+          ) : null}
+        </span>
         <span className="hidden sm:inline">Messagerie interne</span>
       </Button>
     );
@@ -142,7 +149,7 @@ export function MessagerieDock() {
   return (
     <section
       aria-label="Messagerie interne"
-      className="fixed bottom-[4.75rem] right-5 z-40 flex h-[30rem] w-[min(22rem,calc(100vw-2.5rem))] flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-elevated"
+      className="fixed bottom-[4.75rem] right-5 z-40 flex h-[32rem] w-[min(24rem,calc(100vw-2.5rem))] flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-elevated"
     >
       <header className="flex items-center gap-2 border-b border-border bg-primary px-3 py-2.5 text-primary-foreground">
         {active ? (
@@ -161,7 +168,9 @@ export function MessagerieDock() {
             {active ? active.name : "Messagerie interne"}
           </p>
           <p className="truncate text-xs opacity-80">
-            {active ? active.description : `${channels.length} canaux du centre`}
+            {active
+              ? active.description || (active.type === "DIRECT" ? "Privé" : "")
+              : `${channels.length} conversation(s)`}
           </p>
         </div>
         <button
@@ -184,33 +193,110 @@ export function MessagerieDock() {
       </header>
 
       {active ? (
-        <ChannelThread channelId={active.id} />
-      ) : channels.length === 0 ? (
-        <EmptyState />
+        <ChannelThread channelId={active.id} channelName={active.name} />
       ) : (
-        <ScrollArea className="flex-1">
-          <ul className="divide-y divide-border">
-            {channels.map((c) => (
-              <li key={c.id}>
-                <button
-                  onClick={() => setActiveId(c.id)}
-                  className="flex w-full items-center gap-3 px-3 py-3 text-left transition-colors hover:bg-accent"
-                >
-                  <Avatar className="size-9">
-                    <AvatarFallback className="bg-primary-soft text-xs font-semibold text-accent-foreground">
-                      {initiales(c.name)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold">{c.name}</p>
-                    <p className="truncate text-xs text-muted-foreground">{c.description}</p>
-                  </div>
-                  <ChevronDown className="size-4 -rotate-90 text-muted-foreground" />
-                </button>
-              </li>
-            ))}
-          </ul>
-        </ScrollArea>
+        <div className="flex min-h-0 flex-1 flex-col">
+          <div className="relative border-b border-border p-2">
+            <Search className="pointer-events-none absolute left-4 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Nom ou email…"
+              className="h-8 pl-8 text-sm"
+            />
+            {searching ? (
+              <Loader2 className="absolute right-4 top-1/2 size-3.5 -translate-y-1/2 animate-spin" />
+            ) : null}
+          </div>
+          {hits.length > 0 ? (
+            <ul className="max-h-28 space-y-0.5 overflow-y-auto border-b border-border p-1">
+              {hits.map((u) => (
+                <li key={u.id}>
+                  <button
+                    type="button"
+                    className="w-full rounded-md px-2 py-1.5 text-left text-xs hover:bg-muted"
+                    onClick={() => void startDirect(u)}
+                  >
+                    <span className="font-medium">{u.nomComplet}</span>
+                    <span className="block truncate text-muted-foreground">{u.email}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {channels.length === 0 ? (
+            <EmptyState />
+          ) : (
+            <ScrollArea className="flex-1">
+              <p className="px-3 pt-2 text-[10px] font-semibold uppercase text-muted-foreground">
+                Groupes
+              </p>
+              <ul className="divide-y divide-border">
+                {groups.map((c) => (
+                  <li key={c.id}>
+                    <button
+                      onClick={() => setActiveId(c.id)}
+                      className="flex w-full items-center gap-3 px-3 py-2.5 text-left hover:bg-accent"
+                    >
+                      <Avatar className="size-8">
+                        <AvatarFallback className="bg-primary-soft text-[10px] font-semibold">
+                          {initiales(c.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold">{c.name}</p>
+                        <p className="truncate text-xs text-muted-foreground">{c.description}</p>
+                      </div>
+                      {(c.unreadCount ?? 0) > 0 ? (
+                        <span className="flex size-5 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
+                          {(c.unreadCount ?? 0) > 9 ? "9+" : c.unreadCount}
+                        </span>
+                      ) : (
+                        <ChevronDown className="size-4 -rotate-90 text-muted-foreground" />
+                      )}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              {directs.length > 0 ? (
+                <>
+                  <p className="px-3 pt-2 text-[10px] font-semibold uppercase text-muted-foreground">
+                    Discussions
+                  </p>
+                  <ul className="divide-y divide-border">
+                    {directs.map((c) => (
+                      <li key={c.id}>
+                        <button
+                          onClick={() => setActiveId(c.id)}
+                          className="flex w-full items-center gap-3 px-3 py-2.5 text-left hover:bg-accent"
+                        >
+                          <Avatar className="size-8">
+                            <AvatarFallback className="bg-primary-soft text-[10px] font-semibold">
+                              {initiales(c.name)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-semibold">{c.name}</p>
+                            <p className="truncate text-xs text-muted-foreground">
+                              {c.peerEmail || "Privé"}
+                            </p>
+                          </div>
+                          {(c.unreadCount ?? 0) > 0 ? (
+                            <span className="flex size-5 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
+                              {(c.unreadCount ?? 0) > 9 ? "9+" : c.unreadCount}
+                            </span>
+                          ) : (
+                            <ChevronDown className="size-4 -rotate-90 text-muted-foreground" />
+                          )}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              ) : null}
+            </ScrollArea>
+          )}
+        </div>
       )}
     </section>
   );

@@ -1,13 +1,11 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
 import {
-  AlertTriangle,
   CalendarPlus,
   ChevronLeft,
   ChevronRight,
   LayoutGrid,
   List,
-  Loader2,
   MoreHorizontal,
   ReceiptText,
   ScanLine,
@@ -16,20 +14,8 @@ import {
   Users,
   Wallet,
 } from "lucide-react";
-import { toast } from "sonner";
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,8 +24,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -56,18 +40,15 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { DataState, LastUpdated } from "@/components/data-state";
+import { PatientCreateDialog } from "@/components/patients/patient-create-dialog";
 import { KpiCard, PageHeader, Pill } from "@/components/ui-kit";
 import { useDisplayPreference } from "@/hooks/use-display-preference";
 import { useRole } from "@/hooks/use-role";
 import { fetchInvoices } from "@/lib/api/billing";
-import { describeApiError, toastMessage, type FriendlyError } from "@/lib/api/errors";
+import { describeApiError, type FriendlyError } from "@/lib/api/errors";
 import {
-  checkPatientDuplicates,
-  createPatient,
   searchPatients,
-  type PatientDuplicateMatch,
   type PatientRow,
-  type PatientWritePayload,
 } from "@/lib/api/patients";
 import { fetchWorklist } from "@/lib/api/worklist";
 import { toLocalDateKey } from "@/lib/date";
@@ -111,58 +92,6 @@ const SEXES = [
 ];
 const PAGE_SIZE = 20;
 
-type Draft = {
-  nom: string;
-  prenom: string;
-  cin: string;
-  dateNaissance: string;
-  sexe: string;
-  telephone: string;
-  email: string;
-  adresse: string;
-  ville: string;
-  mutuelle: string;
-  numAffiliation: string;
-  titre: string;
-  telephoneDomicile: string;
-  telephoneTravail: string;
-  fax: string;
-  pays: string;
-  conventionType: string;
-  vip: boolean;
-  pacemaker: boolean;
-  pregnant: boolean;
-  contrastAllergy: boolean;
-  medicalAlerts: string;
-  force: boolean;
-};
-
-const emptyDraft = (): Draft => ({
-  nom: "",
-  prenom: "",
-  cin: "",
-  dateNaissance: "",
-  sexe: "",
-  telephone: "",
-  email: "",
-  adresse: "",
-  ville: "",
-  mutuelle: "AMO",
-  numAffiliation: "",
-  titre: "",
-  telephoneDomicile: "",
-  telephoneTravail: "",
-  fax: "",
-  pays: "Maroc",
-  conventionType: "",
-  vip: false,
-  pacemaker: false,
-  pregnant: false,
-  contrastAllergy: false,
-  medicalAlerts: "",
-  force: false,
-});
-
 function formatDateLabel(value?: string | null): string {
   if (!value?.trim()) return "—";
   const d = new Date(value);
@@ -176,7 +105,6 @@ function formatDateLabel(value?: string | null): string {
 
 function PatientsPage() {
   const { nouveau } = Route.useSearch();
-  const navigate = useNavigate();
   const { canCreate, canAccess } = useRole();
   const canBilling = canAccess("billing");
   const { setMode, isCardsView } = useDisplayPreference("patients", "table");
@@ -201,10 +129,6 @@ function PatientsPage() {
   const [patientsAvecReste, setPatientsAvecReste] = useState<number | null>(null);
 
   const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState<Draft>(emptyDraft);
-  const [duplicates, setDuplicates] = useState<PatientDuplicateMatch[]>([]);
-  const [checkingDup, setCheckingDup] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (nouveau && canCreate("patients")) setOpen(true);
@@ -311,96 +235,6 @@ function PatientsPage() {
   const viewStatus =
     listStatus === "ready" && filtered.length === 0 ? "empty" : listStatus;
 
-  const canSubmit =
-    draft.nom.trim() !== "" &&
-    draft.cin.trim() !== "" &&
-    (duplicates.length === 0 || draft.force);
-
-  const runDuplicateCheck = useCallback(async (signal?: AbortSignal) => {
-    const cin = draft.cin.trim();
-    if (!cin) {
-      setDuplicates([]);
-      return [];
-    }
-    setCheckingDup(true);
-    try {
-      const dupParams: { nom?: string; cin?: string; telephone?: string; naissance?: string } = {
-        cin,
-      };
-      const nom = [draft.nom, draft.prenom].filter(Boolean).join(" ").trim();
-      if (nom) dupParams.nom = nom;
-      if (draft.telephone.trim()) dupParams.telephone = draft.telephone.trim();
-      if (draft.dateNaissance) dupParams.naissance = draft.dateNaissance;
-
-      const matches = await checkPatientDuplicates(dupParams, signal);
-      setDuplicates(matches);
-      if (matches.length > 0) {
-        setDraft((d) => ({ ...d, force: false }));
-      }
-      return matches;
-    } catch (e) {
-      toast.error(toastMessage(e));
-      return [];
-    } finally {
-      setCheckingDup(false);
-    }
-  }, [draft.cin, draft.nom, draft.prenom, draft.telephone, draft.dateNaissance]);
-
-  const submitDraft = useCallback(async () => {
-    if (!canSubmit) return;
-    setIsSaving(true);
-    try {
-      let matches = duplicates;
-      if (matches.length === 0) {
-        matches = await runDuplicateCheck();
-        if (matches.length > 0 && !draft.force) {
-          setIsSaving(false);
-          return;
-        }
-      }
-
-      const payload: PatientWritePayload = {
-        nom: draft.nom.trim(),
-        nomComplet: [draft.nom, draft.prenom].filter(Boolean).join(" ").trim(),
-        cin: draft.cin.trim().toUpperCase(),
-        mutuelle: draft.mutuelle,
-        vip: draft.vip,
-        pacemaker: draft.pacemaker,
-        pregnant: draft.pregnant,
-        contrastAllergy: draft.contrastAllergy,
-      };
-      if (draft.prenom.trim()) payload.prenom = draft.prenom.trim();
-      if (draft.dateNaissance) payload.dateNaissance = draft.dateNaissance;
-      if (draft.sexe) payload.sexe = draft.sexe;
-      if (draft.telephone.trim()) payload.telephone = draft.telephone.trim();
-      if (draft.email.trim()) payload.email = draft.email.trim();
-      if (draft.adresse.trim()) payload.adresse = draft.adresse.trim();
-      if (draft.ville.trim()) payload.ville = draft.ville.trim();
-      if (draft.numAffiliation.trim()) payload.numAffiliation = draft.numAffiliation.trim();
-      if (draft.titre.trim()) payload.titre = draft.titre.trim();
-      if (draft.telephoneDomicile.trim()) payload.telephoneDomicile = draft.telephoneDomicile.trim();
-      if (draft.telephoneTravail.trim()) payload.telephoneTravail = draft.telephoneTravail.trim();
-      if (draft.fax.trim()) payload.fax = draft.fax.trim();
-      if (draft.pays.trim()) payload.pays = draft.pays.trim();
-      if (draft.conventionType.trim()) payload.conventionType = draft.conventionType.trim();
-      if (draft.medicalAlerts.trim()) payload.medicalAlerts = draft.medicalAlerts.trim();
-      if (matches.length > 0) payload.force = true;
-
-      const created = await createPatient(payload);
-      setDraft(emptyDraft());
-      setDuplicates([]);
-      setOpen(false);
-      setPage(0);
-      setReloadKey((k) => k + 1);
-      toast.success(`Dossier créé pour ${created.nomComplet}`);
-      void navigate({ to: "/patient/$patientId", params: { patientId: created.id } });
-    } catch (e) {
-      toast.error(toastMessage(e));
-    } finally {
-      setIsSaving(false);
-    }
-  }, [canSubmit, duplicates, draft, navigate, runDuplicateCheck]);
-
   const soldeLabel = (patientId: string): string => {
     if (!canBilling || patientsAvecReste === null) return "—";
     const solde = soldeByPatient.get(patientId) ?? 0;
@@ -436,301 +270,21 @@ function PatientsPage() {
               <LayoutGrid className="mr-1.5 size-4" /> Cartes
             </Button>
             {canCreate("patients") ? (
-              <Dialog
-                open={open}
-                onOpenChange={(v) => {
-                  setOpen(v);
-                  if (!v) {
-                    setDraft(emptyDraft());
-                    setDuplicates([]);
-                  }
-                }}
-              >
-                <DialogTrigger asChild>
-                  <Button>
-                    <UserPlus className="mr-2 size-4" /> Nouveau patient
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
-                  <DialogHeader>
-                    <DialogTitle>Nouveau dossier patient</DialogTitle>
-                    <DialogDescription>
-                      Identité, contact et couverture. Un contrôle anti-doublon s&apos;exécute sur
-                      le CIN.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="pat-nom">Nom *</Label>
-                      <Input
-                        id="pat-nom"
-                        value={draft.nom}
-                        onChange={(e) => setDraft((d) => ({ ...d, nom: e.target.value }))}
-                        autoComplete="family-name"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="pat-prenom">Prénom</Label>
-                      <Input
-                        id="pat-prenom"
-                        value={draft.prenom}
-                        onChange={(e) => setDraft((d) => ({ ...d, prenom: e.target.value }))}
-                        autoComplete="given-name"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="pat-cin">CIN *</Label>
-                      <Input
-                        id="pat-cin"
-                        value={draft.cin}
-                        onChange={(e) =>
-                          setDraft((d) => ({ ...d, cin: e.target.value, force: false }))
-                        }
-                        onBlur={() => void runDuplicateCheck()}
-                        autoComplete="off"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="pat-naissance">Date de naissance</Label>
-                      <Input
-                        id="pat-naissance"
-                        type="date"
-                        value={draft.dateNaissance}
-                        onChange={(e) =>
-                          setDraft((d) => ({ ...d, dateNaissance: e.target.value }))
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Sexe</Label>
-                      <Select
-                        value={draft.sexe || "unset"}
-                        onValueChange={(v) =>
-                          setDraft((d) => ({ ...d, sexe: v === "unset" ? "" : v }))
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Non précisé" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="unset">Non précisé</SelectItem>
-                          <SelectItem value="M">Masculin</SelectItem>
-                          <SelectItem value="F">Féminin</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="pat-tel">Téléphone</Label>
-                      <Input
-                        id="pat-tel"
-                        value={draft.telephone}
-                        onChange={(e) => setDraft((d) => ({ ...d, telephone: e.target.value }))}
-                        inputMode="tel"
-                      />
-                    </div>
-                    <div className="space-y-2 sm:col-span-2">
-                      <Label htmlFor="pat-email">Email</Label>
-                      <Input
-                        id="pat-email"
-                        type="email"
-                        value={draft.email}
-                        onChange={(e) => setDraft((d) => ({ ...d, email: e.target.value }))}
-                      />
-                    </div>
-                    <div className="space-y-2 sm:col-span-2">
-                      <Label htmlFor="pat-adresse">Adresse</Label>
-                      <Input
-                        id="pat-adresse"
-                        value={draft.adresse}
-                        onChange={(e) => setDraft((d) => ({ ...d, adresse: e.target.value }))}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="pat-ville">Ville</Label>
-                      <Input
-                        id="pat-ville"
-                        value={draft.ville}
-                        onChange={(e) => setDraft((d) => ({ ...d, ville: e.target.value }))}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Mutuelle</Label>
-                      <Select
-                        value={draft.mutuelle}
-                        onValueChange={(v) => setDraft((d) => ({ ...d, mutuelle: v }))}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {MUTUELLES.map((m) => (
-                            <SelectItem key={m} value={m}>
-                              {m}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2 sm:col-span-2">
-                      <Label htmlFor="pat-affil">N° affiliation</Label>
-                      <Input
-                        id="pat-affil"
-                        value={draft.numAffiliation}
-                        onChange={(e) =>
-                          setDraft((d) => ({ ...d, numAffiliation: e.target.value }))
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="pat-titre">Civilité</Label>
-                      <Input
-                        id="pat-titre"
-                        value={draft.titre}
-                        onChange={(e) => setDraft((d) => ({ ...d, titre: e.target.value }))}
-                        placeholder="M. / Mme / Dr"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="pat-convention">Type de convention</Label>
-                      <Input
-                        id="pat-convention"
-                        value={draft.conventionType}
-                        onChange={(e) =>
-                          setDraft((d) => ({ ...d, conventionType: e.target.value }))
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="pat-tel-dom">Tél. domicile</Label>
-                      <Input
-                        id="pat-tel-dom"
-                        value={draft.telephoneDomicile}
-                        onChange={(e) =>
-                          setDraft((d) => ({ ...d, telephoneDomicile: e.target.value }))
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="pat-tel-trav">Tél. travail</Label>
-                      <Input
-                        id="pat-tel-trav"
-                        value={draft.telephoneTravail}
-                        onChange={(e) =>
-                          setDraft((d) => ({ ...d, telephoneTravail: e.target.value }))
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="pat-fax">Fax</Label>
-                      <Input
-                        id="pat-fax"
-                        value={draft.fax}
-                        onChange={(e) => setDraft((d) => ({ ...d, fax: e.target.value }))}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="pat-pays">Pays</Label>
-                      <Input
-                        id="pat-pays"
-                        value={draft.pays}
-                        onChange={(e) => setDraft((d) => ({ ...d, pays: e.target.value }))}
-                      />
-                    </div>
-                    <div className="space-y-3 rounded-lg border border-border p-3 sm:col-span-2">
-                      <p className="text-sm font-medium">Alertes cliniques critiques</p>
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        {(
-                          [
-                            ["vip", "VIP"],
-                            ["pacemaker", "Pacemaker"],
-                            ["pregnant", "Grossesse"],
-                            ["contrastAllergy", "Allergie produit de contraste"],
-                          ] as const
-                        ).map(([key, label]) => (
-                          <div key={key} className="flex items-center justify-between gap-2">
-                            <Label htmlFor={`pat-${key}`}>{label}</Label>
-                            <Switch
-                              id={`pat-${key}`}
-                              checked={draft[key]}
-                              onCheckedChange={(checked) =>
-                                setDraft((d) => ({ ...d, [key]: checked }))
-                              }
-                            />
-                          </div>
-                        ))}
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="pat-alerts">Autres alertes médicales</Label>
-                        <Input
-                          id="pat-alerts"
-                          value={draft.medicalAlerts}
-                          onChange={(e) =>
-                            setDraft((d) => ({ ...d, medicalAlerts: e.target.value }))
-                          }
-                          placeholder="Ex. allergie iode, claustrophobie…"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {checkingDup ? (
-                    <p className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Loader2 className="size-4 animate-spin" /> Vérification des doublons…
-                    </p>
-                  ) : null}
-
-                  {duplicates.length > 0 ? (
-                    <Alert variant="destructive">
-                      <AlertTriangle className="size-4" />
-                      <AlertTitle>Doublons potentiels détectés</AlertTitle>
-                      <AlertDescription>
-                        <ul className="mt-2 space-y-1">
-                          {duplicates.map((d) => (
-                            <li key={d.patientId}>
-                              <Link
-                                to="/patient/$patientId"
-                                params={{ patientId: d.patientId }}
-                                className="underline underline-offset-2"
-                              >
-                                {d.nomComplet || d.patientId}
-                              </Link>
-                              {d.numeroDossier ? ` · ${d.numeroDossier}` : ""}
-                              {d.champsIdentiques.length
-                                ? ` · ${d.champsIdentiques.join(", ")}`
-                                : ""}
-                              {d.score ? ` · score ${d.score}` : ""}
-                            </li>
-                          ))}
-                        </ul>
-                        <label className="mt-3 flex items-start gap-2 text-sm text-foreground">
-                          <Checkbox
-                            checked={draft.force}
-                            onCheckedChange={(c) =>
-                              setDraft((d) => ({ ...d, force: c === true }))
-                            }
-                          />
-                          <span>
-                            Je confirme la création malgré le(s) doublon(s) (force).
-                          </span>
-                        </label>
-                      </AlertDescription>
-                    </Alert>
-                  ) : null}
-
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setOpen(false)}>
-                      Annuler
-                    </Button>
-                    <Button disabled={!canSubmit || isSaving} onClick={() => void submitDraft()}>
-                      {isSaving ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
-                      Enregistrer le dossier
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+              <Button onClick={() => setOpen(true)}>
+                <UserPlus className="mr-2 size-4" /> Nouveau patient
+              </Button>
             ) : null}
           </div>
         }
+      />
+
+      <PatientCreateDialog
+        open={open}
+        onOpenChange={setOpen}
+        onCreated={() => {
+          setPage(0);
+          setReloadKey((k) => k + 1);
+        }}
       />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">

@@ -155,6 +155,7 @@ public class AppointmentService {
         LocalDateTime startsAt = parseDateHeure(request.getDateHeure());
         LocalDateTime endsAt = startsAt.plusMinutes(duree);
 
+        assertResourceCompatible(catalogue, resource);
         if (resource != null) {
             assertNoOverlap(resource.getId(), startsAt, endsAt, null);
         }
@@ -239,6 +240,7 @@ public class AppointmentService {
             appt.setEndsAt(appt.getStartsAt().plusMinutes(appt.getDureeMinutes()));
         }
 
+        assertResourceCompatible(appt.getCatalogue(), appt.getResource());
         if (appt.getResource() != null) {
             assertNoOverlap(
                     appt.getResource().getId(), appt.getStartsAt(), appt.getEndsAt(), appt.getId());
@@ -310,6 +312,7 @@ public class AppointmentService {
                             .findById(request.getResourceId())
                             .orElseThrow(() -> ApiException.notFound("Ressource introuvable")));
         }
+        assertResourceCompatible(appt.getCatalogue(), appt.getResource());
         if (appt.getResource() != null) {
             assertNoOverlap(appt.getResource().getId(), startsAt, endsAt, appt.getId());
         }
@@ -431,14 +434,37 @@ public class AppointmentService {
                 appointmentRepository.findOverlaps(
                         resourceId, startsAt, endsAt, excludeId, EXCLUDED_FROM_OVERLAP);
         if (!overlaps.isEmpty()) {
-            Appointment other = overlaps.get(0);
             throw ApiException.conflict(
-                    "slot_conflict",
-                    "Créneau déjà réservé sur cette ressource ("
-                            + other.getStartsAt()
-                            + " – "
-                            + other.getEndsAt()
-                            + ")");
+                    "slot_conflict", "Cette salle est déjà occupée sur ce créneau.");
+        }
+    }
+
+    /**
+     * Examen ↔ salle : hors service interdit ; modalité catalogue doit correspondre à la salle.
+     */
+    private void assertResourceCompatible(CatalogueExamen catalogue, ResourceRoom resource) {
+        if (catalogue != null && resource == null) {
+            throw ApiException.badRequest(
+                    "Une salle spécialisée est obligatoire pour cet examen.");
+        }
+        if (resource == null) {
+            return;
+        }
+        if (!resource.isActif()) {
+            throw ApiException.badRequest("Cette salle est hors service.");
+        }
+        if (catalogue != null
+                && catalogue.getModalite() != null
+                && resource.getModalite() != null
+                && catalogue.getModalite() != resource.getModalite()) {
+            throw ApiException.badRequest(
+                    "Aucune salle compatible n'est disponible pour cet examen.");
+        }
+        if (catalogue != null
+                && catalogue.getModalite() != null
+                && resource.getModalite() == null) {
+            throw ApiException.badRequest(
+                    "Aucune salle compatible n'est disponible pour cet examen.");
         }
     }
 

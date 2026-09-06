@@ -215,8 +215,11 @@ export function ExamenSheet({
                     nom: item.patient,
                     numeroDossier: item.numSejour || String(item.patientId),
                     ...(item.cin ? { cin: item.cin } : {}),
+                    ...(item.sexe ? { sexe: item.sexe } : {}),
+                    ...(item.telephone ? { telephone: item.telephone } : {}),
                     examen: item.description || item.modalite,
-                    dateHeure: item.dateExamen,
+                    ...(item.salle ? { salle: item.salle } : {}),
+                    ...(item.dateExamen ? { dateHeure: item.dateExamen, heure: item.dateExamen.slice(11, 16) } : {}),
                   }}
                 />
               </div>

@@ -191,6 +191,20 @@ public interface ExamenRepository extends JpaRepository<Examen, Long> {
 
     @Query(
             """
+            SELECT COUNT(DISTINCT e.patient.id)
+            FROM Examen e
+            WHERE e.dateExamen >= :debut AND e.dateExamen < :fin
+              AND e.cancelledAt IS NULL
+              AND e.patient IS NOT NULL
+              AND (e.workflowStatus IS NULL OR e.workflowStatus NOT IN :excluded)
+            """)
+    long countDistinctPatientsBetween(
+            @Param("debut") LocalDateTime debut,
+            @Param("fin") LocalDateTime fin,
+            @Param("excluded") Collection<EncounterStatus> excluded);
+
+    @Query(
+            """
             SELECT e FROM Examen e
             JOIN FETCH e.patient
             WHERE e.dateExamen < :before

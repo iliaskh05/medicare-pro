@@ -70,6 +70,8 @@ public class SecurityConfig {
                                         .permitAll()
                                         .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info")
                                         .permitAll()
+                                        .requestMatchers("/ws/chat", "/ws/chat/**")
+                                        .permitAll()
                                         .requestMatchers(HttpMethod.OPTIONS, "/**")
                                         .permitAll()
                                         .anyRequest()

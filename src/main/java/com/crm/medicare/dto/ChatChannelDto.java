@@ -15,4 +15,11 @@ public class ChatChannelDto {
     private String name;
     private String description;
     private int membersCount;
+    /** GROUP | DIRECT */
+    private String type;
+    /** Pour un DM : id du pair */
+    private String peerUserId;
+    private String peerName;
+    private String peerEmail;
+    private int unreadCount;
 }

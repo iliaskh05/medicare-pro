@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Printer, StickyNote, Tags } from "lucide-react";
 import { toast } from "sonner";
 
@@ -10,6 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { fetchSettings } from "@/lib/api/settings";
 import {
   printPatientLabels,
   type PatientLabelPayload,
@@ -36,9 +38,35 @@ export function PatientLabelPrintMenu({
   className,
   label = "Imprimer étiquette",
 }: Props) {
+  const [centreNom, setCentreNom] = useState(payload.centreNom ?? "");
+
+  useEffect(() => {
+    if (payload.centreNom) {
+      setCentreNom(payload.centreNom);
+      return;
+    }
+    let cancelled = false;
+    fetchSettings("centre.")
+      .then((settings) => {
+        if (!cancelled) setCentreNom(settings["centre.nom"]?.trim() || "RadioCRM");
+      })
+      .catch(() => {
+        if (!cancelled) setCentreNom("RadioCRM");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [payload.centreNom]);
+
   const run = (kind: "etiquette" | "autocollant" | "les_deux") => {
     try {
-      printPatientLabels(payload, kind);
+      printPatientLabels(
+        {
+          ...payload,
+          ...(centreNom ? { centreNom } : {}),
+        },
+        kind,
+      );
       toast.success(
         kind === "les_deux"
           ? "Impression étiquette + auto-collant"

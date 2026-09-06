@@ -22,8 +22,19 @@ public class LocalDocumentStorage implements DocumentStorage {
             throws IOException {
         Files.createDirectories(root);
         String ext = extension(suggestedFileName);
-        String key = UUID.randomUUID() + (ext.isEmpty() ? "" : "." + ext);
-        Files.copy(content, root.resolve(key));
+        boolean chatPrefix =
+                suggestedFileName != null
+                        && (suggestedFileName.startsWith("chat/")
+                                || suggestedFileName.startsWith("chat\\"));
+        boolean avatarPrefix =
+                suggestedFileName != null
+                        && (suggestedFileName.startsWith("avatars/")
+                                || suggestedFileName.startsWith("avatars\\"));
+        String folder = chatPrefix ? "chat/" : avatarPrefix ? "avatars/" : "";
+        String key = folder + UUID.randomUUID() + (ext.isEmpty() ? "" : "." + ext);
+        Path target = resolve(key);
+        Files.createDirectories(target.getParent() != null ? target.getParent() : root);
+        Files.copy(content, target);
         return key;
     }
 

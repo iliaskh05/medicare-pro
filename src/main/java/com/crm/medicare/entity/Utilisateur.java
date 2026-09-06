@@ -71,6 +71,9 @@ public class Utilisateur implements UserDetails {
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
+    @Column(name = "avatar_storage_key", length = 255)
+    private String avatarStorageKey;
+
     @PrePersist
     void prePersist() {
         if (createdAt == null) {

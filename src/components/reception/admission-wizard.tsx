@@ -3,6 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { Loader2, Search, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
+import { PatientCreateDialog } from "@/components/patients/patient-create-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,7 +11,7 @@ import { ReferentCombobox } from "@/components/worklist/referent-combobox";
 import { EmptyState, Surface } from "@/components/ui-kit";
 import { fetchResources, createAppointment, fetchAppointments, type AppointmentDto, type ResourceDto } from "@/lib/api/appointments";
 import { fetchCatalogue, type CatalogueActe } from "@/lib/api/catalogue";
-import { createPatient, fetchPatientData, searchPatients, type PatientRow } from "@/lib/api/patients";
+import { fetchPatientData, searchPatients, type PatientRow } from "@/lib/api/patients";
 import { createExamen, fetchWorklist, type WorklistItem } from "@/lib/api/worklist";
 import { formatMAD } from "@/types/domain";
 import { cn } from "@/lib/utils";
@@ -39,15 +40,7 @@ export function AdmissionWizard({
   const [patients, setPatients] = useState<PatientRow[]>([]);
   const [loadingPatients, setLoadingPatients] = useState(false);
   const [patient, setPatient] = useState<PatientRow | null>(null);
-  const [creatingPatient, setCreatingPatient] = useState(false);
-  const [newPatient, setNewPatient] = useState({
-    nom: "",
-    prenom: "",
-    cin: "",
-    naissance: "",
-    sexe: "F",
-    telephone: "",
-  });
+  const [createPatientOpen, setCreatePatientOpen] = useState(false);
 
   const [actes, setActes] = useState<CatalogueActe[]>([]);
   const [acteId, setActeId] = useState<number | null>(null);
@@ -69,6 +62,18 @@ export function AdmissionWizard({
   const avance = Math.min(Math.max(Number(acompte) || 0, 0), total);
   const reste = Math.max(total - avance, 0);
 
+  const compatibleResources = useMemo(() => {
+    const active = resources.filter((r) => r.actif !== false);
+    if (!acte?.modalite) return active;
+    return active.filter(
+      (r) =>
+        Boolean(r.modalite) &&
+        r.modalite!.toUpperCase() === acte.modalite.toUpperCase(),
+    );
+  }, [resources, acte]);
+
+  const noCompatibleRoom = Boolean(acte && compatibleResources.length === 0);
+
   useEffect(() => {
     const t = window.setTimeout(() => setDebouncedQuery(query.trim()), 280);
     return () => window.clearTimeout(t);
@@ -81,12 +86,19 @@ export function AdmissionWizard({
       .catch(() => setActes([]));
     fetchResources(controller.signal)
       .then((rows) => {
-        const active = rows.filter((r) => r.actif !== false);
-        setResources(active);
+        setResources(rows);
       })
       .catch(() => setResources([]));
     return () => controller.abort();
   }, []);
+
+  useEffect(() => {
+    if (!acte) return;
+    if (resourceId && !compatibleResources.some((r) => r.id === resourceId)) {
+      setResourceId("");
+      setSalle("");
+    }
+  }, [acte, compatibleResources, resourceId]);
 
   useEffect(() => {
     if (!initialPatientId) return;
@@ -197,35 +209,6 @@ export function AdmissionWizard({
     return null;
   }, [acte, dateHeure, dayAppointments, dayExams, resourceId, salle]);
 
-  const createNew = async () => {
-    if (!newPatient.nom.trim() || !newPatient.prenom.trim() || !newPatient.cin.trim()) {
-      toast.error("Nom, prénom et CIN sont obligatoires.");
-      return;
-    }
-    setCreatingPatient(true);
-    try {
-      const payload: Parameters<typeof createPatient>[0] = {
-        nom: newPatient.nom.trim().toUpperCase(),
-        prenom: newPatient.prenom.trim(),
-        nomComplet: `${newPatient.nom.trim().toUpperCase()} ${newPatient.prenom.trim()}`,
-        cin: newPatient.cin.trim().toUpperCase(),
-        mutuelle: "AMO",
-        sexe: newPatient.sexe,
-      };
-      if (newPatient.telephone.trim()) payload.telephone = newPatient.telephone.trim();
-      if (newPatient.naissance) payload.dateNaissance = newPatient.naissance;
-      const created = await createPatient(payload);
-      setPatient(created);
-      setPatients((rows) => [created, ...rows.filter((r) => r.id !== created.id)]);
-      setStep(2);
-      toast.success("Patient enregistré.");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Création patient impossible.");
-    } finally {
-      setCreatingPatient(false);
-    }
-  };
-
   const confirm = async () => {
     if (!patient) {
       toast.error("Sélectionnez un patient.");
@@ -239,12 +222,27 @@ export function AdmissionWizard({
       toast.error("Choisissez une date et une heure.");
       return;
     }
+    if (mode === "rdv" && noCompatibleRoom) {
+      toast.error("Aucune salle compatible n'est disponible pour cet examen.");
+      return;
+    }
+    if (mode === "rdv" && !resourceId) {
+      toast.error("Sélectionnez une salle spécialisée.");
+      return;
+    }
+    if (resourceId) {
+      const selected = resources.find((r) => r.id === resourceId);
+      if (selected && selected.actif === false) {
+        toast.error("Cette salle est hors service.");
+        return;
+      }
+    }
     if (avance > total) {
       toast.error("L'avance ne peut pas dépasser le montant total.");
       return;
     }
     if (conflict) {
-      toast.error("Créneau en conflit — choisissez un autre horaire ou une autre salle.");
+      toast.error("Cette salle est déjà occupée sur ce créneau.");
       return;
     }
     setSaving(true);
@@ -381,36 +379,11 @@ export function AdmissionWizard({
             </ul>
           )}
 
-          <div className="mt-6 grid gap-3 border-t border-border pt-4 sm:grid-cols-2">
-            <p className="sm:col-span-2 text-sm font-semibold">Nouveau patient</p>
-            <div>
-              <Label>Nom</Label>
-              <Input value={newPatient.nom} onChange={(e) => setNewPatient({ ...newPatient, nom: e.target.value })} />
-            </div>
-            <div>
-              <Label>Prénom</Label>
-              <Input
-                value={newPatient.prenom}
-                onChange={(e) => setNewPatient({ ...newPatient, prenom: e.target.value })}
-              />
-            </div>
-            <div>
-              <Label>CIN</Label>
-              <Input value={newPatient.cin} onChange={(e) => setNewPatient({ ...newPatient, cin: e.target.value })} />
-            </div>
-            <div>
-              <Label>Téléphone</Label>
-              <Input
-                value={newPatient.telephone}
-                onChange={(e) => setNewPatient({ ...newPatient, telephone: e.target.value })}
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <Button onClick={createNew} disabled={creatingPatient}>
-                {creatingPatient ? <Loader2 className="mr-2 size-4 animate-spin" /> : <UserPlus className="mr-2 size-4" />}
-                Enregistrer le patient
-              </Button>
-            </div>
+          <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-border pt-4">
+            <Button type="button" variant="outline" onClick={() => setCreatePatientOpen(true)}>
+              <UserPlus className="mr-2 size-4" />
+              + Créer un patient
+            </Button>
           </div>
         </Surface>
       ) : null}
@@ -466,30 +439,42 @@ export function AdmissionWizard({
               <Input type="datetime-local" value={dateHeure} onChange={(e) => setDateHeure(e.target.value)} />
             </div>
             <div>
-              <Label>Salle / machine (optionnel)</Label>
+              <Label>Salle / machine</Label>
               <select
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                 value={resourceId}
                 onChange={(e) => {
                   const id = e.target.value;
                   setResourceId(id);
-                  const selected = resources.find((r) => r.id === id);
+                  const selected = compatibleResources.find((r) => r.id === id);
                   setSalle(selected?.libelle ?? "");
                 }}
+                disabled={!acte || noCompatibleRoom}
               >
-                <option value="">Non précisée</option>
-                {resources.map((r) => (
+                <option value="">
+                  {!acte
+                    ? "Choisir d'abord un examen"
+                    : noCompatibleRoom
+                      ? "Aucune salle compatible"
+                      : "Non précisée"}
+                </option>
+                {compatibleResources.map((r) => (
                   <option key={r.id} value={r.id}>
                     {r.libelle}
                     {r.modalite ? ` · ${r.modalite}` : ""}
                   </option>
                 ))}
               </select>
+              {noCompatibleRoom ? (
+                <p className="mt-1 text-xs text-destructive">
+                  Aucune salle compatible n&apos;est disponible pour cet examen.
+                </p>
+              ) : null}
             </div>
           </div>
           {conflict ? (
-            <p className="text-sm text-warning">
-              Créneau potentiellement occupé : {conflict.label}.
+            <p className="text-sm text-destructive">
+              Cette salle est déjà occupée sur ce créneau : {conflict.label}.
             </p>
           ) : null}
           <p className="text-xs text-muted-foreground">
@@ -499,7 +484,12 @@ export function AdmissionWizard({
             <Button variant="outline" onClick={() => setStep(2)}>
               Retour
             </Button>
-            <Button onClick={() => setStep(4)}>Continuer</Button>
+            <Button
+              onClick={() => setStep(4)}
+              disabled={noCompatibleRoom || Boolean(conflict)}
+            >
+              Continuer
+            </Button>
           </div>
         </Surface>
       ) : null}
@@ -564,6 +554,18 @@ export function AdmissionWizard({
           </div>
         </Surface>
       ) : null}
+
+      <PatientCreateDialog
+        open={createPatientOpen}
+        onOpenChange={setCreatePatientOpen}
+        onCreated={(created) => {
+          setPatient(created);
+          setPatients((rows) => [created, ...rows.filter((r) => r.id !== created.id)]);
+          setCreatePatientOpen(false);
+          setStep(2);
+          toast.success("Patient enregistré.");
+        }}
+      />
     </div>
   );
 }

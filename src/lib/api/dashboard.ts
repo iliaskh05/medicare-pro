@@ -12,8 +12,14 @@ import { ApiError, javaApi } from "./config";
 
 export type DashboardKpis = {
   patientsDuJour: number;
+  patientsSemaine?: number;
+  patientsMois?: number;
   actesRealises: number;
   chiffreAffaires: number;
+  chiffreAffairesJour?: number;
+  chiffreAffairesSemaine?: number;
+  chiffreAffairesMois?: number;
+  chiffreAffairesAnnee?: number;
   tauxOccupation: number;
 };
 
@@ -45,8 +51,14 @@ export const EMPTY_DASHBOARD_STATS: DashboardStats = {
 
 export const EMPTY_DASHBOARD_KPIS: DashboardKpis = {
   patientsDuJour: 0,
+  patientsSemaine: 0,
+  patientsMois: 0,
   actesRealises: 0,
   chiffreAffaires: 0,
+  chiffreAffairesJour: 0,
+  chiffreAffairesSemaine: 0,
+  chiffreAffairesMois: 0,
+  chiffreAffairesAnnee: 0,
   tauxOccupation: 0,
 };
 
@@ -81,7 +93,21 @@ export async function fetchDashboardStats(signal?: AbortSignal): Promise<Dashboa
 /** GET {JAVA_API_BASE}/api/dashboard/kpis */
 export async function fetchDashboardKpis(signal?: AbortSignal): Promise<DashboardKpis> {
   const kpis = await javaApi<DashboardKpis>("/api/dashboard/kpis", signal ? { signal } : {});
-  return kpis ?? EMPTY_DASHBOARD_KPIS;
+  if (!kpis) return EMPTY_DASHBOARD_KPIS;
+  return {
+    ...EMPTY_DASHBOARD_KPIS,
+    ...kpis,
+    patientsDuJour: Number(kpis.patientsDuJour ?? 0),
+    patientsSemaine: Number(kpis.patientsSemaine ?? 0),
+    patientsMois: Number(kpis.patientsMois ?? 0),
+    actesRealises: Number(kpis.actesRealises ?? 0),
+    chiffreAffaires: Number(kpis.chiffreAffaires ?? 0),
+    chiffreAffairesJour: Number(kpis.chiffreAffairesJour ?? 0),
+    chiffreAffairesSemaine: Number(kpis.chiffreAffairesSemaine ?? 0),
+    chiffreAffairesMois: Number(kpis.chiffreAffairesMois ?? kpis.chiffreAffaires ?? 0),
+    chiffreAffairesAnnee: Number(kpis.chiffreAffairesAnnee ?? 0),
+    tauxOccupation: Number(kpis.tauxOccupation ?? 0),
+  };
 }
 
 /** GET {JAVA_API_BASE}/api/salle-attente */
