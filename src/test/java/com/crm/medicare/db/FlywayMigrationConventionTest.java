@@ -50,7 +50,9 @@ class FlywayMigrationConventionTest {
                         "V18__patient_clinical_dictionaries_prefs.sql",
                         "V19__report_templates_complementary.sql",
                         "V20__chat_direct_attachments.sql",
-                        "V21__chat_audio_reads_avatar.sql");
+                        "V21__chat_audio_reads_avatar.sql",
+                        "V22__invoice_morocco_einvoice_legacy.sql",
+                        "V23__invoice_sequence_year_column.sql");
 
         String v3 = read(resources, "V3__schema_hardening.sql");
         assertThat(v3)
@@ -157,6 +159,20 @@ class FlywayMigrationConventionTest {
                 .contains("national_reference_price")
                 .contains("data_import_jobs")
                 .contains("demo_dataset_markers")
+                .doesNotContain("DROP TABLE")
+                .doesNotContain("TRUNCATE TABLE");
+
+        String v22 = read(resources, "V22__invoice_morocco_einvoice_legacy.sql");
+        assertThat(v22)
+                .contains("invoice_sequences")
+                .contains("electronic_status")
+                .contains("MIG-")
+                .doesNotContain("DROP TABLE")
+                .doesNotContain("TRUNCATE TABLE");
+
+        String v23 = read(resources, "V23__invoice_sequence_year_column.sql");
+        assertThat(v23)
+                .contains("seq_year")
                 .doesNotContain("DROP TABLE")
                 .doesNotContain("TRUNCATE TABLE");
     }

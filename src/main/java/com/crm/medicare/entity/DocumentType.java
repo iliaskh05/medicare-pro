@@ -7,6 +7,7 @@ public enum DocumentType {
     INVOICE,
     RECEIPT,
     INSURANCE,
+    IMAGE,
     OTHER;
 
     public static DocumentType normalize(String raw) {
@@ -20,8 +21,8 @@ public enum DocumentType {
             case "INVOICE", "FACTURE" -> INVOICE;
             case "RECEIPT", "RECU", "REÇU", "ACQUITTE" -> RECEIPT;
             case "INSURANCE", "MUTUELLE", "ASSURANCE" -> INSURANCE;
-            case "CIN", "ID", "IDENTITE", "IDENTITY" -> OTHER;
-            case "IMAGERIE", "DICOM", "IMAGE", "OTHER", "DOCUMENT", "AUTRE" -> OTHER;
+            case "IMAGE", "IMAGERIE", "PHOTO", "DICOM" -> IMAGE;
+            case "CIN", "ID", "IDENTITE", "IDENTITY", "DOCUMENT", "AUTRE", "OTHER", "DOSSIER" -> OTHER;
             default -> {
                 try {
                     yield DocumentType.valueOf(v);

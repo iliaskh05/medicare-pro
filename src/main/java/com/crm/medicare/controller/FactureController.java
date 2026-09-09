@@ -80,6 +80,19 @@ public class FactureController {
         return invoiceBillingService.settleByReference(reference);
     }
 
+    @GetMapping("/{id}/pdf")
+    @PreAuthorize("hasAuthority('" + PermissionCatalog.INVOICE_READ + "')")
+    public ResponseEntity<byte[]> downloadFacture(@PathVariable Long id) {
+        FacturePdf facture = factureService.genererFacturePdfByInvoice(id);
+        return ResponseEntity.ok()
+                .header(
+                        HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + facture.filename() + "\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .contentLength(facture.content().length)
+                .body(facture.content());
+    }
+
     @GetMapping("/examen/{id}")
     @PreAuthorize("hasAuthority('" + PermissionCatalog.INVOICE_READ + "')")
     public ResponseEntity<byte[]> downloadFactureExamen(@PathVariable Long id) {

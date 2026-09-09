@@ -6,6 +6,7 @@ import com.crm.medicare.dto.AppointmentDto;
 import com.crm.medicare.dto.AppointmentRescheduleRequest;
 import com.crm.medicare.dto.AppointmentWriteRequest;
 import com.crm.medicare.dto.ResourceDto;
+import com.crm.medicare.dto.ResourceOccupancyDto;
 import com.crm.medicare.dto.WorklistCreateRequest;
 import com.crm.medicare.dto.WorklistItemDto;
 import com.crm.medicare.entity.Appointment;
@@ -17,12 +18,14 @@ import com.crm.medicare.entity.MedecinReferent;
 import com.crm.medicare.entity.Modalite;
 import com.crm.medicare.entity.Patient;
 import com.crm.medicare.entity.ResourceRoom;
+import com.crm.medicare.entity.Utilisateur;
 import com.crm.medicare.repository.AppointmentRepository;
 import com.crm.medicare.repository.CatalogueExamenRepository;
 import com.crm.medicare.repository.ExamenRepository;
 import com.crm.medicare.repository.MedecinReferentRepository;
 import com.crm.medicare.repository.PatientRepository;
 import com.crm.medicare.repository.ResourceRoomRepository;
+import com.crm.medicare.repository.UtilisateurRepository;
 import com.crm.medicare.security.SecurityUtils;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -63,6 +66,7 @@ public class AppointmentService {
     private final ExamenRepository examenRepository;
     private final WorklistService worklistService;
     private final AuditService auditService;
+    private final UtilisateurRepository utilisateurRepository;
 
     @Transactional(readOnly = true)
     public List<ResourceDto> listResources(boolean includeInactive) {
@@ -89,6 +93,31 @@ public class AppointmentService {
         }
         room.setActif(true);
         return toResourceDto(resourceRoomRepository.save(room));
+    }
+
+    @Transactional
+    public ResourceDto patchResource(Long id, Boolean actif) {
+        ResourceRoom room =
+                resourceRoomRepository
+                        .findById(id)
+                        .orElseThrow(() -> ApiException.notFound("Ressource introuvable"));
+        if (actif != null) {
+            room.setActif(actif);
+        }
+        return toResourceDto(resourceRoomRepository.save(room));
+    }
+
+    @Transactional(readOnly = true)
+    public List<ResourceOccupancyDto> occupancy(LocalDate day) {
+        LocalDate date = day != null ? day : LocalDate.now(ZONE);
+        LocalDateTime now = LocalDateTime.now(ZONE);
+        List<Appointment> appts =
+                appointmentRepository.findInRange(
+                        date.atStartOfDay(), date.plusDays(1).atStartOfDay(), null, null, null, null);
+        return resourceRoomRepository.findAll().stream()
+                .sorted((a, b) -> a.getLibelle().compareToIgnoreCase(b.getLibelle()))
+                .map(room -> toOccupancy(room, appts, now))
+                .toList();
     }
 
     @Transactional(readOnly = true)
@@ -159,6 +188,7 @@ public class AppointmentService {
         if (resource != null) {
             assertNoOverlap(resource.getId(), startsAt, endsAt, null);
         }
+        assertNoPatientOverlap(patient.getId(), startsAt, endsAt, null);
 
         Appointment appt = new Appointment();
         appt.setPatient(patient);
@@ -176,7 +206,7 @@ public class AppointmentService {
         appt.setMotif(blankToNull(request.getMotif()));
         appt.setNotes(blankToNull(request.getNotes()));
         appt.setStatut(AppointmentStatus.SCHEDULED);
-        appt.setCreatedBy(SecurityUtils.currentUserOrNull());
+        appt.setCreatedBy(persistedCurrentUserOrNull());
         appendHistory(appt, null, AppointmentStatus.SCHEDULED, "Création");
 
         Appointment saved = appointmentRepository.save(appt);
@@ -245,6 +275,8 @@ public class AppointmentService {
             assertNoOverlap(
                     appt.getResource().getId(), appt.getStartsAt(), appt.getEndsAt(), appt.getId());
         }
+        assertNoPatientOverlap(
+                appt.getPatient().getId(), appt.getStartsAt(), appt.getEndsAt(), appt.getId());
 
         Appointment saved = appointmentRepository.save(appt);
         auditService.record(
@@ -316,6 +348,7 @@ public class AppointmentService {
         if (appt.getResource() != null) {
             assertNoOverlap(appt.getResource().getId(), startsAt, endsAt, appt.getId());
         }
+        assertNoPatientOverlap(appt.getPatient().getId(), startsAt, endsAt, appt.getId());
         appt.setStartsAt(startsAt);
         appt.setEndsAt(endsAt);
         appt.setDureeMinutes(duree);
@@ -344,6 +377,9 @@ public class AppointmentService {
      */
     @Transactional
     public AppointmentDto checkIn(Long id) {
+        appointmentRepository
+                .findByIdForUpdate(id)
+                .orElseThrow(() -> ApiException.notFound("Rendez-vous introuvable"));
         Appointment appt = load(id);
         if (appt.getStatut() == AppointmentStatus.CANCELLED
                 || appt.getStatut() == AppointmentStatus.NO_SHOW) {
@@ -436,6 +472,18 @@ public class AppointmentService {
         if (!overlaps.isEmpty()) {
             throw ApiException.conflict(
                     "slot_conflict", "Cette salle est déjà occupée sur ce créneau.");
+        }
+    }
+
+    private void assertNoPatientOverlap(
+            Long patientId, LocalDateTime startsAt, LocalDateTime endsAt, Long excludeId) {
+        List<Appointment> overlaps =
+                appointmentRepository.findPatientOverlaps(
+                        patientId, startsAt, endsAt, excludeId, EXCLUDED_FROM_OVERLAP);
+        if (!overlaps.isEmpty()) {
+            throw ApiException.conflict(
+                    "patient_slot_conflict",
+                    "Ce patient a déjà un rendez-vous sur ce créneau.");
         }
     }
 
@@ -607,6 +655,55 @@ public class AppointmentService {
                 .build();
     }
 
+    private ResourceOccupancyDto toOccupancy(
+            ResourceRoom room, List<Appointment> appointments, LocalDateTime now) {
+        if (!room.isActif()) {
+            return ResourceOccupancyDto.builder()
+                    .id(String.valueOf(room.getId()))
+                    .code(room.getCode())
+                    .libelle(room.getLibelle())
+                    .modalite(room.getModalite() != null ? room.getModalite().name() : null)
+                    .actif(false)
+                    .status("OUT_OF_SERVICE")
+                    .build();
+        }
+        Appointment current =
+                appointments.stream()
+                        .filter(a -> a.getResource() != null && a.getResource().getId().equals(room.getId()))
+                        .filter(a -> BLOCKING.contains(a.getStatut()))
+                        .filter(a -> !now.isBefore(a.getStartsAt()) && now.isBefore(a.getEndsAt()))
+                        .findFirst()
+                        .orElse(null);
+        if (current == null) {
+            return ResourceOccupancyDto.builder()
+                    .id(String.valueOf(room.getId()))
+                    .code(room.getCode())
+                    .libelle(room.getLibelle())
+                    .modalite(room.getModalite() != null ? room.getModalite().name() : null)
+                    .actif(true)
+                    .status("AVAILABLE")
+                    .build();
+        }
+        return ResourceOccupancyDto.builder()
+                .id(String.valueOf(room.getId()))
+                .code(room.getCode())
+                .libelle(room.getLibelle())
+                .modalite(room.getModalite() != null ? room.getModalite().name() : null)
+                .actif(true)
+                .status("OCCUPIED")
+                .currentPatient(current.getPatient() != null ? current.getPatient().getNomComplet() : null)
+                .currentPatientId(
+                        current.getPatient() != null ? String.valueOf(current.getPatient().getId()) : null)
+                .currentAppointmentId(String.valueOf(current.getId()))
+                .currentExam(
+                        current.getCatalogue() != null ? current.getCatalogue().getNom() : current.getMotif())
+                .currentExamenId(
+                        current.getExamen() != null ? String.valueOf(current.getExamen().getId()) : null)
+                .startsAt(current.getStartsAt() != null ? current.getStartsAt().toString() : null)
+                .endsAt(current.getEndsAt() != null ? current.getEndsAt().toString() : null)
+                .build();
+    }
+
     private ResourceDto toResourceDto(ResourceRoom r) {
         return ResourceDto.builder()
                 .id(String.valueOf(r.getId()))
@@ -615,6 +712,14 @@ public class AppointmentService {
                 .modalite(r.getModalite() != null ? r.getModalite().name() : null)
                 .actif(r.isActif())
                 .build();
+    }
+
+    private Utilisateur persistedCurrentUserOrNull() {
+        Utilisateur actor = SecurityUtils.currentUserOrNull();
+        if (actor == null || actor.getId() == null) {
+            return null;
+        }
+        return utilisateurRepository.findById(actor.getId()).orElse(null);
     }
 
     private static String blankToNull(String v) {

@@ -82,6 +82,7 @@ public class AppSettingsService {
                 || key.startsWith("display.")
                 || key.startsWith("medical.")
                 || key.startsWith("pricing.")
+                || key.startsWith("billing.")
                 || key.startsWith("notification.");
     }
 

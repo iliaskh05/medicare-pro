@@ -55,6 +55,25 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
 
     @Query(
             """
+            SELECT i FROM Invoice i
+            JOIN i.items it
+            WHERE it.examenId = :examenId
+            ORDER BY i.createdAt DESC
+            """)
+    java.util.List<Invoice> findByExamenId(@Param("examenId") Long examenId);
+
+    @Query(
+            """
+            SELECT COALESCE(SUM(i.total - i.amountPaid + i.amountRefunded), 0)
+            FROM Invoice i
+            WHERE i.statut IN :statuses
+            """)
+    java.math.BigDecimal sumOutstanding(@Param("statuses") java.util.Collection<InvoiceStatus> statuses);
+
+    long countByStatutIn(java.util.Collection<InvoiceStatus> statuses);
+
+    @Query(
+            """
             SELECT COALESCE(SUM(i.amountPaid), 0)
             FROM Invoice i
             WHERE i.statut IN :statuses

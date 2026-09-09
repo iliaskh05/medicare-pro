@@ -1,6 +1,11 @@
+com\crm\medicare\service\ChatServiceTest.class
 com\crm\medicare\service\ExcelImportServiceTest.class
+com\crm\medicare\service\AppointmentLifecycleTest.class
 com\crm\medicare\service\InvoiceBillingServiceTest.class
+com\crm\medicare\security\LanOriginTest.class
 com\crm\medicare\data\MoroccanCatalogueDefinitionsTest.class
 com\crm\medicare\imaging\DbImagingProviderTest.class
 com\crm\medicare\controller\MedecinReferentControllerStatsTest.class
 com\crm\medicare\service\DemoDatasetServiceTest.class
+com\crm\medicare\controller\SystemHealthTest.class
+com\crm\medicare\service\AppointmentLifecycleTest$Fixture.class

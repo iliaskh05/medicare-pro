@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { Clock, RefreshCw, User } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { AlertTriangle, Clock, RefreshCw, User, UserRound } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { EmptyState, PageHeader, Pill } from "@/components/ui-kit";
+import { EmptyState, PageHeader, Pill, ServiceNotice } from "@/components/ui-kit";
+import { ApiError } from "@/lib/api/config";
 import { advanceWaitingRoom, fetchWaitingRoom, type WaitingRoomItem } from "@/lib/api/waiting-room";
 import { patientDossierLink } from "@/lib/patient-nav";
 import { formatCentreDateTime } from "@/lib/date";
@@ -31,36 +32,50 @@ export const Route = createFileRoute("/file-attente")({
   component: FileAttentePage,
 });
 
+function isAbort(e: unknown): boolean {
+  return e instanceof ApiError && e.code === "aborted";
+}
+
 function FileAttentePage() {
   const [rows, setRows] = useState<WaitingRoomItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  const load = (silent = false) => {
-    if (!silent) setLoading(true);
+  const load = useCallback((silent = false) => {
+    if (!silent) {
+      setLoading(true);
+      setError(null);
+    }
     const controller = new AbortController();
     fetchWaitingRoom({}, controller.signal)
-      .then(setRows)
+      .then((data) => {
+        setRows(data);
+        setError(null);
+      })
       .catch((e: unknown) => {
-        setRows([]);
+        if (isAbort(e)) return;
         if (!silent) {
+          setRows([]);
+          setError(e instanceof Error ? e.message : "Impossible de charger la file d'attente");
           toast.error(e instanceof Error ? e.message : "Impossible de charger la file d'attente");
         }
+        // Silent refresh: keep previous rows if the poll fails
       })
       .finally(() => {
         if (!silent) setLoading(false);
       });
     return () => controller.abort();
-  };
+  }, []);
 
   useEffect(() => {
     return load(false);
-  }, []);
+  }, [load]);
 
   useEffect(() => {
     const id = window.setInterval(() => load(true), 20_000);
     return () => window.clearInterval(id);
-  }, []);
+  }, [load]);
 
   const advance = async (id: string) => {
     setBusyId(id);
@@ -80,12 +95,19 @@ function FileAttentePage() {
       <PageHeader
         eyebrow="Opérations"
         title="File d'attente"
-        subtitle="Patients présents — ouvrir le dossier patient (identifiant patientId)."
+        subtitle="Patients présents au centre (check-in RDV ou passage sans rendez-vous)."
         actions={
-          <Button variant="outline" size="sm" onClick={() => load()} disabled={loading}>
-            <RefreshCw className={`mr-2 size-4 ${loading ? "animate-spin" : ""}`} />
-            Actualiser
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" asChild>
+              <Link to="/accueil" search={{ mode: "walkin" }}>
+                <UserRound className="mr-1.5 size-4" /> Admission
+              </Link>
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => load(false)} disabled={loading}>
+              <RefreshCw className={`mr-2 size-4 ${loading ? "animate-spin" : ""}`} />
+              Actualiser
+            </Button>
+          </div>
         }
       />
 
@@ -95,11 +117,37 @@ function FileAttentePage() {
           <Skeleton className="h-12 w-full" />
           <Skeleton className="h-12 w-full" />
         </div>
+      ) : error ? (
+        <div className="space-y-4">
+          <ServiceNotice message={error} onRetry={() => load(false)} />
+          <EmptyState
+            icon={AlertTriangle}
+            title="File d'attente indisponible"
+            description="Vérifiez que le serveur est démarré, puis réessayez."
+            action={
+              <Button size="sm" onClick={() => load(false)}>
+                Réessayer
+              </Button>
+            }
+          />
+        </div>
       ) : rows.length === 0 ? (
         <EmptyState
           icon={Clock}
           title="Aucun patient en file"
-          description="Les passages enregistrés (walk-in ou check-in) apparaissent ici."
+          description="Enregistrez un passage sans RDV ou faites le check-in d'un rendez-vous du jour pour alimenter la file."
+          action={
+            <div className="flex flex-wrap justify-center gap-2">
+              <Button size="sm" asChild>
+                <Link to="/accueil" search={{ mode: "walkin" }}>
+                  Passage sans RDV
+                </Link>
+              </Button>
+              <Button size="sm" variant="outline" asChild>
+                <Link to="/agenda">Agenda / check-in</Link>
+              </Button>
+            </div>
+          }
         />
       ) : (
         <div className="panel overflow-hidden">

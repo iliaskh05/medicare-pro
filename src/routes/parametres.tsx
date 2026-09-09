@@ -37,6 +37,8 @@ import { useTheme } from "@/hooks/use-theme";
 import { fetchMyPreferences, saveMyPreference } from "@/lib/api/preferences";
 import { uploadMyAvatar } from "@/lib/api/profile";
 import { fetchSettings, saveSettings } from "@/lib/api/settings";
+import { configuredBackendUrl, fetchSystemHealth, type SystemStatus } from "@/lib/api/system";
+import { ConnectionDiagnostics } from "@/components/connection-diagnostics";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/parametres")({
@@ -409,21 +411,47 @@ function Preferences() {
 }
 
 function Securite() {
+  const [health, setHealth] = useState<SystemStatus | null>(null);
+  const [healthError, setHealthError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchSystemHealth(controller.signal)
+      .then((s) => {
+        setHealth(s);
+        setHealthError(null);
+      })
+      .catch((e: unknown) => {
+        setHealth(null);
+        setHealthError(e instanceof Error ? e.message : "Diagnostic indisponible");
+      });
+    return () => controller.abort();
+  }, []);
+
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Historique des connexions</CardTitle>
+          <CardTitle className="text-base">État du serveur</CardTitle>
           <CardDescription>
-            Journal fourni par le service d&apos;authentification du centre.
+            URL configurée : {configuredBackendUrl()}
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <EmptyState
-            icon={History}
-            title="Aucune donnée disponible"
-            description="Les connexions apparaîtront ici dès que le service d'authentification sera relié."
-          />
+        <CardContent className="space-y-4 text-sm">
+          <ConnectionDiagnostics />
+          {healthError ? (
+            <p className="text-destructive">{healthError}</p>
+          ) : health ? (
+            <ul className="space-y-1">
+              <li>API : {health.api}</li>
+              <li>Base de données : {health.database}</li>
+              <li>Service ML : {health.ml}</li>
+              <li>WebSocket : {health.websocket}</li>
+              <li>Version : {health.version}</li>
+            </ul>
+          ) : (
+            <p className="text-muted-foreground">Vérification…</p>
+          )}
         </CardContent>
       </Card>
 

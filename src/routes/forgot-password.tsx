@@ -8,8 +8,7 @@ import { Label } from "@/components/ui/label";
 import logoRadioCrm from "@/assets/logo-radiocrm.png";
 import loginBgAsset from "@/assets/login-bg.jpg.asset.json";
 
-/** Appel public (pas de JWT) — même base que le login, hors client Worklist. */
-const AUTH_API_BASE = "http://localhost:8080";
+import { getJavaApiBase } from "@/lib/api/config";
 
 export const Route = createFileRoute("/forgot-password")({
   head: () => ({
@@ -31,7 +30,7 @@ function ForgotPasswordPage() {
     setError(null);
     try {
       // fetch natif sans Authorization — ne passe pas par api/javaApi (401 auto).
-      const res = await fetch(`${AUTH_API_BASE}/api/auth/forgot-password`, {
+      const res = await fetch(`${getJavaApiBase()}/api/auth/forgot-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
         credentials: "omit",

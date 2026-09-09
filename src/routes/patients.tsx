@@ -4,6 +4,7 @@ import {
   CalendarPlus,
   ChevronLeft,
   ChevronRight,
+  FileSpreadsheet,
   LayoutGrid,
   List,
   MoreHorizontal,
@@ -14,6 +15,7 @@ import {
   Users,
   Wallet,
 } from "lucide-react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -52,6 +54,7 @@ import {
 } from "@/lib/api/patients";
 import { fetchWorklist } from "@/lib/api/worklist";
 import { toLocalDateKey } from "@/lib/date";
+import { downloadExcelWorkbook, excelFilename } from "@/lib/excel-export";
 import { formatMAD } from "@/types/domain";
 
 export const Route = createFileRoute("/patients")({
@@ -268,6 +271,55 @@ function PatientsPage() {
               aria-pressed={isCardsView}
             >
               <LayoutGrid className="mr-1.5 size-4" /> Cartes
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={filtered.length === 0}
+              onClick={() => {
+                void (async () => {
+                  try {
+                    await downloadExcelWorkbook({
+                      filename: excelFilename("Patients"),
+                      sheets: [
+                        {
+                          name: "Patients",
+                          columns: [
+                            { header: "N° dossier", key: "num", width: 14 },
+                            { header: "Nom", key: "nom", width: 18 },
+                            { header: "Prénom", key: "prenom", width: 16 },
+                            { header: "Téléphone", key: "tel", width: 14 },
+                            { header: "CIN", key: "cin", width: 12 },
+                            { header: "Assurance", key: "mutuelle", width: 14 },
+                            { header: "Ville", key: "ville", width: 14 },
+                            { header: "Statut", key: "statut", width: 12 },
+                          ],
+                          rows: filtered.map((p) => {
+                            const parts = (p.nomComplet || "").trim().split(/\s+/);
+                            const prenom = parts.length > 1 ? parts.slice(0, -1).join(" ") : "";
+                            const nom = parts.length > 0 ? parts[parts.length - 1] : p.nomComplet;
+                            return {
+                              num: p.numeroDossier ?? p.id,
+                              nom,
+                              prenom,
+                              tel: p.telephone ?? "",
+                              cin: p.cin ?? "",
+                              mutuelle: p.mutuelle ?? "",
+                              ville: p.ville ?? "",
+                              statut: p.vip ? "VIP" : "Actif",
+                            };
+                          }),
+                        },
+                      ],
+                    });
+                    toast.success(`Export Excel — ${filtered.length} patient(s)`);
+                  } catch (e) {
+                    toast.error(e instanceof Error ? e.message : "Export impossible");
+                  }
+                })();
+              }}
+            >
+              <FileSpreadsheet className="mr-1.5 size-4" /> Exporter Excel
             </Button>
             {canCreate("patients") ? (
               <Button onClick={() => setOpen(true)}>

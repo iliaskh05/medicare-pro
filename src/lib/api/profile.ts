@@ -1,4 +1,4 @@
-import { javaApiForm, JAVA_API_BASE } from "./config";
+import { javaApiForm, getJavaApiBase } from "./config";
 import { AUTH_USER_KEY, readAuthToken } from "@/lib/auth-session";
 
 export async function uploadMyAvatar(file: File, signal?: AbortSignal): Promise<string> {
@@ -39,7 +39,7 @@ export function readStoredAvatarUrl(): string | null {
 /** Fetch avatar bytes with JWT → object URL (caller must revoke). */
 export async function fetchMyAvatarBlob(signal?: AbortSignal): Promise<Blob> {
   const token = readAuthToken();
-  const res = await fetch(`${JAVA_API_BASE}/api/me/avatar`, {
+  const res = await fetch(`${getJavaApiBase()}/api/me/avatar`, {
     signal,
     headers: {
       ...(token ? { Authorization: `Bearer ${token}` } : {}),

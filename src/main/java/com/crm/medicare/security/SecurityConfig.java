@@ -31,7 +31,6 @@ import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 @Configuration
 @EnableWebSecurity
@@ -45,6 +44,9 @@ public class SecurityConfig {
 
     @Value("${radiocrm.cors.allowed-origins:http://localhost:8081,http://localhost:5173}")
     private String allowedOrigins;
+
+    @Value("${radiocrm.cors.allow-private-lan:true}")
+    private boolean allowPrivateLan;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -66,9 +68,16 @@ public class SecurityConfig {
                                                 "/api/v1/auth/login",
                                                 "/api/v1/auth/register",
                                                 "/api/auth/forgot-password",
-                                                "/api/auth/reset-password")
+                                                "/api/auth/reset-password",
+                                                "/api/v1/auth/forgot-password",
+                                                "/api/v1/auth/reset-password")
                                         .permitAll()
-                                        .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info")
+                                        .requestMatchers(
+                                                "/api/system/health",
+                                                "/api/v1/system/health",
+                                                "/actuator/health",
+                                                "/actuator/health/**",
+                                                "/actuator/info")
                                         .permitAll()
                                         .requestMatchers("/ws/chat", "/ws/chat/**")
                                         .permitAll()
@@ -84,18 +93,74 @@ public class SecurityConfig {
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        List<String> origins =
-                Arrays.stream(allowedOrigins.split(",")).map(String::trim).filter(s -> !s.isBlank()).toList();
-        configuration.setAllowedOrigins(origins);
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("*"));
-        configuration.setExposedHeaders(List.of("Authorization", "X-Correlation-Id"));
-        configuration.setAllowCredentials(false);
+        List<String> explicit =
+                Arrays.stream(allowedOrigins.split(","))
+                        .map(String::trim)
+                        .filter(s -> !s.isBlank())
+                        .toList();
+        return request -> {
+            CorsConfiguration configuration = new CorsConfiguration();
+            String origin = request.getHeader("Origin");
+            if (origin != null && isAllowedOrigin(origin, explicit)) {
+                configuration.setAllowedOrigins(List.of(origin));
+            } else if (origin == null) {
+                configuration.setAllowedOrigins(explicit);
+            }
+            configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+            configuration.setAllowedHeaders(List.of("*"));
+            configuration.setExposedHeaders(List.of("Authorization", "X-Correlation-Id"));
+            configuration.setAllowCredentials(false);
+            configuration.setMaxAge(3600L);
+            return configuration;
+        };
+    }
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
+    private boolean isAllowedOrigin(String origin, List<String> explicit) {
+        if (explicit.stream().anyMatch(origin::equalsIgnoreCase)) {
+            return true;
+        }
+        if (!allowPrivateLan) {
+            return false;
+        }
+        try {
+            java.net.URI uri = java.net.URI.create(origin);
+            String scheme = uri.getScheme();
+            String host = uri.getHost();
+            if (host == null) {
+                return "tauri".equalsIgnoreCase(scheme);
+            }
+            if ("tauri".equalsIgnoreCase(scheme) || "https://tauri.localhost".equalsIgnoreCase(origin)) {
+                return true;
+            }
+            if ("localhost".equalsIgnoreCase(host) || "127.0.0.1".equals(host) || "::1".equals(host)) {
+                return "http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme);
+            }
+            return isPrivateLanHost(host);
+        } catch (Exception ex) {
+            return false;
+        }
+    }
+
+    /** RFC1918 + loopback — clients du centre, jamais un wildcard public. */
+    static boolean isPrivateLanHost(String host) {
+        if (host.startsWith("192.168.")) {
+            return true;
+        }
+        if (host.startsWith("10.")) {
+            return true;
+        }
+        if (host.startsWith("172.")) {
+            String[] parts = host.split("\\.");
+            if (parts.length >= 2) {
+                try {
+                    int second = Integer.parseInt(parts[1]);
+                    return second >= 16 && second <= 31;
+                } catch (NumberFormatException ignored) {
+                    return false;
+                }
+            }
+        }
+        return false;
     }
 
     @Bean
@@ -128,7 +193,7 @@ public class SecurityConfig {
                             .timestamp(Instant.now().toString())
                             .status(401)
                             .code("unauthorized")
-                            .message("Authentification requise")
+                            .message("Votre session a expiré. Veuillez vous reconnecter.")
                             .path(request.getRequestURI())
                             .correlationId(com.crm.medicare.common.CorrelationIdFilter.currentOrUnknown())
                             .build());
@@ -146,7 +211,7 @@ public class SecurityConfig {
                             .timestamp(Instant.now().toString())
                             .status(403)
                             .code("forbidden")
-                            .message("Accès refusé")
+                            .message("Vous n'avez pas les droits nécessaires pour effectuer cette action.")
                             .path(request.getRequestURI())
                             .correlationId(com.crm.medicare.common.CorrelationIdFilter.currentOrUnknown())
                             .build());

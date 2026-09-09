@@ -126,7 +126,7 @@ public class WorklistController {
     }
 
     @PutMapping("/{id}/compte-rendu")
-    @PreAuthorize("hasAnyAuthority('" + PermissionCatalog.REPORT_WRITE + "','" + PermissionCatalog.EXAM_UPDATE + "')")
+    @PreAuthorize("hasAuthority('" + PermissionCatalog.REPORT_WRITE + "')")
     public WorklistItemDto saveCompteRendu(
             @PathVariable Long id, @RequestBody Map<String, String> body) {
         if (body != null

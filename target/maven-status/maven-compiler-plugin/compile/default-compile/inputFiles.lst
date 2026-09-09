@@ -1,3 +1,7 @@
+C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\chat\ChatRealtimeHub.java
+C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\chat\ChatWebSocketAuthInterceptor.java
+C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\chat\ChatWebSocketConfig.java
+C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\chat\ChatWebSocketHandler.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\common\ApiErrorResponse.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\common\ApiException.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\common\CentreZone.java
@@ -5,6 +9,7 @@ C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\common\Corre
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\common\GlobalExceptionHandler.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\common\PageResponse.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\config\DotEnvEnvironmentPostProcessor.java
+C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\config\ProdSafetyValidator.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\controller\AlerteController.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\controller\AppointmentController.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\controller\AssistantController.java
@@ -21,6 +26,7 @@ C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\controller\F
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\controller\ImagerieController.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\controller\ImagingController.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\controller\InsuranceController.java
+C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\controller\MeController.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\controller\MedecinReferentController.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\controller\PatientController.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\controller\PresentationCompatController.java
@@ -29,6 +35,7 @@ C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\controller\R
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\controller\SalleAttenteController.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\controller\SettingsController.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\controller\StaffController.java
+C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\controller\SystemStatusController.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\controller\UserPreferenceController.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\controller\WaitingRoomController.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\controller\WorklistController.java
@@ -50,6 +57,8 @@ C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dto\AuditKpi
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dto\AuthResponse.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dto\CatalogueExamenWriteRequest.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dto\ChatChannelDto.java
+C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dto\ChatDirectCreateRequest.java
+C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dto\ChatDirectoryUserDto.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dto\ChatMessageCreateRequest.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dto\ChatMessageDto.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dto\CoverageQuoteDto.java
@@ -91,8 +100,10 @@ C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dto\ReportVe
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dto\ReportWriteRequest.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dto\ResetPasswordRequest.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dto\ResourceDto.java
+C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dto\ResourceOccupancyDto.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dto\SalleAttenteDto.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dto\StatusHistoryItemDto.java
+C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dto\SystemStatusDto.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dto\TendanceAnomalieDto.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dto\WaitingRoomItemDto.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\dto\WorklistCreateRequest.java
@@ -108,7 +119,11 @@ C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\entity\AppSe
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\entity\AuditLog.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\entity\CatalogueExamen.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\entity\ChatChannel.java
+C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\entity\ChatChannelMember.java
+C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\entity\ChatChannelRead.java
+C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\entity\ChatChannelType.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\entity\ChatMessage.java
+C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\entity\ChatMessageType.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\entity\CoverageRule.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\entity\DataImportJob.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\entity\DemoDatasetMarker.java
@@ -117,6 +132,7 @@ C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\entity\Dicti
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\entity\DictionaryPathologyFamily.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\entity\DocumentExamen.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\entity\DocumentType.java
+C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\entity\ElectronicInvoiceStatus.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\entity\EtatPatient.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\entity\Examen.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\entity\ExamStatusHistory.java
@@ -127,9 +143,11 @@ C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\entity\Imagi
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\entity\InsurancePlan.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\entity\InsuranceProvider.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\entity\Invoice.java
+C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\entity\InvoiceElectronicEvent.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\entity\InvoiceItem.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\entity\InvoicePayment.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\entity\InvoiceRefund.java
+C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\entity\InvoiceSequence.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\entity\MedecinReferent.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\entity\Modalite.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\entity\NotificationAttempt.java
@@ -164,6 +182,8 @@ C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\repository\A
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\repository\AppSettingRepository.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\repository\AuditLogRepository.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\repository\CatalogueExamenRepository.java
+C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\repository\ChatChannelMemberRepository.java
+C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\repository\ChatChannelReadRepository.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\repository\ChatChannelRepository.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\repository\ChatMessageRepository.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\repository\CoverageRuleRepository.java
@@ -182,6 +202,7 @@ C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\repository\I
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\repository\InsuranceProviderRepository.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\repository\InvoicePaymentRepository.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\repository\InvoiceRepository.java
+C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\repository\InvoiceSequenceRepository.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\repository\MedecinReferentRepository.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\repository\NotificationAttemptRepository.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\repository\PaiementExamenRepository.java
@@ -216,6 +237,7 @@ C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\service\Dash
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\service\DemoDatasetService.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\service\DictionaryService.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\service\DocumentStorageService.java
+C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\service\ElectronicInvoiceService.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\service\EmailService.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\service\ExcelImportService.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\service\FactureService.java
@@ -227,8 +249,10 @@ C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\service\Invo
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\service\NotificationService.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\service\PatientService.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\service\PresentationCompatService.java
+C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\service\ProfileAvatarService.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\service\ReportService.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\service\ReportTemplateService.java
+C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\service\SystemStatusService.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\service\UserPreferenceService.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\service\WaitingRoomService.java
 C:\Users\acer\crm.radio\medicare-pro\src\main\java\com\crm\medicare\service\WorklistService.java

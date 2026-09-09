@@ -138,7 +138,11 @@ function ChatPage() {
         subtitle="Groupes du centre et discussions privées — texte, photos, PDF et messages vocaux"
         actions={
           <Pill tone={status === "open" ? "success" : status === "polling" ? "warning" : "neutral"}>
-            {status === "open" ? "Temps réel" : status === "polling" ? "Polling" : "Connexion…"}
+            {status === "open"
+              ? "Temps réel"
+              : status === "polling"
+                ? "Polling (secours)"
+                : "Connexion…"}
           </Pill>
         }
       />

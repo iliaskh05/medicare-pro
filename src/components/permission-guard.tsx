@@ -20,8 +20,8 @@ export function PermissionGuard({
   children: ReactNode;
   fallback?: ReactNode;
 }) {
-  const { role } = useRole();
-  if (!canAccess(role, resource, action)) return <>{fallback}</>;
+  const { backendRole } = useRole();
+  if (!canAccess(backendRole, resource, action)) return <>{fallback}</>;
   return <>{children}</>;
 }
 
@@ -42,8 +42,9 @@ export function WriteGuard({
 }
 
 export function useWriteAccess(resource: Resource) {
-  const { role } = useRole();
-  const canWrite = canAccess(role, resource, "edit") || canAccess(role, resource, "create");
+  const { backendRole } = useRole();
+  const canWrite =
+    canAccess(backendRole, resource, "edit") || canAccess(backendRole, resource, "create");
   const guardWrite = (fn: () => void) => {
     if (!canWrite) {
       toast.error("Action non autorisée", {

@@ -8,8 +8,8 @@ import {
   canExport as rbacCanExport,
   canValidate as rbacCanValidate,
   hasPermission as rbacHasPermission,
-  normalizeRole,
-  type BackendRole,
+  canonicalizeRole,
+  type CanonicalRole,
   type Permission,
   type Resource,
 } from "@/lib/rbac";
@@ -110,7 +110,7 @@ const roleLabels: Record<AppRole, string> = {
 type RoleContextValue = {
   role: AppRole;
   /** Rôle brut renvoyé par le backend, source des permissions RBAC. */
-  backendRole: BackendRole;
+  backendRole: CanonicalRole | "UNKNOWN";
   /** Identifiant utilisateur backend (JWT / localStorage), pour la messagerie. */
   userId: string | null;
   /** `can("billing:export")` — voir src/lib/rbac.ts. */
@@ -158,12 +158,12 @@ export function mapBackendRole(role: string | null | undefined): AppRole {
 }
 
 /** Rôle UI → rôle backend par défaut (simulateur de rôle / session locale). */
-export function uiRoleToBackendRole(role: AppRole): BackendRole {
+export function uiRoleToBackendRole(role: AppRole): CanonicalRole {
   switch (role) {
     case "directeur":
       return "DIRECTEUR";
     case "accueil":
-      return "ACCUEIL";
+      return "SECRETARIAT";
     case "technicien":
       return "MANIPULATEUR";
     case "medecin":
@@ -212,10 +212,10 @@ export function RoleProvider({ children }: { children: ReactNode }) {
     const storedRole = window.sessionStorage.getItem(ROLE_STORAGE_KEY);
     return isRole(storedRole) ? storedRole : "directeur";
   });
-  const [backendRole, setBackendRole] = useState<BackendRole>(() => {
+  const [backendRole, setBackendRole] = useState<CanonicalRole | "UNKNOWN">(() => {
     if (typeof window === "undefined") return "DIRECTEUR";
     const storedUser = readStoredUser();
-    if (storedUser?.role) return normalizeRole(storedUser.role);
+    if (storedUser?.role) return canonicalizeRole(storedUser.role) ?? "UNKNOWN";
     const storedRole = window.sessionStorage.getItem(ROLE_STORAGE_KEY);
     return isRole(storedRole) ? uiRoleToBackendRole(storedRole) : "DIRECTEUR";
   });
@@ -235,7 +235,7 @@ export function RoleProvider({ children }: { children: ReactNode }) {
     if (storedUser) {
       const mapped = mapBackendRole(storedUser.role);
       setRole(mapped);
-      setBackendRole(normalizeRole(storedUser.role));
+      setBackendRole(canonicalizeRole(storedUser.role) ?? "UNKNOWN");
       setDisplayName(storedUser.nomComplet || storedUser.nom || null);
       setUserId(storedUser.id != null ? String(storedUser.id) : null);
       return;

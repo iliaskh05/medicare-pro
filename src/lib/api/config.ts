@@ -1,9 +1,11 @@
 /**
- * Configuration des accès HTTP du frontend de production.
+ * Configuration des accès HTTP du frontend.
  *
- * Deux backends sont adressés depuis le serveur local du centre :
- *  - `JAVA_API` : API métier (patients, factures, correspondants, messagerie).
- *  - `ML_API`   : microservice Python (clustering fraude caisse, analyse d'images).
+ *  - `JAVA_API` : API métier Spring (patients, factures, messagerie).
+ *  - `ML_API`   : microservice Python optionnel (fraude).
+ *
+ * L'adresse du serveur peut être changée sans rebuild via localStorage
+ * (`radiocrm:server-url`). Dev peut rester localhost ; le LAN utilise l'IP du serveur.
  */
 import {
   clearAuthStorage,
@@ -12,20 +14,91 @@ import {
   scheduleLogoutRedirect,
 } from "@/lib/auth-session";
 
+export const SERVER_URL_STORAGE_KEY = "radiocrm:server-url";
+
 function readBase(key: string): string | undefined {
   const raw = import.meta.env?.[key] as string | undefined;
   const value = raw?.trim().replace(/\/$/, "");
   return value ? value : undefined;
 }
 
-/** Backend Spring Boot du centre (serveur local du centre). */
-export const JAVA_API_BASE = readBase("VITE_JAVA_API_URL") ?? "http://localhost:8080";
+function isLoopbackHost(host: string): boolean {
+  return host === "localhost" || host === "127.0.0.1" || host === "[::1]" || host === "::1";
+}
+
+function isLoopbackUrl(url: string): boolean {
+  try {
+    const host = new URL(url).hostname;
+    return isLoopbackHost(host);
+  } catch {
+    return url.includes("localhost") || url.includes("127.0.0.1");
+  }
+}
+
+function normalizeServerUrl(raw: string): string {
+  const trimmed = raw.trim().replace(/\/$/, "");
+  if (!trimmed) return trimmed;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `http://${trimmed}`;
+}
+
+function readStoredServerUrl(): string | undefined {
+  if (typeof window === "undefined") return undefined;
+  try {
+    const stored = window.localStorage.getItem(SERVER_URL_STORAGE_KEY);
+    if (!stored) return undefined;
+    const normalized = normalizeServerUrl(stored);
+    return normalized || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Résolution automatique (sans override opérateur) :
+ * - SSR / Node : VITE_JAVA_API_URL ou localhost (dev).
+ * - Page servie depuis un hôte LAN alors que le build pointe encore sur localhost
+ *   → même hostname, port 8080.
+ */
+function resolveDefaultJavaApiBase(): string {
+  const configured = readBase("VITE_JAVA_API_URL");
+  if (typeof window === "undefined") {
+    return configured ?? "http://localhost:8080";
+  }
+  const pageHost = window.location.hostname;
+  if (!configured || (isLoopbackUrl(configured) && !isLoopbackHost(pageHost))) {
+    return `${window.location.protocol}//${pageHost}:8080`;
+  }
+  return configured;
+}
+
+/** Adresse API courante (override localStorage > env / hostname). */
+export function getJavaApiBase(): string {
+  return readStoredServerUrl() ?? resolveDefaultJavaApiBase();
+}
+
+export function setJavaApiBase(url: string): void {
+  if (typeof window === "undefined") return;
+  const normalized = normalizeServerUrl(url);
+  if (!normalized) {
+    window.localStorage.removeItem(SERVER_URL_STORAGE_KEY);
+    return;
+  }
+  window.localStorage.setItem(SERVER_URL_STORAGE_KEY, normalized);
+}
+
+export function clearJavaApiBaseOverride(): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(SERVER_URL_STORAGE_KEY);
+}
+
+/** @deprecated Prefer getJavaApiBase() so LAN overrides apply after login config. */
+export const JAVA_API_BASE = getJavaApiBase();
 
 /** Microservice Python de scoring / clustering. */
 export const ML_API_BASE = readBase("VITE_ML_API_URL");
 
-/** Toujours vrai : l'API Java pointe par défaut sur localhost:8080. */
-export const API_CONFIGURED = Boolean(JAVA_API_BASE);
+export const API_CONFIGURED = true;
 
 export const API_TIMEOUT_MS = Number(import.meta.env?.["VITE_API_TIMEOUT_MS"] ?? 15000);
 
@@ -104,7 +177,7 @@ export async function httpRequest<T>(
   signal?.addEventListener("abort", onParentAbort);
 
   const token = readAuthToken();
-  const isJavaApi = base === JAVA_API_BASE;
+  const isJavaApi = base === getJavaApiBase();
   const url = `${base}${path}`;
 
   try {
@@ -149,7 +222,9 @@ export async function httpRequest<T>(
     throw new ApiError(
       error instanceof Error ? error.message : "Requête réseau impossible",
       0,
-      "network_error",
+      typeof navigator !== "undefined" && navigator.onLine === false
+        ? "offline"
+        : "network_error",
     );
   } finally {
     clearTimeout(timeout);
@@ -158,7 +233,7 @@ export async function httpRequest<T>(
 }
 
 export const javaApi = <T>(path: string, options?: RequestOptions) =>
-  httpRequest<T>(JAVA_API_BASE, path, options);
+  httpRequest<T>(getJavaApiBase(), path, options);
 
 export const mlApi = <T>(path: string, options?: RequestOptions) =>
   httpRequest<T>(ML_API_BASE, path, options);
@@ -171,7 +246,8 @@ export async function javaApiForm<T>(
   form: FormData,
   { signal, method = "POST" }: { signal?: AbortSignal; method?: "POST" | "PUT" } = {},
 ): Promise<T> {
-  if (!JAVA_API_BASE) {
+  const base = getJavaApiBase();
+  if (!base) {
     throw new ApiError("URL du service indisponible.", 0, "backend_not_configured");
   }
 
@@ -181,7 +257,7 @@ export async function javaApiForm<T>(
   signal?.addEventListener("abort", onParentAbort);
 
   const token = readAuthToken();
-  const url = `${JAVA_API_BASE}${path}`;
+  const url = `${base}${path}`;
 
   try {
     const res = await fetch(url, {
@@ -223,7 +299,9 @@ export async function javaApiForm<T>(
     throw new ApiError(
       error instanceof Error ? error.message : "Envoi du fichier impossible",
       0,
-      "network_error",
+      typeof navigator !== "undefined" && navigator.onLine === false
+        ? "offline"
+        : "network_error",
     );
   } finally {
     clearTimeout(timeout);
@@ -238,7 +316,8 @@ export async function javaApiBlob(
   path: string,
   { method = "GET", signal, headers }: Omit<RequestOptions, "body"> = {},
 ): Promise<Blob> {
-  if (!JAVA_API_BASE) {
+  const base = getJavaApiBase();
+  if (!base) {
     throw new ApiError("URL du service indisponible.", 0, "backend_not_configured");
   }
 
@@ -248,7 +327,7 @@ export async function javaApiBlob(
   signal?.addEventListener("abort", onParentAbort);
 
   const token = readAuthToken();
-  const url = `${JAVA_API_BASE}${path}`;
+  const url = `${base}${path}`;
 
   try {
     const res = await fetch(url, {
@@ -290,7 +369,9 @@ export async function javaApiBlob(
     throw new ApiError(
       error instanceof Error ? error.message : "Téléchargement impossible",
       0,
-      "network_error",
+      typeof navigator !== "undefined" && navigator.onLine === false
+        ? "offline"
+        : "network_error",
     );
   } finally {
     clearTimeout(timeout);

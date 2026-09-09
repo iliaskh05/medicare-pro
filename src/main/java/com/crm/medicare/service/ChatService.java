@@ -463,8 +463,11 @@ public class ChatService {
                 (int)
                         Math.min(
                                 Integer.MAX_VALUE,
-                                chatChannelReadRepository.countUnread(
-                                        channel.getId(), currentUserId, since));
+                                since == null
+                                        ? chatChannelReadRepository.countUnreadAll(
+                                                channel.getId(), currentUserId)
+                                        : chatChannelReadRepository.countUnreadSince(
+                                                channel.getId(), currentUserId, since));
         ChatChannelDto.ChatChannelDtoBuilder b =
                 ChatChannelDto.builder()
                         .id(channel.getId())

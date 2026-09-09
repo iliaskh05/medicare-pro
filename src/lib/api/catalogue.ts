@@ -40,15 +40,27 @@ function mapActe(row: Partial<CatalogueActe> & { id?: number | string; prix?: nu
   };
 }
 
+function asCatalogueList(data: unknown): unknown[] {
+  if (Array.isArray(data)) return data;
+  if (data && typeof data === "object") {
+    const record = data as Record<string, unknown>;
+    const content = record["content"];
+    const items = record["items"];
+    if (Array.isArray(content)) return content;
+    if (Array.isArray(items)) return items;
+  }
+  return [];
+}
+
 export async function fetchCatalogue(
   actifs = true,
   signal?: AbortSignal,
 ): Promise<CatalogueActe[]> {
-  const rows = await api.get<unknown[]>(
+  const rows = await api.get<unknown>(
     `/api/catalogue/examens?actifs=${actifs ? "true" : "false"}`,
     signal ? { signal } : {},
   );
-  return (rows ?? []).map((row) => mapActe(row as never));
+  return asCatalogueList(rows).map((row) => mapActe(row as never));
 }
 
 export async function createCatalogueActe(payload: CatalogueWritePayload): Promise<CatalogueActe> {

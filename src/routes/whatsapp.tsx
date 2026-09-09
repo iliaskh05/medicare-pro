@@ -12,6 +12,8 @@ import { WaChatThread } from "@/components/whatsapp/wa-chat-thread";
 import { WaContextPanel } from "@/components/whatsapp/wa-context-panel";
 import { WaConversationList } from "@/components/whatsapp/wa-conversation-list";
 import { fetchWaConversations, sendWaMessage } from "@/lib/api/whatsapp";
+import { ApiError } from "@/lib/api/config";
+import { describeApiError } from "@/lib/api/errors";
 import {
   waStatutLabel,
   type WaConversation,
@@ -82,8 +84,13 @@ function WhatsAppPage() {
       })
       .catch((e: unknown) => {
         if (controller.signal.aborted) return;
+        const friendly = describeApiError(e);
+        const notConfigured =
+          e instanceof ApiError && (e.status === 404 || e.code === "not_found");
         setError(
-          e instanceof Error ? e.message : "Impossible de charger les conversations WhatsApp.",
+          notConfigured
+            ? "NOT CONFIGURED — l'API WhatsApp n'est pas branchée sur ce serveur. La console n'est pas un canal actif."
+            : friendly.message,
         );
       })
       .finally(() => {

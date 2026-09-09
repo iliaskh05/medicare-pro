@@ -5,6 +5,7 @@ import com.crm.medicare.dto.AppointmentDto;
 import com.crm.medicare.dto.AppointmentRescheduleRequest;
 import com.crm.medicare.dto.AppointmentWriteRequest;
 import com.crm.medicare.dto.ResourceDto;
+import com.crm.medicare.dto.ResourceOccupancyDto;
 import com.crm.medicare.security.PermissionCatalog;
 import com.crm.medicare.service.AppointmentService;
 import java.time.LocalDate;
@@ -96,6 +97,24 @@ public class AppointmentController {
     public List<ResourceDto> resources(
             @RequestParam(defaultValue = "false") boolean includeInactive) {
         return appointmentService.listResources(includeInactive);
+    }
+
+    @GetMapping({"/api/resources/occupancy", "/api/v1/resources/occupancy"})
+    @PreAuthorize("hasAuthority('" + PermissionCatalog.APPOINTMENT_READ + "')")
+    public List<ResourceOccupancyDto> occupancy(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return appointmentService.occupancy(date);
+    }
+
+    @PatchMapping({"/api/resources/{id}", "/api/v1/resources/{id}"})
+    @PreAuthorize("hasAuthority('" + PermissionCatalog.SETTINGS_WRITE + "')")
+    public ResourceDto patchResource(
+            @PathVariable Long id, @RequestBody Map<String, String> body) {
+        Boolean actif = null;
+        if (body != null && body.get("actif") != null) {
+            actif = Boolean.parseBoolean(body.get("actif"));
+        }
+        return appointmentService.patchResource(id, actif);
     }
 
     @PostMapping({"/api/resources", "/api/v1/resources"})

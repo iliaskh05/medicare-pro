@@ -53,6 +53,12 @@ public class InvoicePayment {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "source_type", length = 64)
+    private String sourceType;
+
+    @Column(name = "source_id", length = 64)
+    private String sourceId;
+
     @PrePersist
     void prePersist() {
         if (createdAt == null) {

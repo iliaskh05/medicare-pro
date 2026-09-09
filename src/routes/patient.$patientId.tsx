@@ -7,14 +7,23 @@ import {
   CalendarClock,
   CalendarPlus,
   FileText,
+  FileUp,
   FolderOpen,
+  FolderPlus,
+  ImagePlus,
+  PackageCheck,
   ReceiptText,
   ScanLine,
   ShieldAlert,
+  UserRound,
   Wallet,
 } from "lucide-react";
 
-import { PatientDocumentsPanel } from "@/components/patients/documents-panel";
+import {
+  PatientDocumentsPanel,
+  type DocumentUploadKind,
+} from "@/components/patients/documents-panel";
+import { PatientDossierRemettrePanel } from "@/components/patients/dossier-remettre-panel";
 import { PatientLabelPrintMenu } from "@/components/patients/patient-label-print-menu";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -70,11 +79,14 @@ import { formatMAD } from "@/types/domain";
 
 const PATIENT_TABS = [
   "apercu",
+  "identite",
   "rdv",
   "historique",
+  "images",
+  "documents",
+  "dossier",
   "comptes-rendus",
   "facturation",
-  "documents",
   "timeline",
 ] as const;
 
@@ -151,8 +163,9 @@ function PatientRecordPage() {
   const { tab: tabParam } = Route.useSearch();
   const tab: PatientTab = tabParam ?? "apercu";
   const navigate = useNavigate({ from: Route.fullPath });
-  const { role, profile } = useRole();
+  const { role, profile, canEdit, canCreate } = useRole();
   const canSeeFinance = profile.canSeeFinance;
+  const canWriteReport = canEdit("reports") || canCreate("reports");
 
   const [patient, setPatient] = useState<PatientRow | null>(null);
   const [historique, setHistorique] = useState<HistoryItem[]>([]);
@@ -168,6 +181,7 @@ function PatientRecordPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [uploadKind, setUploadKind] = useState<DocumentUploadKind | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -377,23 +391,70 @@ function PatientRecordPage() {
                 </Link>
               </Button>
             ) : null}
-            <Button size="sm" variant="secondary" onClick={() => setTab("documents")}>
-              <FolderOpen className="mr-1.5 size-4" /> Documents
-            </Button>
           </div>
         }
       />
+
+      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card px-3 py-3">
+        <span className="mr-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Actions rapides
+        </span>
+        <Button
+          size="sm"
+          onClick={() => {
+            setUploadKind("image");
+            setTab("images");
+          }}
+        >
+          <ImagePlus className="mr-1.5 size-4" /> Ajouter une image
+        </Button>
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={() => {
+            setUploadKind("document");
+            setTab("documents");
+          }}
+        >
+          <FileUp className="mr-1.5 size-4" /> Ajouter un document
+        </Button>
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={() => {
+            setUploadKind("dossier");
+            setTab("documents");
+          }}
+        >
+          <FolderPlus className="mr-1.5 size-4" /> Ajouter au dossier
+        </Button>
+        <Button size="sm" variant="outline" onClick={() => setTab("dossier")}>
+          <PackageCheck className="mr-1.5 size-4" /> Dossier à remettre
+        </Button>
+      </div>
 
       <div className={role === "directeur" ? "grid gap-6 xl:grid-cols-10" : undefined}>
         <div className={role === "directeur" ? "space-y-6 xl:col-span-7" : "space-y-6"}>
           <Tabs value={tab} onValueChange={setTab}>
             <TabsList className="h-auto w-full flex-wrap justify-start">
               <TabsTrigger value="apercu">Vue générale</TabsTrigger>
+              <TabsTrigger value="identite">
+                <UserRound className="mr-2 size-4" /> Identité
+              </TabsTrigger>
               <TabsTrigger value="rdv">
                 <CalendarClock className="mr-2 size-4" /> Rendez-vous
               </TabsTrigger>
               <TabsTrigger value="historique">
                 <Activity className="mr-2 size-4" /> Examens
+              </TabsTrigger>
+              <TabsTrigger value="images">
+                <ImagePlus className="mr-2 size-4" /> Images
+              </TabsTrigger>
+              <TabsTrigger value="documents">
+                <FolderOpen className="mr-2 size-4" /> Documents
+              </TabsTrigger>
+              <TabsTrigger value="dossier">
+                <PackageCheck className="mr-2 size-4" /> Dossier à remettre
               </TabsTrigger>
               <TabsTrigger value="comptes-rendus">
                 <FileText className="mr-2 size-4" /> Comptes-rendus
@@ -403,11 +464,8 @@ function PatientRecordPage() {
                   <ReceiptText className="mr-2 size-4" /> Facturation
                 </TabsTrigger>
               ) : null}
-              <TabsTrigger value="documents">
-                <FolderOpen className="mr-2 size-4" /> Documents
-              </TabsTrigger>
               <TabsTrigger value="timeline">
-                <CalendarClock className="mr-2 size-4" /> Timeline
+                <CalendarClock className="mr-2 size-4" /> Historique
               </TabsTrigger>
             </TabsList>
 
@@ -578,6 +636,35 @@ function PatientRecordPage() {
               </Card>
             </TabsContent>
 
+            <TabsContent value="identite" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Identité & contact</CardTitle>
+                </CardHeader>
+                <CardContent className="grid gap-4 sm:grid-cols-2">
+                  <Field label="Nom complet" value={patient.nomComplet} />
+                  <Field label="N° dossier" value={patient.numeroDossier ?? patient.id} />
+                  <Field label="CIN" value={patient.cin} />
+                  <Field label="Sexe" value={patient.sexe} />
+                  <Field label="Date de naissance" value={patient.dateNaissance} />
+                  <Field label="Âge" value={patient.age != null ? `${patient.age} ans` : null} />
+                  <Field label="Téléphone" value={patient.telephone} />
+                  <Field label="Email" value={patient.email} />
+                  <Field label="Adresse" value={patient.adresse} />
+                  <Field label="Ville" value={patient.ville} />
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Mutuelle / Assurance</CardTitle>
+                </CardHeader>
+                <CardContent className="grid gap-4 sm:grid-cols-2">
+                  <Field label="Mutuelle" value={patient.mutuelle} />
+                  <Field label="N° affiliation" value={patient.numAffiliation} />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
             <TabsContent value="rdv" className="space-y-3">
               {appointments.length === 0 ? (
                 <EmptyState
@@ -676,17 +763,36 @@ function PatientRecordPage() {
             <TabsContent value="comptes-rendus">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between gap-2">
-                  <CardTitle className="text-base">Comptes-rendus</CardTitle>
-                  <Button variant="outline" size="sm" asChild>
-                    <Link to="/comptes-rendus">Ouvrir le module</Link>
-                  </Button>
+                  <div>
+                    <CardTitle className="text-base">Comptes-rendus</CardTitle>
+                    {!canWriteReport ? (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Consultation uniquement — rédaction et validation réservées aux
+                        médecins / radiologues.
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {canWriteReport ? (
+                      <Button size="sm" asChild>
+                        <Link to="/comptes-rendus">Rédiger / modifier</Link>
+                      </Button>
+                    ) : null}
+                    <Button variant="outline" size="sm" asChild>
+                      <Link to="/comptes-rendus">Ouvrir le module</Link>
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   {reports.length === 0 ? (
                     <EmptyState
                       icon={FileText}
                       title="Aucun compte-rendu"
-                      description="Les comptes-rendus liés à ce patient apparaîtront ici."
+                      description={
+                        canWriteReport
+                          ? "Créez un compte rendu depuis le module Comptes-rendus."
+                          : "Les comptes-rendus liés à ce patient apparaîtront ici (consultation)."
+                      }
                       compact
                     />
                   ) : (
@@ -709,7 +815,9 @@ function PatientRecordPage() {
                               {REPORT_STATUS_LABEL[r.status] ?? r.status}
                             </Pill>
                             <Button variant="outline" size="sm" asChild>
-                              <Link to="/comptes-rendus">Voir</Link>
+                              <Link to="/comptes-rendus">
+                                {canWriteReport ? "Ouvrir" : "Voir"}
+                              </Link>
                             </Button>
                           </div>
                         </li>
@@ -774,13 +882,52 @@ function PatientRecordPage() {
               </TabsContent>
             ) : null}
 
+            <TabsContent value="images">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Images</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <PatientDocumentsPanel
+                    patientId={patient.id}
+                    mode="images"
+                    openUpload={uploadKind === "image" ? "image" : null}
+                    onUploadHandled={() => setUploadKind(null)}
+                    onChanged={() => setReloadKey((k) => k + 1)}
+                  />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
             <TabsContent value="documents">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Documents</CardTitle>
+                  <CardTitle className="text-base">Documents patient</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <PatientDocumentsPanel patientId={patient.id} />
+                  <PatientDocumentsPanel
+                    patientId={patient.id}
+                    mode="documents"
+                    openUpload={
+                      uploadKind === "document" || uploadKind === "dossier" ? uploadKind : null
+                    }
+                    onUploadHandled={() => setUploadKind(null)}
+                    onChanged={() => setReloadKey((k) => k + 1)}
+                  />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="dossier">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Dossier à remettre</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <PatientDossierRemettrePanel
+                    patientId={patient.id}
+                    onChanged={() => setReloadKey((k) => k + 1)}
+                  />
                 </CardContent>
               </Card>
             </TabsContent>
@@ -788,13 +935,13 @@ function PatientRecordPage() {
             <TabsContent value="timeline">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Timeline complète</CardTitle>
+                  <CardTitle className="text-base">Historique complet</CardTitle>
                 </CardHeader>
                 <CardContent>
                   {timeline.length === 0 ? (
                     <EmptyState
                       icon={CalendarClock}
-                      title="Timeline vide"
+                      title="Historique vide"
                       description="Aucun événement enregistré pour ce dossier."
                       compact
                     />
@@ -807,11 +954,13 @@ function PatientRecordPage() {
                         >
                           <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-2">
-                              <p className="font-semibold leading-snug">{ev.title}</p>
+                              <p className="font-semibold leading-snug">
+                                {ev.action || ev.title}
+                              </p>
                               {ev.source ? <Pill tone="neutral">{ev.source}</Pill> : null}
                             </div>
                             <p className="mt-0.5 text-xs text-muted-foreground">
-                              {[ev.type, ev.action, ev.actor, ev.detail]
+                              {[ev.title, ev.type, ev.actor, ev.detail]
                                 .filter(Boolean)
                                 .join(" · ")}
                             </p>
@@ -875,6 +1024,15 @@ function PatientRecordPage() {
           </aside>
         ) : null}
       </div>
+    </div>
+  );
+}
+
+function Field({ label, value }: { label: string; value?: string | number | null }) {
+  return (
+    <div>
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="mt-1 text-sm font-medium text-foreground">{value != null && value !== "" ? value : "—"}</p>
     </div>
   );
 }

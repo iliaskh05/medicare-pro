@@ -53,6 +53,27 @@ public class InvoiceItem {
     @Column(name = "line_total", nullable = false, precision = 12, scale = 2)
     private BigDecimal lineTotal = BigDecimal.ZERO;
 
+    @Column(length = 64)
+    private String code;
+
+    @Column(length = 32)
+    private String modalite;
+
+    @Column(nullable = false, precision = 12, scale = 2)
+    private BigDecimal discount = BigDecimal.ZERO;
+
+    @Column(name = "vat_rate", nullable = false, precision = 5, scale = 2)
+    private BigDecimal vatRate = BigDecimal.ZERO;
+
+    @Column(name = "vat_amount", nullable = false, precision = 12, scale = 2)
+    private BigDecimal vatAmount = BigDecimal.ZERO;
+
+    @Column(name = "total_ht", nullable = false, precision = 12, scale = 2)
+    private BigDecimal totalHt = BigDecimal.ZERO;
+
+    @Column(name = "total_ttc", nullable = false, precision = 12, scale = 2)
+    private BigDecimal totalTtc = BigDecimal.ZERO;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
@@ -61,5 +82,10 @@ public class InvoiceItem {
         if (createdAt == null) {
             createdAt = LocalDateTime.now();
         }
+        if (discount == null) discount = BigDecimal.ZERO;
+        if (vatRate == null) vatRate = BigDecimal.ZERO;
+        if (vatAmount == null) vatAmount = BigDecimal.ZERO;
+        if (totalHt == null) totalHt = lineTotal != null ? lineTotal : BigDecimal.ZERO;
+        if (totalTtc == null) totalTtc = lineTotal != null ? lineTotal : BigDecimal.ZERO;
     }
 }

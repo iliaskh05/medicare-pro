@@ -15,10 +15,15 @@ import com.crm.medicare.entity.Paiement;
 import com.crm.medicare.entity.Patient;
 import com.crm.medicare.entity.Report;
 import com.crm.medicare.repository.AppointmentRepository;
+import com.crm.medicare.repository.DocumentExamenRepository;
 import com.crm.medicare.repository.ExamenRepository;
 import com.crm.medicare.repository.InvoiceRepository;
 import com.crm.medicare.repository.PatientRepository;
 import com.crm.medicare.repository.ReportRepository;
+import com.crm.medicare.entity.DocumentExamen;
+import com.crm.medicare.entity.DocumentType;
+import com.crm.medicare.entity.Utilisateur;
+import com.crm.medicare.repository.UtilisateurRepository;
 import com.crm.medicare.security.SecurityUtils;
 import jakarta.persistence.criteria.Predicate;
 import java.math.BigDecimal;
@@ -54,6 +59,8 @@ public class PatientService {
     private final AppointmentRepository appointmentRepository;
     private final ReportRepository reportRepository;
     private final InvoiceRepository invoiceRepository;
+    private final DocumentExamenRepository documentExamenRepository;
+    private final UtilisateurRepository utilisateurRepository;
     private final AuditService auditService;
 
     @Transactional(readOnly = true)
@@ -202,7 +209,7 @@ public class PatientService {
 
         Patient patient = new Patient();
         applyWrite(patient, request, cin);
-        patient.setCreatedBy(SecurityUtils.currentUserOrNull());
+        patient.setCreatedBy(persistedCurrentUserOrNull());
         Patient saved = persistNewPatient(patient);
 
         auditService.record(
@@ -405,6 +412,47 @@ public class PatientService {
                                     .build());
                 }
             }
+            if (e.getDossierRemisAt() != null
+                    && ("remis".equalsIgnoreCase(e.getDossierStatut())
+                            || "envoye".equalsIgnoreCase(e.getDossierStatut()))) {
+                events.add(
+                        Patient360Dtos.TimelineEvent.builder()
+                                .id("dossier-remis-" + e.getId())
+                                .source("dossier")
+                                .type("REMIS")
+                                .title("Dossier remis au patient")
+                                .detail(
+                                        e.getDescription() != null
+                                                ? e.getDescription()
+                                                : e.getNumSejour())
+                                .at(formatDate(e.getDossierRemisAt()))
+                                .actor(e.getDossierRemisPar())
+                                .action("Dossier remis au patient")
+                                .build());
+            }
+        }
+
+        for (DocumentExamen doc : documentExamenRepository.findByPatientIdOrderByCreatedAtDesc(patientId)) {
+            boolean image =
+                    DocumentType.IMAGE.name().equalsIgnoreCase(doc.getType())
+                            || (doc.getContentType() != null
+                                    && doc.getContentType().toLowerCase(Locale.ROOT).startsWith("image/"));
+            events.add(
+                    Patient360Dtos.TimelineEvent.builder()
+                            .id("doc-" + doc.getId())
+                            .source(image ? "image" : "document")
+                            .type(doc.getType())
+                            .title(doc.getNomOriginal())
+                            .detail(
+                                    doc.getExamen() != null
+                                            ? (doc.getExamen().getDescription() != null
+                                                    ? doc.getExamen().getDescription()
+                                                    : doc.getExamen().getNumSejour())
+                                            : null)
+                            .at(formatDate(doc.getCreatedAt()))
+                            .actor(doc.getCreatedBy())
+                            .action(image ? "Image ajoutée" : "Document ajouté")
+                            .build());
         }
 
         Page<Appointment> appts =
@@ -588,7 +636,7 @@ public class PatientService {
             }
         }
         if (created) {
-            patient.setCreatedBy(SecurityUtils.currentUserOrNull());
+            patient.setCreatedBy(persistedCurrentUserOrNull());
             return persistNewPatient(patient);
         }
         return patientRepository.save(patient);
@@ -598,6 +646,15 @@ public class PatientService {
         return patientRepository
                 .findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> ApiException.notFound("Patient introuvable"));
+    }
+
+    /** Never attach a detached principal that is no longer in the utilisateurs table. */
+    private Utilisateur persistedCurrentUserOrNull() {
+        Utilisateur actor = SecurityUtils.currentUserOrNull();
+        if (actor == null || actor.getId() == null) {
+            return null;
+        }
+        return utilisateurRepository.findById(actor.getId()).orElse(null);
     }
 
     private void applyWrite(Patient patient, PatientWriteRequest request, String cin) {

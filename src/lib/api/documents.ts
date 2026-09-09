@@ -26,10 +26,11 @@ export async function fetchExamenDocuments(
   examenId: string,
   signal?: AbortSignal,
 ): Promise<DocumentItem[]> {
-  return javaApi<DocumentItem[]>(
+  const rows = await javaApi<unknown>(
     `/api/documents/examen/${encodeURIComponent(examenId)}`,
     signal ? { signal } : {},
   );
+  return Array.isArray(rows) ? (rows as DocumentItem[]) : [];
 }
 
 export async function uploadDocument(params: {
@@ -51,7 +52,9 @@ export async function downloadDocumentFile(id: number): Promise<Blob> {
 }
 
 export function isImageDocument(doc: DocumentItem): boolean {
+  const type = (doc.type || "").toUpperCase();
   return (
+    type === "IMAGE" ||
     doc.contentType.startsWith("image/") ||
     /\.(jpe?g|png)$/i.test(doc.nomOriginal)
   );

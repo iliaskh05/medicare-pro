@@ -134,7 +134,47 @@ export async function rescheduleAppointment(
   });
 }
 
-export async function fetchResources(signal?: AbortSignal): Promise<ResourceDto[]> {
-  const rows = await javaApi<ResourceDto[]>("/api/resources", signal ? { signal } : {});
+export type ResourceOccupancyDto = ResourceDto & {
+  status: "AVAILABLE" | "OCCUPIED" | "OUT_OF_SERVICE" | string;
+  currentPatient?: string | null;
+  currentPatientId?: string | null;
+  currentAppointmentId?: string | null;
+  currentExam?: string | null;
+  currentExamenId?: string | null;
+  startsAt?: string | null;
+  endsAt?: string | null;
+};
+
+export async function fetchResourceOccupancy(
+  date: string,
+  signal?: AbortSignal,
+): Promise<ResourceOccupancyDto[]> {
+  const rows = await javaApi<ResourceOccupancyDto[]>(
+    `/api/resources/occupancy?date=${encodeURIComponent(date)}`,
+    signal ? { signal } : {},
+  );
+  return rows ?? [];
+}
+
+export async function createResource(payload: {
+  code: string;
+  libelle: string;
+  modalite?: string;
+}): Promise<ResourceDto> {
+  return javaApi<ResourceDto>("/api/resources", { method: "POST", body: payload });
+}
+
+export async function fetchResources(
+  options?: { includeInactive?: boolean; signal?: AbortSignal } | AbortSignal,
+): Promise<ResourceDto[]> {
+  const opts =
+    options instanceof AbortSignal
+      ? { signal: options, includeInactive: false }
+      : options ?? {};
+  const qs = opts.includeInactive ? "?includeInactive=true" : "";
+  const rows = await javaApi<ResourceDto[]>(
+    `/api/resources${qs}`,
+    opts.signal ? { signal: opts.signal } : {},
+  );
   return rows ?? [];
 }

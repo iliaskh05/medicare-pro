@@ -398,7 +398,8 @@ export function NouveauRdvDialog({
                 </Select>
                 {noCompatibleRoom ? (
                   <p className="text-xs text-destructive">
-                    Aucune salle compatible n&apos;est disponible pour cet examen.
+                    Aucune salle active pour la modalité « {acte?.modalite} ». Vérifiez la page
+                    Salles (actives + modalité) ou importez les ressources.
                   </p>
                 ) : null}
                 {roomConflict ? (

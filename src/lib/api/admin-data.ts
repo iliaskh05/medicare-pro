@@ -1,4 +1,4 @@
-import { javaApi, javaApiBlob, javaApiForm, JAVA_API_BASE } from "@/lib/api/config";
+import { javaApi, javaApiBlob, javaApiForm, getJavaApiBase } from "@/lib/api/config";
 import { readAuthToken } from "@/lib/auth-session";
 
 export type DemoDatasetStatus = {
@@ -96,7 +96,7 @@ export async function fetchImportHistory(signal?: AbortSignal): Promise<DataImpo
 /** Fallback download via fetch if javaApiBlob path differs. */
 export async function downloadTemplateFile(): Promise<void> {
   const token = readAuthToken();
-  const res = await fetch(`${JAVA_API_BASE}/api/admin/data/template`, {
+  const res = await fetch(`${getJavaApiBase()}/api/admin/data/template`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   if (!res.ok) throw new Error("Téléchargement du modèle impossible");

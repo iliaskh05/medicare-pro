@@ -65,6 +65,7 @@ import { fetchRadiologues, type StaffRadiologue } from "@/lib/api/staff";
 import { useDisplayPreference } from "@/hooks/use-display-preference";
 import { fetchMyPreference } from "@/lib/api/preferences";
 import { toLocalDateKey } from "@/lib/date";
+import { downloadExcelWorkbook, excelFilename } from "@/lib/excel-export";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/worklist")({
@@ -289,36 +290,53 @@ function WorklistPage() {
               variant="outline"
               disabled={rows.length === 0}
               onClick={() => {
-                const header = [
-                  "Patient",
-                  "Sejour",
-                  "Examen",
-                  "Modalite",
-                  "Date",
-                  "Etat",
-                  "Compte rendu",
-                  "Paiement",
-                ];
-                const body = rows.map((r) =>
-                  [r.patient, r.numSejour, r.description, r.modalite, r.dateExamen, r.etatPatient, r.statutCr, r.paiement]
-                    .map((v) => `"${String(v).replaceAll('"', '""')}"`)
-                    .join(","),
-                );
-                const blob = new Blob([[header.join(","), ...body].join("\n")], {
-                  type: "text/csv;charset=utf-8",
-                });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = `examens-${date}.csv`;
-                a.click();
-                URL.revokeObjectURL(url);
+                void (async () => {
+                  try {
+                    await downloadExcelWorkbook({
+                      filename: excelFilename("Examens"),
+                      sheets: [
+                        {
+                          name: "Examens",
+                          columns: [
+                            { header: "N° examen", key: "num", width: 16 },
+                            { header: "Patient", key: "patient", width: 26 },
+                            { header: "Type", key: "type", width: 28, wrap: true },
+                            { header: "Modalité", key: "modalite", width: 12 },
+                            { header: "Médecin", key: "medecin", width: 20 },
+                            { header: "Date", key: "date", width: 18, format: "date" },
+                            { header: "Statut", key: "statut", width: 14 },
+                            { header: "Compte rendu", key: "cr", width: 14 },
+                            { header: "Montant", key: "montant", width: 14, format: "currency" },
+                            { header: "Payé", key: "paye", width: 14, format: "currency" },
+                            { header: "Reste", key: "reste", width: 14, format: "currency" },
+                          ],
+                          rows: rows.map((r) => ({
+                            num: r.numSejour ?? r.id,
+                            patient: r.patient,
+                            type: r.description ?? "",
+                            modalite: r.modalite ?? "",
+                            medecin: r.medecin ?? "",
+                            date: r.dateExamen ?? "",
+                            statut: r.etatPatient ?? "",
+                            cr: r.statutCr ?? "",
+                            montant: r.montant ?? 0,
+                            paye: r.acompte ?? 0,
+                            reste: r.reste ?? Math.max(0, (r.montant ?? 0) - (r.acompte ?? 0)),
+                          })),
+                        },
+                      ],
+                    });
+                    toast.success(`Export Excel — ${rows.length} examen(s)`);
+                  } catch (e) {
+                    toast.error(e instanceof Error ? e.message : "Export impossible");
+                  }
+                })();
               }}
             >
-              <FileDown className="mr-1.5 size-4" /> Exporter CSV
+              <FileDown className="mr-1.5 size-4" /> Exporter Excel
             </Button>
             <Button asChild>
-              <Link to="/accueil" search={{ mode: "rdv" }}>
+              <Link to="/accueil" search={{ mode: "rdv" } as { mode: "rdv" }}>
                 Nouvel examen
               </Link>
             </Button>

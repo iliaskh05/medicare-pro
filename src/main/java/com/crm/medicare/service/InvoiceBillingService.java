@@ -6,17 +6,20 @@ import com.crm.medicare.dto.InvoiceDto;
 import com.crm.medicare.dto.InvoiceItemDto;
 import com.crm.medicare.dto.InvoicePaymentRequest;
 import com.crm.medicare.dto.InvoiceRefundRequest;
+import com.crm.medicare.entity.ElectronicInvoiceStatus;
 import com.crm.medicare.entity.Examen;
 import com.crm.medicare.entity.Invoice;
 import com.crm.medicare.entity.InvoiceItem;
 import com.crm.medicare.entity.InvoicePayment;
 import com.crm.medicare.entity.InvoiceRefund;
+import com.crm.medicare.entity.InvoiceSequence;
 import com.crm.medicare.entity.Paiement;
 import com.crm.medicare.entity.Patient;
 import com.crm.medicare.entity.Utilisateur;
 import com.crm.medicare.repository.ExamenRepository;
 import com.crm.medicare.repository.InvoicePaymentRepository;
 import com.crm.medicare.repository.InvoiceRepository;
+import com.crm.medicare.repository.InvoiceSequenceRepository;
 import com.crm.medicare.repository.PatientRepository;
 import com.crm.medicare.security.SecurityUtils;
 import com.crm.medicare.workflow.InvoiceStatus;
@@ -30,6 +33,7 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -48,6 +52,18 @@ public class InvoiceBillingService {
     private final WorkflowEngine workflowEngine;
     private final AuditService auditService;
     private final AnomalyScoringService anomalyScoringService;
+    private final InvoiceSequenceRepository invoiceSequenceRepository;
+    private final AppSettingsService appSettingsService;
+    private final ElectronicInvoiceService electronicInvoiceService;
+
+    @Value("${radiocrm.centre.ice:}")
+    private String centreIce;
+
+    @Value("${radiocrm.centre.if:}")
+    private String centreIf;
+
+    @Value("${radiocrm.centre.taxe_professionnelle:}")
+    private String centreTaxePro;
 
     @Transactional(readOnly = true)
     public List<InvoiceDto> list() {
@@ -115,6 +131,19 @@ public class InvoiceBillingService {
         invoice.setPatientShare(patientShare);
         invoice.setModePaiement(normalizeMode(request.getModePaiement()));
         invoice.setNotes(request.getNotes());
+        invoice.setSeries(appSettingsService.get("billing.invoice.series", "FAC"));
+        invoice.setDocumentKind("INVOICE");
+        invoice.setServiceDate(LocalDate.now(ZONE));
+        invoice.setVatRate(parseRate(appSettingsService.get("billing.vat.default-rate", "0")));
+        invoice.setTotalHt(total);
+        invoice.setTotalTva(BigDecimal.ZERO);
+        invoice.setSellerIce(firstNonBlank(appSettingsService.get("centre.ice", ""), centreIce));
+        invoice.setSellerIf(firstNonBlank(appSettingsService.get("centre.if", ""), centreIf));
+        invoice.setSellerTaxeProfessionnelle(
+                firstNonBlank(appSettingsService.get("centre.taxe_professionnelle", ""), centreTaxePro));
+        invoice.setLegalMentions(appSettingsService.get("billing.legal-mentions", ""));
+        invoice.setPaymentTerms(appSettingsService.get("billing.payment-terms", ""));
+        invoice.setElectronicStatus(ElectronicInvoiceStatus.ISSUED);
         Utilisateur actor = SecurityUtils.currentUserOrNull();
         if (actor != null) {
             invoice.setCreatedById(actor.getId());
@@ -133,6 +162,17 @@ public class InvoiceBillingService {
         item.setQuantity(BigDecimal.ONE);
         item.setUnitPrice(montant);
         item.setLineTotal(montant);
+        item.setDiscount(BigDecimal.ZERO);
+        item.setVatRate(invoice.getVatRate());
+        item.setVatAmount(BigDecimal.ZERO);
+        item.setTotalHt(montant);
+        item.setTotalTtc(montant);
+        if (examen != null && examen.getModalite() != null) {
+            item.setModalite(examen.getModalite().name());
+        }
+        if (examen != null && examen.getCatalogue() != null) {
+            item.setCode(examen.getCatalogue().getCode());
+        }
         invoice.getItems().add(item);
 
         Invoice saved = invoiceRepository.save(invoice);
@@ -155,7 +195,9 @@ public class InvoiceBillingService {
             if (examen.getAcompte() == null) {
                 examen.setAcompte(BigDecimal.ZERO);
             }
-            examen.setPaiement(Paiement.impaye);
+            if (examen.getAcompte().compareTo(BigDecimal.ZERO) <= 0) {
+                examen.setPaiement(Paiement.impaye);
+            }
             examenRepository.save(examen);
         }
 
@@ -165,6 +207,7 @@ public class InvoiceBillingService {
                 String.valueOf(saved.getId()),
                 Map.of("reference", saved.getReference(), "total", saved.getTotal().toPlainString()));
         anomalyScoringService.scoreInvoiceAsync(saved.getId());
+        electronicInvoiceService.markIssued(saved);
         return toDto(saved);
     }
 
@@ -264,6 +307,7 @@ public class InvoiceBillingService {
                 "Invoice",
                 String.valueOf(saved.getId()),
                 Map.of("reference", saved.getReference()));
+        electronicInvoiceService.markCancelled(saved);
         return toDto(saved);
     }
 
@@ -342,10 +386,59 @@ public class InvoiceBillingService {
                 .orElseThrow(() -> ApiException.notFound("Facture introuvable"));
     }
 
+    /**
+     * Caisse worklist : une facture par examen, paiements sur le ledger autoritatif.
+     */
+    @Transactional
+    public InvoiceDto ensureAndPayForExam(Long examenId, InvoicePaymentRequest request) {
+        Examen examen =
+                examenRepository
+                        .findByIdWithPatient(examenId)
+                        .orElseThrow(() -> ApiException.notFound("Examen introuvable"));
+        List<Invoice> existing = invoiceRepository.findByExamenId(examenId);
+        Invoice invoice;
+        if (existing.isEmpty()) {
+            InvoiceCreateRequest create = new InvoiceCreateRequest();
+            create.setPatientId(examen.getPatient().getId());
+            create.setExamenId(examenId);
+            if (examen.getAcompte() != null && examen.getAcompte().compareTo(BigDecimal.ZERO) > 0) {
+                create.setAcompte(examen.getAcompte());
+                create.setModePaiement(
+                        request.getMode() != null && !request.getMode().isBlank() ? request.getMode() : "especes");
+                create.setIdempotencyKey("exam-seed-" + examenId);
+            }
+            InvoiceDto created = create(create);
+            invoice = load(Long.valueOf(created.getId()));
+        } else {
+            invoice = load(existing.get(0).getId());
+        }
+        applyPayment(invoice, request, true);
+        return toDto(invoiceRepository.save(invoice));
+    }
+
     private String nextReference() {
-        String prefix = "FAC-" + LocalDate.now(ZONE).getYear() + "-";
-        long seq = invoiceRepository.countByReferenceStartingWith(prefix) + 1;
-        return prefix + String.format("%06d", seq);
+        int year = LocalDate.now(ZONE).getYear();
+        String series = appSettingsService.get("billing.invoice.series", "FAC");
+        InvoiceSequence seq =
+                invoiceSequenceRepository
+                        .lockBySeriesAndYear(series, year)
+                        .orElseGet(
+                                () -> {
+                                    InvoiceSequence created = new InvoiceSequence();
+                                    created.setSeries(series);
+                                    created.setYear(year);
+                                    created.setLastValue(0);
+                                    return invoiceSequenceRepository.saveAndFlush(created);
+                                });
+        if (seq.getLastValue() == 0) {
+            seq =
+                    invoiceSequenceRepository
+                            .lockBySeriesAndYear(series, year)
+                            .orElse(seq);
+        }
+        seq.setLastValue(seq.getLastValue() + 1);
+        invoiceSequenceRepository.save(seq);
+        return series + "-" + year + "-" + String.format("%06d", seq.getLastValue());
     }
 
     /**
@@ -376,13 +469,7 @@ public class InvoiceBillingService {
                 invoice.getItems() == null || invoice.getItems().isEmpty()
                         ? ""
                         : invoice.getItems().get(0).getLabel();
-        String uiStatut =
-                switch (invoice.getStatut()) {
-                    case PAID -> "Payé";
-                    case CANCELLED -> "Annulé";
-                    case REFUNDED -> "Annulé";
-                    default -> "En attente de mutuelle";
-                };
+        String uiStatut = uiInvoiceStatus(invoice.getStatut());
         String modeUi = uiMode(invoice.getModePaiement());
         return InvoiceDto.builder()
                 .id(String.valueOf(invoice.getId()))
@@ -429,6 +516,22 @@ public class InvoiceBillingService {
                 .build();
     }
 
+    private static String uiInvoiceStatus(InvoiceStatus statut) {
+        if (statut == InvoiceStatus.PAID) {
+            return "Payé";
+        }
+        if (statut == InvoiceStatus.CANCELLED || statut == InvoiceStatus.REFUNDED) {
+            return "Annulé";
+        }
+        if (statut == InvoiceStatus.CREDIT_NOTE) {
+            return "Avoir";
+        }
+        if (statut == InvoiceStatus.PARTIALLY_PAID) {
+            return "Partiellement payé";
+        }
+        return "En attente de mutuelle";
+    }
+
     private static String normalizeMode(String raw) {
         if (isBlank(raw)) {
             return "especes";
@@ -470,5 +573,14 @@ public class InvoiceBillingService {
             }
         }
         return null;
+    }
+
+    private static BigDecimal parseRate(String raw) {
+        try {
+            return new BigDecimal(raw == null || raw.isBlank() ? "0" : raw.trim())
+                    .setScale(2, RoundingMode.HALF_UP);
+        } catch (NumberFormatException ex) {
+            return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        }
     }
 }

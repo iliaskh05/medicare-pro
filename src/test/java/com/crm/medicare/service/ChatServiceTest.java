@@ -15,6 +15,7 @@ import com.crm.medicare.repository.ChatChannelRepository;
 import com.crm.medicare.repository.ChatMessageRepository;
 import com.crm.medicare.repository.UtilisateurRepository;
 import java.nio.charset.StandardCharsets;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,6 +49,11 @@ class ChatServiceTest {
         seedGroup("techniciens-medecins", "Techniciens - Médecins");
         seedGroup("general", "Général");
         authenticate(alice);
+    }
+
+    @AfterEach
+    void clearSecurityContext() {
+        SecurityContextHolder.clearContext();
     }
 
     @Test

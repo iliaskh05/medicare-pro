@@ -58,15 +58,27 @@ const navGroups: { label: string; items: NavItem[] }[] = [
     items: [{ title: "Dossiers patients", url: "/patients", icon: Users }],
   },
   {
-    label: "Activité",
+    label: "Activité médicale",
     items: [
-      { title: "Accueil / Admissions", url: "/accueil", icon: UserRound },
-      { title: "Rendez-vous", url: "/agenda", icon: CalendarDays },
-      { title: "Salles", url: "/salles", icon: DoorOpen },
       { title: "File d'attente", url: "/file-attente", icon: Clock },
       { title: "Examens", url: "/worklist", icon: ClipboardList },
+      { title: "Agenda", url: "/agenda", icon: CalendarDays },
+      { title: "Salles", url: "/salles", icon: DoorOpen },
+      { title: "Accueil / Admissions", url: "/accueil", icon: UserRound },
       { title: "Comptes rendus", url: "/comptes-rendus", icon: FileText },
-      { title: "Numérisation", url: "/numerisation", icon: ScanLine },
+    ],
+  },
+  {
+    label: "Médecins",
+    items: [{ title: "Correspondants", url: "/medecins-referents", icon: Contact }],
+  },
+  {
+    label: "Gestion",
+    items: [
+      { title: "Facturation", url: "/facturation", icon: ReceiptText, finance: true },
+      { title: "Restes à payer", url: "/impayes", icon: Wallet, finance: true },
+      { title: "Catalogue", url: "/catalogue", icon: Stethoscope },
+      { title: "Dossiers à remettre", url: "/dossiers", icon: FolderOpen },
     ],
   },
   {
@@ -74,35 +86,14 @@ const navGroups: { label: string; items: NavItem[] }[] = [
     items: [{ title: "Messagerie interne", url: "/chat", icon: MessageSquare, chat: true }],
   },
   {
-    label: "Catalogue",
-    items: [{ title: "Examens & tarifs", url: "/catalogue", icon: Stethoscope }],
-  },
-  {
-    label: "Médecins",
-    items: [
-      { title: "Correspondants", url: "/medecins-referents", icon: Contact },
-      { title: "Réseau", url: "/medecins", icon: Stethoscope },
-    ],
-  },
-  {
-    label: "Gestion",
-    items: [
-      { title: "Facturation", url: "/facturation", icon: ReceiptText, finance: true },
-      { title: "Restes à payer", url: "/impayes", icon: Wallet, finance: true },
-      { title: "Dossiers à remettre", url: "/dossiers", icon: FolderOpen },
-    ],
-  },
-  {
-    label: "Analytics",
-    items: [{ title: "Activité", url: "/analytics", icon: BarChart3 }],
-  },
-  {
     label: "Administration",
     items: [
-      { title: "Audit & conformité", url: "/audit", icon: ShieldAlert, fraude: true },
-      { title: "Données & import", url: "/donnees", icon: Database },
-      { title: "Dictionnaires", url: "/dictionnaires", icon: BookMarked },
       { title: "Paramètres", url: "/parametres", icon: Settings },
+      { title: "Données & import", url: "/donnees", icon: Database },
+      { title: "Audit", url: "/audit", icon: ShieldAlert, fraude: true },
+      { title: "Dictionnaires", url: "/dictionnaires", icon: BookMarked },
+      { title: "Activité", url: "/analytics", icon: BarChart3 },
+      { title: "Numérisation", url: "/numerisation", icon: ScanLine },
     ],
   },
 ];

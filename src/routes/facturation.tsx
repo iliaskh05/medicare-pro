@@ -86,8 +86,9 @@ import {
   type InvoicePayload,
 } from "@/lib/api/billing";
 import { fetchCatalogue, type CatalogueActe } from "@/lib/api/catalogue";
-import { downloadFactureExamen } from "@/lib/api/factures";
+import { downloadFacture } from "@/lib/api/factures";
 import { searchPatients, type PatientRow } from "@/lib/api/patients";
+import { downloadExcelWorkbook, excelFilename } from "@/lib/excel-export";
 import { formatMAD } from "@/types/domain";
 
 export const Route = createFileRoute("/facturation")({
@@ -142,31 +143,11 @@ const emptyCreateForm = (): CreateForm => ({
   notes: "",
 });
 
-function invoiceExamenId(inv: Invoice): string | null {
-  for (const item of inv.items ?? []) {
-    if (item.examenId) return String(item.examenId);
-  }
-  return null;
-}
-
 function isUnpaid(inv: Invoice): boolean {
   if (inv.statut === "CANCELLED" || inv.statut === "REFUNDED" || inv.statut === "PAID") {
     return false;
   }
   return inv.resteACharge > 0;
-}
-
-function downloadCsv(filename: string, rows: string[][]) {
-  const body = rows
-    .map((cols) => cols.map((v) => `"${String(v).replaceAll('"', '""')}"`).join(","))
-    .join("\n");
-  const blob = new Blob(["\uFEFF" + body], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
 }
 
 function FacturationPage() {
@@ -355,10 +336,22 @@ function FacturationPage() {
       if (createForm.acompte > 0) payload.acompte = createForm.acompte;
       if (createForm.notes.trim()) payload.notes = createForm.notes.trim();
 
-      const { reference } = await submitInvoice(payload);
-      toast.success(`Facture ${reference} créée.`);
+      const { reference, invoice } = await submitInvoice(payload);
       setCreateOpen(false);
       retry();
+      if (invoice?.id) {
+        try {
+          await downloadFacture(invoice.id, reference, invoice.patientName || createForm.patientName);
+          toast.success(`Facture ${reference} créée — PDF téléchargé.`);
+        } catch (pdfErr) {
+          toast.success(`Facture ${reference} créée.`);
+          toast.error(
+            pdfErr instanceof Error ? pdfErr.message : "PDF non téléchargé — utilisez le bouton PDF",
+          );
+        }
+      } else {
+        toast.success(`Facture ${reference} créée.`);
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Création de facture impossible");
     } finally {
@@ -484,13 +477,13 @@ function FacturationPage() {
   };
 
   const handlePdf = async (inv: Invoice) => {
-    const examenId = invoiceExamenId(inv);
-    if (!examenId) {
-      toast.info("PDF disponible via l'examen");
+    const invoiceId = inv.id || "";
+    if (!invoiceId) {
+      toast.error("Identifiant de facture manquant");
       return;
     }
     try {
-      await downloadFactureExamen(examenId, inv.patientName || "patient");
+      await downloadFacture(invoiceId, inv.reference || invoiceId, inv.patientName || "patient");
       toast.success("Facture PDF téléchargée.");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Téléchargement PDF impossible");
@@ -502,32 +495,66 @@ function FacturationPage() {
       toast.error("Aucune facture à exporter");
       return;
     }
-    const header = [
-      "Reference",
-      "Patient",
-      "Examen",
-      "Total",
-      "Mutuelle",
-      "Paye",
-      "Reste",
-      "Date",
-      "Statut",
-      "Mode",
-    ];
-    const rows = visibleInvoices.map((inv) => [
-      inv.reference || inv.id,
-      inv.patientName,
-      inv.examen || inv.acte,
-      String(inv.total),
-      String(inv.insuranceShare),
-      String(inv.amountPaid),
-      String(inv.resteACharge),
-      inv.date,
-      INVOICE_STATUS_LABEL[inv.statut],
-      inv.modePaiement,
-    ]);
-    downloadCsv(`factures-${new Date().toISOString().slice(0, 10)}.csv`, [header, ...rows]);
-    toast.success(`Export CSV — ${visibleInvoices.length} facture(s)`);
+    void (async () => {
+      try {
+        await downloadExcelWorkbook({
+          filename: excelFilename("Factures"),
+          sheets: [
+            {
+              name: "Factures",
+              columns: [
+                { header: "Référence", key: "ref", width: 16 },
+                { header: "Patient", key: "patient", width: 26 },
+                { header: "Examen", key: "examen", width: 28, wrap: true },
+                { header: "Total", key: "total", width: 14, format: "currency" },
+                { header: "Mutuelle", key: "mutuelle", width: 14, format: "currency" },
+                { header: "Payé", key: "paye", width: 14, format: "currency" },
+                { header: "Reste", key: "reste", width: 14, format: "currency" },
+                { header: "Date", key: "date", width: 16, format: "date" },
+                { header: "Statut", key: "statut", width: 14 },
+                { header: "Mode paiement", key: "mode", width: 14 },
+              ],
+              rows: visibleInvoices.map((inv) => ({
+                ref: inv.reference || inv.id,
+                patient: inv.patientName,
+                examen: inv.examen || inv.acte,
+                total: inv.total,
+                mutuelle: inv.insuranceShare,
+                paye: inv.amountPaid,
+                reste: inv.resteACharge,
+                date: inv.date,
+                statut: INVOICE_STATUS_LABEL[inv.statut],
+                mode: inv.modePaiement,
+              })),
+            },
+            {
+              name: "Paiements",
+              columns: [
+                { header: "Date", key: "date", width: 16, format: "date" },
+                { header: "Patient", key: "patient", width: 26 },
+                { header: "Examen", key: "examen", width: 28, wrap: true },
+                { header: "Montant", key: "montant", width: 14, format: "currency" },
+                { header: "Mode paiement", key: "mode", width: 14 },
+                { header: "Facture", key: "facture", width: 16 },
+              ],
+              rows: visibleInvoices
+                .filter((inv) => inv.amountPaid > 0)
+                .map((inv) => ({
+                  date: inv.date,
+                  patient: inv.patientName,
+                  examen: inv.examen || inv.acte,
+                  montant: inv.amountPaid,
+                  mode: inv.modePaiement,
+                  facture: inv.reference || inv.id,
+                })),
+            },
+          ],
+        });
+        toast.success(`Export Excel — ${visibleInvoices.length} facture(s)`);
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Export impossible");
+      }
+    })();
   };
 
   if (!canViewBilling) {
@@ -548,7 +575,7 @@ function FacturationPage() {
       <PageHeader
         eyebrow="Gestion"
         title="Facturation"
-        subtitle="Émission, encaissements et suivi des factures du centre"
+        subtitle="Émission, encaissements et PDF commercial marocain (mentions CGI — pas de validation DGI)"
         actions={
           <>
             <div className="flex items-center gap-2 rounded-md border border-border px-3 py-1.5">
@@ -569,7 +596,7 @@ function FacturationPage() {
               onClick={handleExport}
             >
               <Download className="mr-1.5 size-4" />
-              Export
+              Exporter Excel
             </Button>
             <Button variant="outline" size="sm" onClick={retry} disabled={loading}>
               <RefreshCw className={`mr-1.5 size-4 ${loading ? "animate-spin" : ""}`} />
@@ -709,6 +736,17 @@ function FacturationPage() {
                         </Pill>
                       </TableCell>
                       <TableCell className="pr-6 text-right" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-0.5">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-8"
+                            title="Télécharger la facture PDF"
+                            onClick={() => void handlePdf(inv)}
+                          >
+                            <FileDown className="size-4" />
+                            <span className="sr-only">Télécharger PDF</span>
+                          </Button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon" className="size-8">
@@ -742,7 +780,7 @@ function FacturationPage() {
                             ) : null}
                             <DropdownMenuItem onClick={() => void handlePdf(inv)}>
                               <FileDown className="mr-2 size-4" />
-                              PDF
+                              Télécharger PDF
                             </DropdownMenuItem>
                             {canCancelInvoice(inv) ? (
                               <>
@@ -763,6 +801,7 @@ function FacturationPage() {
                             ) : null}
                           </DropdownMenuContent>
                         </DropdownMenu>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -1118,7 +1157,7 @@ function FacturationPage() {
               <div className="flex flex-wrap gap-2">
                 <Button variant="outline" size="sm" onClick={() => void handlePdf(detail)}>
                   <FileDown className="mr-1.5 size-4" />
-                  PDF
+                  Télécharger PDF
                 </Button>
                 <Pill tone={invoiceStatusTone(detail.statut)}>
                   {INVOICE_STATUS_LABEL[detail.statut]}

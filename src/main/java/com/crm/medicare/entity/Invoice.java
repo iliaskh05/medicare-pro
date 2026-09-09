@@ -19,6 +19,7 @@ import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -33,8 +34,8 @@ import lombok.ToString;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@EqualsAndHashCode(exclude = {"patient", "items", "payments", "refunds"})
-@ToString(exclude = {"patient", "items", "payments", "refunds"})
+@EqualsAndHashCode(exclude = {"patient", "items", "payments", "refunds", "relatedInvoice", "electronicEvents"})
+@ToString(exclude = {"patient", "items", "payments", "refunds", "relatedInvoice", "electronicEvents"})
 public class Invoice {
 
     @Id
@@ -43,6 +44,16 @@ public class Invoice {
 
     @Column(nullable = false, unique = true, length = 64)
     private String reference;
+
+    @Column(nullable = false, length = 32)
+    private String series = "FAC";
+
+    /** INVOICE | CREDIT_NOTE */
+    @Column(name = "document_kind", nullable = false, length = 32)
+    private String documentKind = "INVOICE";
+
+    @Column(name = "service_date")
+    private LocalDate serviceDate;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "patient_id", nullable = false)
@@ -69,6 +80,59 @@ public class Invoice {
 
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal remise = BigDecimal.ZERO;
+
+    @Column(name = "total_ht", nullable = false, precision = 12, scale = 2)
+    private BigDecimal totalHt = BigDecimal.ZERO;
+
+    @Column(name = "total_tva", nullable = false, precision = 12, scale = 2)
+    private BigDecimal totalTva = BigDecimal.ZERO;
+
+    @Column(name = "vat_rate", nullable = false, precision = 5, scale = 2)
+    private BigDecimal vatRate = BigDecimal.ZERO;
+
+    @Column(name = "seller_ice", length = 32)
+    private String sellerIce;
+
+    @Column(name = "seller_if", length = 32)
+    private String sellerIf;
+
+    @Column(name = "seller_taxe_professionnelle", length = 32)
+    private String sellerTaxeProfessionnelle;
+
+    @Column(name = "customer_ice", length = 32)
+    private String customerIce;
+
+    @Column(name = "customer_if", length = 32)
+    private String customerIf;
+
+    @Column(name = "legal_mentions", columnDefinition = "TEXT")
+    private String legalMentions;
+
+    @Column(name = "payment_terms", columnDefinition = "TEXT")
+    private String paymentTerms;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "related_invoice_id")
+    private Invoice relatedInvoice;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "electronic_status", nullable = false, length = 32)
+    private ElectronicInvoiceStatus electronicStatus = ElectronicInvoiceStatus.DRAFT;
+
+    @Column(name = "electronic_external_ref", length = 128)
+    private String electronicExternalRef;
+
+    @Column(name = "electronic_hash", length = 128)
+    private String electronicHash;
+
+    @Column(name = "electronic_transmitted_at")
+    private LocalDateTime electronicTransmittedAt;
+
+    @Column(name = "electronic_response_at")
+    private LocalDateTime electronicResponseAt;
+
+    @Column(name = "electronic_rejection_reason", length = 512)
+    private String electronicRejectionReason;
 
     @Column(name = "mode_paiement", length = 32)
     private String modePaiement;
@@ -109,6 +173,10 @@ public class Invoice {
     @OrderBy("createdAt ASC")
     private List<InvoiceRefund> refunds = new ArrayList<>();
 
+    @OneToMany(mappedBy = "invoice", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("createdAt ASC")
+    private List<InvoiceElectronicEvent> electronicEvents = new ArrayList<>();
+
     @PrePersist
     void prePersist() {
         if (createdAt == null) {
@@ -133,10 +201,22 @@ public class Invoice {
         if (insuranceShare == null) insuranceShare = BigDecimal.ZERO;
         if (patientShare == null) patientShare = BigDecimal.ZERO;
         if (remise == null) remise = BigDecimal.ZERO;
+        if (totalHt == null) totalHt = total != null ? total : BigDecimal.ZERO;
+        if (totalTva == null) totalTva = BigDecimal.ZERO;
+        if (vatRate == null) vatRate = BigDecimal.ZERO;
+        if (series == null || series.isBlank()) series = "FAC";
+        if (documentKind == null || documentKind.isBlank()) documentKind = "INVOICE";
+        if (electronicStatus == null) electronicStatus = ElectronicInvoiceStatus.DRAFT;
     }
 
+    /**
+     * Solde dû = TTC − paiements − avoirs appliqués + remboursements.
+     * Les montants sont NUMERIC(12,2) ; aucun float.
+     */
     public BigDecimal reste() {
-        return total.subtract(amountPaid).add(amountRefunded).max(BigDecimal.ZERO);
+        BigDecimal paid = amountPaid != null ? amountPaid : BigDecimal.ZERO;
+        BigDecimal refunded = amountRefunded != null ? amountRefunded : BigDecimal.ZERO;
+        return total.subtract(paid).add(refunded).max(BigDecimal.ZERO);
     }
 
     /** Remaining patient share after payments (insurance share is not cash payable). */

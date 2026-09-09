@@ -138,6 +138,18 @@ function asNumber(value: unknown): number | undefined {
   return Number.isFinite(n) ? n : undefined;
 }
 
+function asRowList(data: unknown): WorklistApiRow[] {
+  if (Array.isArray(data)) return data as WorklistApiRow[];
+  if (data && typeof data === "object") {
+    const record = data as Record<string, unknown>;
+    const content = record["content"];
+    const items = record["items"];
+    if (Array.isArray(content)) return content as WorklistApiRow[];
+    if (Array.isArray(items)) return items as WorklistApiRow[];
+  }
+  return [];
+}
+
 function formatDateExamen(value: unknown): string {
   if (value == null) return "";
   const raw = String(value);
@@ -194,7 +206,7 @@ export function mapWorklistItem(row: WorklistApiRow): WorklistItem {
     nurseName: row.nurseName ?? undefined,
     assistantName: row.assistantName ?? undefined,
     parentExamenId: row.parentExamenId ? String(row.parentExamenId) : undefined,
-    historique: (row.historique ?? []).map((h) => ({
+    historique: (Array.isArray(row.historique) ? row.historique : []).map((h) => ({
       date: formatDateExamen(h.date),
       auteur: h.auteur ?? "",
       action: h.action ?? "",
@@ -234,11 +246,11 @@ export async function fetchWorklist(
   if (params.page != null) qs.set("page", String(params.page));
   if (params.size != null) qs.set("size", String(params.size));
 
-  const rows = await api.get<WorklistApiRow[]>(
+  const rows = await api.get<unknown>(
     `/api/worklist?${qs.toString()}`,
     signal ? { signal } : {},
   );
-  return (rows ?? []).map(mapWorklistItem);
+  return asRowList(rows).map(mapWorklistItem);
 }
 
 export type StatusHistoryItem = {
@@ -273,13 +285,13 @@ export async function fetchDossiers(
   signal?: AbortSignal,
 ): Promise<WorklistItem[]> {
   const qs = statut ? `?statut=${encodeURIComponent(statut)}` : "";
-  const rows = await api.get<WorklistApiRow[]>(`/api/worklist/dossiers${qs}`, signal ? { signal } : {});
-  return (rows ?? []).map(mapWorklistItem);
+  const rows = await api.get<unknown>(`/api/worklist/dossiers${qs}`, signal ? { signal } : {});
+  return asRowList(rows).map(mapWorklistItem);
 }
 
 export async function fetchImpayes(signal?: AbortSignal): Promise<WorklistItem[]> {
-  const rows = await api.get<WorklistApiRow[]>(`/api/worklist/impayes`, signal ? { signal } : {});
-  return (rows ?? []).map(mapWorklistItem);
+  const rows = await api.get<unknown>(`/api/worklist/impayes`, signal ? { signal } : {});
+  return asRowList(rows).map(mapWorklistItem);
 }
 
 /** POST {JAVA_API_BASE}/api/worklist */
@@ -357,11 +369,11 @@ export async function saveCompteRendu(
 }
 
 export async function fetchPaiements(id: string, signal?: AbortSignal): Promise<PaiementItem[]> {
-  const rows = await api.get<PaiementItem[]>(
+  const rows = await api.get<unknown>(
     `/api/worklist/${encodeURIComponent(id)}/paiements`,
     signal ? { signal } : {},
   );
-  return rows ?? [];
+  return Array.isArray(rows) ? (rows as PaiementItem[]) : [];
 }
 
 export async function recordPaiement(

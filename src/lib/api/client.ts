@@ -1,9 +1,9 @@
 /**
  * Utilitaire HTTP RadioCRM — façade typée sur le client Java authentifié.
  */
-import { JAVA_API_BASE, ApiError, javaApi } from "./config";
+import { ApiError, getJavaApiBase, javaApi, JAVA_API_BASE } from "./config";
 
-export { JAVA_API_BASE, ApiError, javaApi };
+export { JAVA_API_BASE, ApiError, javaApi, getJavaApiBase };
 
 export type ApiRequestOptions = {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";

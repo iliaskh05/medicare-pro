@@ -3,6 +3,7 @@ package com.crm.medicare.repository;
 import com.crm.medicare.entity.Appointment;
 import com.crm.medicare.entity.AppointmentStatus;
 import com.crm.medicare.entity.Modalite;
+import jakarta.persistence.LockModeType;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
@@ -10,6 +11,7 @@ import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -25,6 +27,10 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
             WHERE a.id = :id
             """)
     Optional<Appointment> findByIdWithDetails(@Param("id") Long id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT a FROM Appointment a WHERE a.id = :id")
+    Optional<Appointment> findByIdForUpdate(@Param("id") Long id);
 
     @Query(
             """
@@ -59,6 +65,22 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
             """)
     List<Appointment> findOverlaps(
             @Param("resourceId") Long resourceId,
+            @Param("startsAt") LocalDateTime startsAt,
+            @Param("endsAt") LocalDateTime endsAt,
+            @Param("excludeId") Long excludeId,
+            @Param("excluded") Collection<AppointmentStatus> excluded);
+
+    @Query(
+            """
+            SELECT a FROM Appointment a
+            WHERE a.patient.id = :patientId
+              AND a.statut NOT IN :excluded
+              AND a.startsAt < :endsAt
+              AND a.endsAt > :startsAt
+              AND (:excludeId IS NULL OR a.id <> :excludeId)
+            """)
+    List<Appointment> findPatientOverlaps(
+            @Param("patientId") Long patientId,
             @Param("startsAt") LocalDateTime startsAt,
             @Param("endsAt") LocalDateTime endsAt,
             @Param("excludeId") Long excludeId,

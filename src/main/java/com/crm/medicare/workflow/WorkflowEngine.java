@@ -65,12 +65,21 @@ public class WorkflowEngine {
         INVOICE.put(InvoiceStatus.DRAFT, EnumSet.of(InvoiceStatus.ISSUED, InvoiceStatus.CANCELLED));
         INVOICE.put(
                 InvoiceStatus.ISSUED,
-                EnumSet.of(InvoiceStatus.PARTIALLY_PAID, InvoiceStatus.PAID, InvoiceStatus.CANCELLED));
+                EnumSet.of(
+                        InvoiceStatus.PARTIALLY_PAID,
+                        InvoiceStatus.PAID,
+                        InvoiceStatus.CANCELLED,
+                        InvoiceStatus.CREDIT_NOTE));
         INVOICE.put(
                 InvoiceStatus.PARTIALLY_PAID,
-                EnumSet.of(InvoiceStatus.PAID, InvoiceStatus.CANCELLED, InvoiceStatus.REFUNDED));
-        INVOICE.put(InvoiceStatus.PAID, EnumSet.of(InvoiceStatus.REFUNDED));
+                EnumSet.of(
+                        InvoiceStatus.PAID,
+                        InvoiceStatus.CANCELLED,
+                        InvoiceStatus.REFUNDED,
+                        InvoiceStatus.CREDIT_NOTE));
+        INVOICE.put(InvoiceStatus.PAID, EnumSet.of(InvoiceStatus.REFUNDED, InvoiceStatus.CREDIT_NOTE));
         INVOICE.put(InvoiceStatus.CANCELLED, EnumSet.noneOf(InvoiceStatus.class));
+        INVOICE.put(InvoiceStatus.CREDIT_NOTE, EnumSet.noneOf(InvoiceStatus.class));
         INVOICE.put(InvoiceStatus.REFUNDED, EnumSet.noneOf(InvoiceStatus.class));
     }
 

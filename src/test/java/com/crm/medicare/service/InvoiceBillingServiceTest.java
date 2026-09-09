@@ -16,7 +16,9 @@ import com.crm.medicare.repository.CatalogueExamenRepository;
 import com.crm.medicare.repository.MedecinReferentRepository;
 import com.crm.medicare.repository.PatientRepository;
 import com.crm.medicare.workflow.InvoiceStatus;
+import com.crm.medicare.service.FactureService.FacturePdf;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -30,6 +32,7 @@ import org.springframework.web.server.ResponseStatusException;
 class InvoiceBillingServiceTest {
 
     @Autowired private InvoiceBillingService invoiceBillingService;
+    @Autowired private FactureService factureService;
     @Autowired private WorklistService worklistService;
     @Autowired private PatientRepository patientRepository;
     @Autowired private MedecinReferentRepository medecinReferentRepository;
@@ -158,6 +161,36 @@ class InvoiceBillingServiceTest {
         catalogueExamenRepository.save(acte);
         assertThat(invoiceBillingService.get(Long.valueOf(invoice.getId())).getTotal())
                 .isEqualByComparingTo("1800.00");
+    }
+
+    @Test
+    void invoiceNumbersAreSequentialAndUnique() {
+        Long patientId = ensurePatient("INV666666");
+        InvoiceCreateRequest create = new InvoiceCreateRequest();
+        create.setPatientId(patientId);
+        create.setActe("Radio thorax");
+        create.setMontant(new BigDecimal("120.00"));
+        InvoiceDto a = invoiceBillingService.create(create);
+        InvoiceDto b = invoiceBillingService.create(create);
+        assertThat(b.getReference()).isNotEqualTo(a.getReference());
+        assertThat(a.getReference()).startsWith("FAC-");
+        assertThat(b.getReference()).startsWith("FAC-");
+    }
+
+    @Test
+    void invoicePdfIsMoroccanCommercialDocumentWithoutExam() {
+        Long patientId = ensurePatient("INVPDF001");
+        InvoiceCreateRequest create = new InvoiceCreateRequest();
+        create.setPatientId(patientId);
+        create.setActe("IRM cérébrale");
+        create.setMontant(new BigDecimal("1200.00"));
+        InvoiceDto invoice = invoiceBillingService.create(create);
+
+        FacturePdf pdf = factureService.genererFacturePdfByInvoice(Long.valueOf(invoice.getId()));
+        assertThat(pdf.filename()).contains("FACTURE_");
+        assertThat(new String(pdf.content(), 0, Math.min(8, pdf.content().length), StandardCharsets.US_ASCII))
+                .startsWith("%PDF");
+        assertThat(pdf.content().length).isGreaterThan(800);
     }
 
     private Long ensurePatient(String cin) {

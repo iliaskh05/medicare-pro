@@ -26,6 +26,7 @@ import { QuickCreateMenu } from "@/components/quick-create";
 import { useRole, clearAuthSession } from "@/hooks/use-role";
 import { useAuth } from "@/hooks/use-auth";
 import { useTheme } from "@/hooks/use-theme";
+import { resetChatUnreadStore } from "@/hooks/use-chat-unread";
 
 
 const pageContext: { match: string; label: string }[] = [
@@ -33,8 +34,9 @@ const pageContext: { match: string; label: string }[] = [
   { match: "/accueil", label: "Accueil patient" },
   { match: "/patients", label: "Patients" },
   { match: "/patient/", label: "Dossier patient" },
-  { match: "/worklist", label: "Examens" },
+  { match: "/salles", label: "Salles" },
   { match: "/file-attente", label: "File d'attente" },
+  { match: "/worklist", label: "Examens" },
   { match: "/agenda", label: "Rendez-vous" },
   { match: "/comptes-rendus", label: "Comptes rendus" },
   { match: "/catalogue", label: "Examens & tarifs" },
@@ -55,6 +57,7 @@ export function AppHeader() {
     "RadioCRM";
 
   function handleLogout() {
+    resetChatUnreadStore();
     logout();
     clearAuthSession();
     toast.success("Session fermée.");

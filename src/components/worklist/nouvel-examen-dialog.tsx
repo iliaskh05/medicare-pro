@@ -270,7 +270,7 @@ export function NouvelExamenDialog({ onCreated }: { onCreated?: (item?: Worklist
                 <p className="text-sm text-destructive">Aucune salle / machine active.</p>
               ) : (
                 <Select
-                  value={draft.resourceId || undefined}
+                  {...(draft.resourceId ? { value: draft.resourceId } : {})}
                   onValueChange={(v) => {
                     const selected = resources.find((r) => r.id === v);
                     setDraft((d) => ({

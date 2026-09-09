@@ -2,6 +2,7 @@ package com.crm.medicare.service;
 
 import com.crm.medicare.common.ApiException;
 import com.crm.medicare.dto.HistoriqueItemDto;
+import com.crm.medicare.dto.InvoicePaymentRequest;
 import com.crm.medicare.dto.PaiementCreateRequest;
 import com.crm.medicare.dto.PaiementItemDto;
 import com.crm.medicare.dto.StatusHistoryItemDto;
@@ -28,6 +29,7 @@ import com.crm.medicare.repository.PaiementExamenRepository;
 import com.crm.medicare.repository.PatientRepository;
 import com.crm.medicare.repository.ResourceRoomRepository;
 import com.crm.medicare.repository.UtilisateurRepository;
+import com.crm.medicare.security.PermissionCatalog;
 import com.crm.medicare.security.SecurityUtils;
 import com.crm.medicare.workflow.EncounterStatus;
 import com.crm.medicare.workflow.WorkflowEngine;
@@ -75,6 +77,7 @@ public class WorklistService {
     private final UtilisateurRepository utilisateurRepository;
     private final ReportService reportService;
     private final ResourceRoomRepository resourceRoomRepository;
+    private final InvoiceBillingService invoiceBillingService;
 
     public record WorklistListResult(
             List<WorklistItemDto> items, long total, Integer page, Integer size) {}
@@ -443,7 +446,7 @@ public class WorklistService {
         examen.setMontant(tarif);
         BigDecimal acompte = request.getAcompte() != null ? request.getAcompte() : BigDecimal.ZERO;
         applyAcompte(examen, acompte);
-        examen.setCreatedBy(SecurityUtils.currentUserOrNull());
+        examen.setCreatedBy(persistedCurrentUserOrNull());
 
         HistoriqueExamen creation = new HistoriqueExamen();
         creation.setExamen(examen);
@@ -476,6 +479,7 @@ public class WorklistService {
         }
         Examen examen = load(id);
         if (request.getStatutCr() != null && !request.getStatutCr().isBlank()) {
+            requireReportWrite();
             String cr = request.getStatutCr().trim();
             if ("signe".equalsIgnoreCase(cr) || "imprime".equalsIgnoreCase(cr)) {
                 throw new ResponseStatusException(
@@ -508,6 +512,12 @@ public class WorklistService {
         }
         if (request.getDossierStatut() != null && !request.getDossierStatut().isBlank()) {
             applyDossierStatut(examen, request.getDossierStatut().trim());
+        }
+        if (request.getIndication() != null
+                || request.getTechnique() != null
+                || request.getResultats() != null
+                || request.getConclusion() != null) {
+            requireReportWrite();
         }
         if (request.getIndication() != null) {
             examen.setIndication(blankToNull(request.getIndication()));
@@ -621,14 +631,13 @@ public class WorklistService {
         if (request == null || request.getMontant() == null || request.getMontant().compareTo(BigDecimal.ZERO) <= 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "montant de paiement invalide");
         }
+        InvoicePaymentRequest pay = new InvoicePaymentRequest();
+        pay.setMontant(request.getMontant());
+        pay.setMode(request.getMode());
+        pay.setIdempotencyKey("exam-" + id + "-" + request.getMontant() + "-" + System.nanoTime());
+        invoiceBillingService.ensureAndPayForExam(id, pay);
+
         Examen examen = load(id);
-        BigDecimal total = examen.getMontant() != null ? examen.getMontant() : BigDecimal.ZERO;
-        BigDecimal current = examen.getAcompte() != null ? examen.getAcompte() : BigDecimal.ZERO;
-        BigDecimal next = current.add(request.getMontant());
-        if (next.compareTo(total) > 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "L'avance ne peut pas dépasser le total");
-        }
-        applyAcompte(examen, next);
         recordLedger(examen, request.getMontant(), request.getMode());
         HistoriqueExamen hist = new HistoriqueExamen();
         hist.setExamen(examen);
@@ -644,7 +653,7 @@ public class WorklistService {
                 String.valueOf(id),
                 java.util.Map.of(
                         "montant", String.valueOf(request.getMontant()),
-                        "source_type", "EXAM",
+                        "source_type", "INVOICE",
                         "source_id", String.valueOf(id)));
         return toDto(saved, true);
     }
@@ -861,6 +870,19 @@ public class WorklistService {
         }
     }
 
+    private void requireReportWrite() {
+        var auth = org.springframework.security.core.context.SecurityContextHolder.getContext()
+                .getAuthentication();
+        if (auth == null
+                || auth.getAuthorities() == null
+                || auth.getAuthorities().stream()
+                        .noneMatch(a -> PermissionCatalog.REPORT_WRITE.equals(a.getAuthority()))) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Rédaction / modification du compte rendu réservée aux médecins et radiologues");
+        }
+    }
+
     private void applyDossierStatut(Examen examen, String statut) {
         Set<String> allowed = Set.of("a_preparer", "pret", "remis", "non_remis", "envoye");
         if (!allowed.contains(statut)) {
@@ -989,6 +1011,14 @@ public class WorklistService {
         String n = nom == null ? "" : nom.trim();
         String p = prenom == null ? "" : prenom.trim();
         return (n + " " + p).trim();
+    }
+
+    private Utilisateur persistedCurrentUserOrNull() {
+        Utilisateur actor = SecurityUtils.currentUserOrNull();
+        if (actor == null || actor.getId() == null) {
+            return null;
+        }
+        return utilisateurRepository.findById(actor.getId()).orElse(null);
     }
 
     private static boolean isBlank(String value) {

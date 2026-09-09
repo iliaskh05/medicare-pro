@@ -51,6 +51,7 @@ import {
   startOfWeekKey,
   toLocalDateKey,
 } from "@/lib/date";
+import { describeApiError } from "@/lib/api/errors";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/agenda")({
@@ -145,6 +146,7 @@ function AgendaPage() {
   const [rows, setRows] = useState<AppointmentDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [reloadTick, setReloadTick] = useState(0);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [rescheduleId, setRescheduleId] = useState<string | null>(null);
   const [rescheduleAt, setRescheduleAt] = useState("");
@@ -192,14 +194,15 @@ function AgendaPage() {
       controller.signal,
     )
       .then(setRows)
-      .catch((e: unknown) =>
-        setError(e instanceof Error ? e.message : "Impossible de charger l'agenda"),
-      )
+      .catch((e: unknown) => {
+        if (controller.signal.aborted) return;
+        setError(describeApiError(e).message);
+      })
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [range.from, range.to, status, modalite, resourceId]);
+  }, [range.from, range.to, status, modalite, resourceId, reloadTick]);
 
   const byDay = useMemo(() => {
     const map = new Map<string, AppointmentDto[]>();
@@ -494,7 +497,16 @@ function AgendaPage() {
       {loading ? (
         <Skeleton className="h-80" />
       ) : error ? (
-        <EmptyState icon={CalendarDays} title="Impossible de charger les données." />
+        <EmptyState
+          icon={CalendarDays}
+          title="Impossible de charger les rendez-vous"
+          description={error}
+          action={
+            <Button type="button" variant="outline" onClick={() => setReloadTick((n) => n + 1)}>
+              Réessayer
+            </Button>
+          }
+        />
       ) : view === "jour" ? (
         <div className="app-surface overflow-hidden">
           <div className="flex items-center justify-between border-b border-border px-3 py-2">

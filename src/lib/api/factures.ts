@@ -1,5 +1,6 @@
 /**
- * Factures PDF — GET {JAVA_API_BASE}/api/factures/examen/{id}
+ * Factures PDF — GET {JAVA_API_BASE}/api/factures/{id}/pdf
+ * (et /api/factures/examen/{id} pour la worklist)
  */
 import { javaApiBlob } from "./config";
 
@@ -15,13 +16,24 @@ function slugPatient(name: string): string {
   );
 }
 
+/** Télécharge la facture commerciale PDF par id de facture (sans examen requis). */
+export async function downloadFacture(
+  invoiceId: string,
+  reference: string,
+  patientNom: string,
+): Promise<void> {
+  const blob = await javaApiBlob(`/api/factures/${encodeURIComponent(invoiceId)}/pdf`);
+  const ref = slugPatient(reference || invoiceId);
+  triggerDownload(blob, `FACTURE_${ref}_${slugPatient(patientNom)}.pdf`);
+}
+
 /** Télécharge la facture PDF d'un examen (JWT + blob). */
 export async function downloadFactureExamen(
   examenId: string,
   patientNom: string,
 ): Promise<void> {
   const blob = await javaApiBlob(`/api/factures/examen/${encodeURIComponent(examenId)}`);
-  triggerDownload(blob, `facture_${slugPatient(patientNom)}.pdf`);
+  triggerDownload(blob, `FACTURE_${slugPatient(patientNom)}.pdf`);
 }
 
 export async function previewFactureExamen(examenId: string): Promise<void> {

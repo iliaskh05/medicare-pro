@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { Loader2, Search, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
@@ -467,7 +467,11 @@ export function AdmissionWizard({
               </select>
               {noCompatibleRoom ? (
                 <p className="mt-1 text-xs text-destructive">
-                  Aucune salle compatible n&apos;est disponible pour cet examen.
+                  Aucune salle active pour la modalité « {acte?.modalite} ». Ouvrez{" "}
+                  <Link to="/salles" className="underline">
+                    Salles
+                  </Link>{" "}
+                  pour vérifier les ressources actives et leur modalité.
                 </p>
               ) : null}
             </div>

@@ -2,8 +2,11 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { Building2, Lock, Mail, ShieldCheck, Sparkles, User } from "lucide-react";
 import { AUTH_TOKEN_KEY, AUTH_USER_KEY, persistAuthToken } from "@/lib/auth-session";
+import { resetChatUnreadStore } from "@/hooks/use-chat-unread";
 import { useAuth } from "@/hooks/use-auth";
-import { JAVA_API_BASE } from "@/lib/api/config";
+import { getJavaApiBase } from "@/lib/api/config";
+import { ConnectionDiagnostics } from "@/components/connection-diagnostics";
+import { describeApiError } from "@/lib/api/errors";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -100,7 +103,7 @@ function LoginPage() {
     setLoginLoading(true);
     setLoginError(null);
     try {
-      const response = await fetch(`${JAVA_API_BASE}/api/auth/login`, {
+      const response = await fetch(`${getJavaApiBase()}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -132,6 +135,7 @@ function LoginPage() {
       window.sessionStorage.setItem(AUTH_TOKEN_KEY, data.token);
       persistAuthToken(data.token);
       setToken(data.token);
+      resetChatUnreadStore();
 
       if (data.utilisateur) {
         const utilisateur = {
@@ -153,9 +157,15 @@ function LoginPage() {
 
       void navigate({ to: "/dashboard" });
     } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : "Impossible de se connecter";
-      setLoginError(message);
+      if (typeof navigator !== "undefined" && navigator.onLine === false) {
+        setLoginError("Connexion au réseau du centre perdue.");
+      } else if (error instanceof TypeError) {
+        setLoginError("Le serveur MediCare Pro est actuellement inaccessible.");
+      } else if (error instanceof Error) {
+        setLoginError(error.message);
+      } else {
+        setLoginError(describeApiError(error).message);
+      }
     } finally {
       setLoginLoading(false);
     }
@@ -168,7 +178,7 @@ function LoginPage() {
     setRegisterLoading(true);
     setRegisterError(null);
     try {
-      const response = await fetch(`${JAVA_API_BASE}/api/auth/register`, {
+      const response = await fetch(`${getJavaApiBase()}/api/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -197,6 +207,7 @@ function LoginPage() {
       window.sessionStorage.setItem(AUTH_TOKEN_KEY, data.token);
       persistAuthToken(data.token);
       setToken(data.token);
+      resetChatUnreadStore();
 
       if (data.utilisateur) {
         window.localStorage.setItem(
@@ -261,6 +272,7 @@ function LoginPage() {
           </TabsList>
 
           <TabsContent value="login" className="mt-5 space-y-5">
+            <ConnectionDiagnostics compact />
             <div className="space-y-1">
               <CardTitle className="login-text text-lg">Bienvenue sur RadioCRM</CardTitle>
               <CardDescription className="login-muted text-sm">

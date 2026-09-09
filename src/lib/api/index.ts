@@ -14,6 +14,7 @@ export * from "./worklist";
 export * from "./catalogue";
 export * from "./documents";
 export * from "./appointments";
+export * from "./system";
 export * from "./waiting-room";
 export * from "./settings";
 export * from "./staff";

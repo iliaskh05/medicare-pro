@@ -9,15 +9,17 @@ import {
   type ChatMessageDto,
 } from "@/lib/api/chat";
 import { refreshChatUnread } from "@/hooks/use-chat-unread";
+import { readAuthToken } from "@/lib/auth-session";
 
 export type SocketStatus = "connecting" | "open" | "closed" | "polling";
 
 const POLL_MS = 2500;
+const WS_RETRY_MS = [1000, 2000, 4000, 8000, 15000];
 
 /**
  * Canal de messagerie interne :
  * - historique + envoi via API Java (auteur = JWT),
- * - WebSocket pour push immédiat,
+ * - WebSocket pour push immédiat (reconnexion auto),
  * - polling de secours.
  */
 export function useChatChannel(
@@ -31,6 +33,8 @@ export function useChatChannel(
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
   const sendingRef = useRef(false);
+  const retryRef = useRef(0);
+  const retryTimerRef = useRef<number | null>(null);
 
   const mergeMessages = useCallback((incoming: ChatMessageDto[]) => {
     setMessages((prev) => {
@@ -50,6 +54,11 @@ export function useChatChannel(
     setMessages([]);
     setIsLoading(true);
     setError(null);
+
+    if (!channelId) {
+      setIsLoading(false);
+      return;
+    }
 
     fetchChannelMessages(channelId)
       .then((remote) => {
@@ -75,42 +84,82 @@ export function useChatChannel(
   useEffect(() => {
     if (typeof window === "undefined" || !channelId) return;
 
-    setStatus("connecting");
+    let cancelled = false;
     let wsOpen = false;
 
-    try {
-      const socket = new WebSocket(chatSocketUrl());
-      socketRef.current = socket;
-      socket.onopen = () => {
-        wsOpen = true;
-        setStatus("open");
-      };
-      socket.onclose = () => {
-        wsOpen = false;
+    const clearRetry = () => {
+      if (retryTimerRef.current != null) {
+        window.clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = null;
+      }
+    };
+
+    const connect = () => {
+      if (cancelled) return;
+      if (!readAuthToken()) {
         setStatus("polling");
-      };
-      socket.onerror = () => {
-        socket.close();
-      };
-      socket.onmessage = (event) => {
-        try {
-          const incoming = JSON.parse(event.data as string) as ChatMessageDto;
-          if (incoming.channelId === channelId) {
-            setMessages((prev) =>
-              prev.some((m) => m.id === incoming.id) ? prev : [...prev, incoming],
-            );
+        return;
+      }
+
+      setStatus("connecting");
+      try {
+        const socket = new WebSocket(chatSocketUrl());
+        socketRef.current = socket;
+
+        socket.onopen = () => {
+          if (cancelled) {
+            socket.close();
+            return;
           }
-        } catch {
-          /* ignore */
-        }
-      };
-    } catch {
-      setStatus("polling");
-    }
+          wsOpen = true;
+          retryRef.current = 0;
+          setStatus("open");
+        };
+
+        socket.onclose = () => {
+          wsOpen = false;
+          socketRef.current = null;
+          if (cancelled) return;
+          setStatus("polling");
+          const delay = WS_RETRY_MS[Math.min(retryRef.current, WS_RETRY_MS.length - 1)] ?? 15000;
+          retryRef.current += 1;
+          clearRetry();
+          retryTimerRef.current = window.setTimeout(connect, delay);
+        };
+
+        socket.onerror = () => {
+          try {
+            socket.close();
+          } catch {
+            /* ignore */
+          }
+        };
+
+        socket.onmessage = (event) => {
+          try {
+            const incoming = JSON.parse(event.data as string) as ChatMessageDto;
+            if (incoming.channelId === channelId) {
+              setMessages((prev) =>
+                prev.some((m) => m.id === incoming.id) ? prev : [...prev, incoming],
+              );
+            }
+          } catch {
+            /* ignore non-JSON (pong) */
+          }
+        };
+      } catch {
+        setStatus("polling");
+        const delay = WS_RETRY_MS[Math.min(retryRef.current, WS_RETRY_MS.length - 1)] ?? 15000;
+        retryRef.current += 1;
+        clearRetry();
+        retryTimerRef.current = window.setTimeout(connect, delay);
+      }
+    };
+
+    connect();
 
     const pollId = window.setInterval(() => {
       if (document.visibilityState === "hidden" || sendingRef.current) return;
-      // Si WS ouvert, poll moins critique mais on garde un filet léger
       fetchChannelMessages(channelId)
         .then((remote) => {
           if (remote) mergeMessages(remote);
@@ -118,15 +167,33 @@ export function useChatChannel(
           if (!wsOpen) setStatus("polling");
         })
         .catch(() => {
-          /* silencieux */
+          /* silencieux en poll */
         });
     }, POLL_MS);
 
+    const pingId = window.setInterval(() => {
+      const s = socketRef.current;
+      if (s && s.readyState === WebSocket.OPEN) {
+        try {
+          s.send("ping");
+        } catch {
+          /* ignore */
+        }
+      }
+    }, 25000);
+
     return () => {
+      cancelled = true;
+      clearRetry();
       window.clearInterval(pollId);
+      window.clearInterval(pingId);
       const s = socketRef.current;
       socketRef.current = null;
-      s?.close();
+      try {
+        s?.close();
+      } catch {
+        /* ignore */
+      }
     };
   }, [channelId, mergeMessages]);
 

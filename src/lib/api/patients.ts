@@ -176,8 +176,13 @@ function mapPatient(dto: PatientDto): PatientRow {
 }
 
 export async function fetchPatients(signal?: AbortSignal): Promise<PatientRow[]> {
-  const rows = await javaApi<PatientDto[]>("/api/patients", signal ? { signal } : {});
-  return (rows ?? []).map(mapPatient);
+  const data = await javaApi<unknown>("/api/patients", signal ? { signal } : {});
+  const rows: PatientDto[] = Array.isArray(data)
+    ? (data as PatientDto[])
+    : data && typeof data === "object" && Array.isArray((data as { content?: unknown }).content)
+      ? ((data as { content: PatientDto[] }).content ?? [])
+      : [];
+  return rows.map(mapPatient);
 }
 
 /** Recherche serveur paginée — déclenche le contrat PageResponse côté backend. */

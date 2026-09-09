@@ -1,6 +1,7 @@
 package com.crm.medicare.service;
 
 import com.crm.medicare.common.ApiException;
+import com.crm.medicare.dashboard.DashboardMetrics;
 import com.crm.medicare.dto.StatusHistoryItemDto;
 import com.crm.medicare.dto.WaitingRoomItemDto;
 import com.crm.medicare.dto.WorklistItemDto;
@@ -56,13 +57,12 @@ public class WaitingRoomService {
         LocalDateTime now = LocalDateTime.now(ZONE);
 
         return examenRepository.findWithPatientByDateRange(debut, fin).stream()
-                .filter(e -> e.getWorkflowStatus() != null && IN_ROOM.contains(e.getWorkflowStatus()))
+                .filter(DashboardMetrics::isInWaitingRoom)
                 .filter(e -> matchesStatut(e, statut))
                 .filter(e -> matchesPriorite(e, priorite))
                 .sorted(
                         Comparator.comparing(
-                                        (Examen e) ->
-                                                priorityRank(e.getPriorite()),
+                                        (Examen e) -> priorityRank(e.getPriorite()),
                                         Comparator.naturalOrder())
                                 .thenComparing(
                                         Examen::getArrivedAt,
@@ -80,10 +80,7 @@ public class WaitingRoomService {
                 examenRepository
                         .findByIdWithPatient(examenId)
                         .orElseThrow(() -> ApiException.notFound("Examen introuvable"));
-        EncounterStatus from =
-                examen.getWorkflowStatus() != null
-                        ? examen.getWorkflowStatus()
-                        : EncounterStatus.SCHEDULED;
+        EncounterStatus from = effectiveStatus(examen);
         EncounterStatus to = nextStatus(from);
         if (to == null) {
             throw ApiException.conflict(
@@ -130,8 +127,13 @@ public class WaitingRoomService {
         if (statut == null || statut.isBlank() || "tous".equalsIgnoreCase(statut)) {
             return true;
         }
-        return e.getWorkflowStatus() != null
-                && e.getWorkflowStatus().name().equalsIgnoreCase(statut.trim());
+        String wanted = statut.trim();
+        if (e.getWorkflowStatus() != null && e.getWorkflowStatus().name().equalsIgnoreCase(wanted)) {
+            return true;
+        }
+        EncounterStatus effective = effectiveStatus(e);
+        return effective.name().equalsIgnoreCase(wanted)
+                || labelStatut(e).equalsIgnoreCase(wanted);
     }
 
     private boolean matchesPriorite(Examen e, String priorite) {
@@ -152,11 +154,32 @@ public class WaitingRoomService {
         };
     }
 
+    /** Statut effectif pour file : workflow prioritaire, sinon etat_patient legacy. */
+    private EncounterStatus effectiveStatus(Examen examen) {
+        if (examen.getWorkflowStatus() != null && IN_ROOM.contains(examen.getWorkflowStatus())) {
+            return examen.getWorkflowStatus();
+        }
+        if (examen.getEtatPatient() != null) {
+            return switch (examen.getEtatPatient()) {
+                case arrive -> EncounterStatus.ARRIVED;
+                case retard, attente_longue -> EncounterStatus.WAITING;
+                case attendu ->
+                        examen.getWorkflowStatus() != null
+                                ? examen.getWorkflowStatus()
+                                : EncounterStatus.SCHEDULED;
+            };
+        }
+        return examen.getWorkflowStatus() != null
+                ? examen.getWorkflowStatus()
+                : EncounterStatus.SCHEDULED;
+    }
+
     private WaitingRoomItemDto toDto(Examen e, LocalDateTime now) {
+        EncounterStatus status = effectiveStatus(e);
         LocalDateTime arrived =
                 e.getArrivedAt() != null
                         ? e.getArrivedAt()
-                        : (IN_ROOM.contains(e.getWorkflowStatus()) ? e.getDateExamen() : null);
+                        : (IN_ROOM.contains(status) ? e.getDateExamen() : null);
         Integer attente = null;
         if (arrived != null && !arrived.isAfter(now)) {
             attente = (int) Math.max(0, Duration.between(arrived, now).toMinutes());
@@ -168,8 +191,8 @@ public class WaitingRoomService {
                 .examen(e.getDescription() != null ? e.getDescription() : e.getExamTypeCode())
                 .modalite(e.getModalite() != null ? e.getModalite().name() : null)
                 .priorite(e.getPriorite())
-                .statut(labelStatut(e.getWorkflowStatus()))
-                .workflowStatus(e.getWorkflowStatus() != null ? e.getWorkflowStatus().name() : null)
+                .statut(labelStatut(e))
+                .workflowStatus(status.name())
                 .operateur(e.getMedecin())
                 .attenteMinutes(attente)
                 .heurePrevue(e.getDateExamen())
@@ -177,16 +200,13 @@ public class WaitingRoomService {
                 .build();
     }
 
-    private static String labelStatut(EncounterStatus s) {
-        if (s == null) {
-            return "scheduled";
-        }
-        return switch (s) {
+    private String labelStatut(Examen e) {
+        return switch (effectiveStatus(e)) {
             case ARRIVED -> "arrived";
             case WAITING -> "waiting";
             case PREPARING -> "preparing";
             case IN_PROGRESS -> "in_progress";
-            default -> s.name().toLowerCase(Locale.ROOT);
+            default -> effectiveStatus(e).name().toLowerCase(Locale.ROOT);
         };
     }
 }

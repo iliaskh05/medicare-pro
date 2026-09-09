@@ -1,4 +1,4 @@
-import { javaApi, javaApiForm, JAVA_API_BASE } from "./config";
+import { javaApi, javaApiForm, getJavaApiBase } from "./config";
 import { readAuthToken } from "@/lib/auth-session";
 
 export type ChatChannelType = "GROUP" | "DIRECT";
@@ -125,7 +125,7 @@ export async function uploadChannelMessage(
 /** Absolute URL for chat file (still needs Authorization header for fetch). */
 export function chatFileAbsoluteUrl(fileUrl: string): string {
   if (fileUrl.startsWith("http")) return fileUrl;
-  return `${JAVA_API_BASE}${fileUrl.startsWith("/") ? "" : "/"}${fileUrl}`;
+  return `${getJavaApiBase()}${fileUrl.startsWith("/") ? "" : "/"}${fileUrl}`;
 }
 
 /** Download / preview chat file with JWT → Blob URL (revoke after use). */
@@ -145,9 +145,14 @@ export async function fetchChatFileBlob(fileUrl: string, signal?: AbortSignal): 
 
 /** WebSocket URL with JWT query param. */
 export function chatSocketUrl(): string {
-  const base =
-    (import.meta.env?.["VITE_WS_URL"] as string | undefined)?.replace(/\/$/, "") ||
-    JAVA_API_BASE.replace(/^http/, "ws");
+  const rawWs = (import.meta.env?.["VITE_WS_URL"] as string | undefined)?.trim();
+  let base =
+    rawWs?.replace(/\/$/, "") ||
+    getJavaApiBase().replace(/^http/, "ws");
+  // Si VITE_WS_URL contient déjà /ws/chat (config legacy), ne pas le doubler
+  if (/\/ws\/chat$/i.test(base)) {
+    base = base.replace(/\/ws\/chat$/i, "");
+  }
   const token = readAuthToken() ?? "";
   const qs = token ? `?token=${encodeURIComponent(token)}` : "";
   return `${base}/ws/chat${qs}`;

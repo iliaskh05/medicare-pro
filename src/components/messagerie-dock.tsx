@@ -72,7 +72,7 @@ export function MessagerieDock() {
   const [query, setQuery] = useState("");
   const [hits, setHits] = useState<ChatDirectoryUserDto[]>([]);
   const [searching, setSearching] = useState(false);
-  const { channels, totalUnread, refresh } = useChatUnread({
+  const { channels, totalUnread, refresh, lastError } = useChatUnread({
     activeChannelId: open ? activeId : null,
     enabled: true,
   });
@@ -224,8 +224,16 @@ export function MessagerieDock() {
               ))}
             </ul>
           ) : null}
-          {channels.length === 0 ? (
-            <EmptyState />
+          {lastError ? (
+            <div className="flex flex-1 flex-col items-center justify-center gap-3 px-4 text-center">
+              <p className="text-sm font-medium text-destructive">Messagerie indisponible</p>
+              <p className="text-xs text-muted-foreground">{lastError}</p>
+              <Button size="sm" variant="outline" onClick={() => void refresh()}>
+                Réessayer
+              </Button>
+            </div>
+          ) : channels.length === 0 ? (
+            <EmptyState message="Aucun canal — vérifiez la connexion au serveur ou réessayez." />
           ) : (
             <ScrollArea className="flex-1">
               <p className="px-3 pt-2 text-[10px] font-semibold uppercase text-muted-foreground">

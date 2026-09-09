@@ -1,28 +1,23 @@
-/**
- * RBAC frontend centralisé.
- *
- * ⚠️ Le masquage d'un bouton n'est PAS une sécurité : le backend Spring Boot
- * reste seul responsable de l'autorisation réelle (403 sur endpoint protégé).
- * Cette couche sert uniquement à ne pas proposer d'action impossible.
- */
+/** Canonical backend roles — the only ones Spring issues. */
+export type CanonicalRole = "DIRECTEUR" | "RADIOLOGUE" | "MANIPULATEUR" | "SECRETARIAT";
 
-/** Rôles métier renvoyés par le backend (`AuthResponse.utilisateur.role`). */
-export type BackendRole =
-  | "SUPER_ADMIN"
-  | "ADMIN"
-  | "DIRECTION"
-  | "DIRECTEUR"
-  | "ACCUEIL"
-  | "SECRETARIAT"
-  | "SECRETAIRE"
-  | "RADIOLOGUE"
-  | "MANIPULATEUR"
-  | "TECHNICIEN"
-  | "CAISSIER"
-  | "COMPTABLE"
-  | "AUDITEUR";
+/** Alias historically stored in UI / old tokens. Mapped explicitly — never guessed. */
+export type BackendRole = CanonicalRole | "UNKNOWN";
 
-/** Domaines fonctionnels de l'application. */
+const ALIASES: Record<string, CanonicalRole> = {
+  DIRECTEUR: "DIRECTEUR",
+  DIRECTION: "DIRECTEUR",
+  SUPER_ADMIN: "DIRECTEUR",
+  ADMIN: "DIRECTEUR",
+  RADIOLOGUE: "RADIOLOGUE",
+  MANIPULATEUR: "MANIPULATEUR",
+  TECHNICIEN: "MANIPULATEUR",
+  SECRETARIAT: "SECRETARIAT",
+  ACCUEIL: "SECRETARIAT",
+  SECRETAIRE: "SECRETARIAT",
+  CAISSIER: "SECRETARIAT",
+};
+
 export type Resource =
   | "patients"
   | "appointments"
@@ -63,102 +58,77 @@ function grant(resources: Resource[], actions: Action[]): Permission[] {
 const FULL: Action[] = ["view", "create", "edit", "validate", "delete", "export"];
 
 /**
- * Matrice de permissions. Elle doit rester alignée sur les règles
- * `@PreAuthorize` du backend — toute divergence est un bug.
+ * Must stay aligned with PermissionCatalog.java.
+ * Unknown roles receive an empty set — never a silent fallback to SECRETARIAT.
  */
-const MATRIX: Record<BackendRole, Permission[]> = {
-  SUPER_ADMIN: grant(ALL, FULL),
-  ADMIN: grant(ALL, FULL),
-  DIRECTION: [
-    ...grant(ALL, ["view", "export"]),
-    ...grant(["fraud"], ["validate", "edit"]),
-    ...grant(["doctors", "settings"], ["create", "edit"]),
-  ],
-  DIRECTEUR: [
-    ...grant(ALL, ["view", "export"]),
-    ...grant(["fraud"], ["validate", "edit"]),
-    ...grant(["doctors", "settings"], ["create", "edit"]),
-  ],
-  ACCUEIL: [
-    ...grant(
-      ["patients", "appointments", "waiting-room", "worklist", "doctors", "messaging", "settings"],
-      ["view"],
-    ),
-    ...grant(["patients", "appointments", "waiting-room"], ["create", "edit"]),
-    ...grant(["billing"], ["view", "create"]),
-  ],
-  SECRETARIAT: [
-    ...grant(
-      ["patients", "appointments", "waiting-room", "worklist", "doctors", "messaging", "settings"],
-      ["view"],
-    ),
-    ...grant(["patients", "appointments", "waiting-room"], ["create", "edit"]),
-    ...grant(["billing"], ["view", "create"]),
-  ],
-  SECRETAIRE: [
-    ...grant(
-      ["patients", "appointments", "waiting-room", "worklist", "doctors", "messaging", "settings"],
-      ["view"],
-    ),
-    ...grant(["patients", "appointments"], ["create", "edit"]),
-    ...grant(["billing"], ["view"]),
-  ],
+const MATRIX: Record<CanonicalRole, Permission[]> = {
+  DIRECTEUR: grant(ALL, FULL),
   RADIOLOGUE: [
     ...grant(
-      ["patients", "worklist", "waiting-room", "imaging", "reports", "messaging", "settings"],
+      ["patients", "worklist", "waiting-room", "imaging", "reports", "messaging", "dashboard", "doctors"],
       ["view"],
     ),
     ...grant(["reports"], ["create", "edit", "validate", "export"]),
-    ...grant(["imaging"], ["edit"]),
+    ...grant(["worklist", "imaging"], ["edit"]),
+    ...grant(["messaging"], ["create", "edit"]),
   ],
   MANIPULATEUR: [
     ...grant(
-      ["patients", "worklist", "waiting-room", "imaging", "messaging", "settings"],
+      ["patients", "worklist", "waiting-room", "imaging", "messaging", "dashboard", "appointments"],
       ["view"],
     ),
-    ...grant(["worklist", "waiting-room"], ["edit"]),
-    ...grant(["imaging"], ["create", "edit"]),
+    ...grant(["worklist", "waiting-room", "imaging"], ["edit"]),
+    ...grant(["messaging"], ["create", "edit"]),
   ],
-  TECHNICIEN: [
+  SECRETARIAT: [
     ...grant(
-      ["patients", "worklist", "waiting-room", "imaging", "messaging", "settings"],
+      [
+        "patients",
+        "appointments",
+        "waiting-room",
+        "worklist",
+        "doctors",
+        "messaging",
+        "dashboard",
+        "billing",
+        "settings",
+      ],
       ["view"],
     ),
-    ...grant(["worklist", "waiting-room"], ["edit"]),
-    ...grant(["imaging"], ["create", "edit"]),
-  ],
-  CAISSIER: [
-    ...grant(["patients", "waiting-room", "billing", "messaging", "settings"], ["view"]),
-    ...grant(["billing"], ["create", "edit"]),
-  ],
-  COMPTABLE: [
-    ...grant(["billing", "dashboard", "patients", "settings"], ["view"]),
-    ...grant(["billing", "dashboard"], ["export"]),
-  ],
-  AUDITEUR: [
-    ...grant(["billing", "dashboard", "fraud", "patients", "reports", "settings"], ["view"]),
-    ...grant(["fraud"], ["edit", "validate"]),
-    ...grant(["fraud", "billing"], ["export"]),
+    ...grant(["patients", "appointments", "waiting-room", "billing"], ["create", "edit"]),
+    ...grant(["messaging"], ["create", "edit"]),
+    ...grant(["billing"], ["export"]),
   ],
 };
 
-/** Normalise une valeur de rôle libre vers un rôle connu (fallback le plus restrictif). */
+/** Explicit alias map. Unknown → null (deny). */
+export function canonicalizeRole(role: string | null | undefined): CanonicalRole | null {
+  if (!role) return null;
+  const upper = role.trim().toUpperCase();
+  return ALIASES[upper] ?? null;
+}
+
+/** @deprecated use canonicalizeRole. Kept so existing callers compile. */
 export function normalizeRole(role: string | null | undefined): BackendRole {
-  const upper = (role ?? "").toUpperCase();
-  return (upper in MATRIX ? upper : "SECRETAIRE") as BackendRole;
+  return canonicalizeRole(role) ?? "UNKNOWN";
 }
 
 export function permissionsOf(role: string | null | undefined): ReadonlySet<Permission> {
-  return new Set(MATRIX[normalizeRole(role)]);
+  const canonical = canonicalizeRole(role);
+  if (!canonical) return new Set();
+  return new Set(MATRIX[canonical]);
 }
 
 export function hasPermission(role: string | null | undefined, permission: Permission): boolean {
   return permissionsOf(role).has(permission);
 }
 
-/** L'utilisateur peut-il ouvrir cet écran ? */
-export function canAccess(role: string | null | undefined, resource: Resource): boolean {
-  return hasPermission(role, `${resource}:view`);
+export function canAccess(
+  role: string | null | undefined,
+  resource: Resource,
+  action: Action = "view",
+): boolean {
+  return hasPermission(role, `${resource}:${action}`);
 }
 
 export function canEdit(role: string | null | undefined, resource: Resource): boolean {

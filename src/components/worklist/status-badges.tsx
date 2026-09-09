@@ -5,8 +5,8 @@ import {
   CreditCard,
   FileSignature,
   FileText,
-  Printer,
   PenLine,
+  Printer,
   UserCheck,
   Wallet,
 } from "lucide-react";
@@ -172,35 +172,39 @@ export const PAIEMENT_LABELS = paiementMap;
 
 const dossierMap: Record<string, BadgeDef> = {
   a_preparer: {
-    label: "À préparer",
+    label: "À remettre",
     icon: FileText,
-    className: "border-border bg-muted text-muted-foreground",
+    className: "border-warning/30 bg-warning/10 text-warning",
   },
   pret: {
-    label: "Dossier prêt",
+    label: "À remettre",
     icon: FileSignature,
-    className: "border-info/25 bg-info/10 text-info",
+    className: "border-warning/30 bg-warning/10 text-warning",
   },
   remis: {
-    label: "Remis",
+    label: "✓ Remis",
     icon: UserCheck,
     className: "border-success/25 bg-success/10 text-success",
   },
   non_remis: {
-    label: "Non remis",
+    label: "À remettre",
     icon: AlertTriangle,
     className: "border-warning/30 bg-warning/10 text-warning",
   },
   envoye: {
-    label: "Envoyé",
-    icon: Printer,
-    className: "border-primary/20 bg-primary/10 text-primary",
+    label: "✓ Remis",
+    icon: UserCheck,
+    className: "border-success/25 bg-success/10 text-success",
   },
 };
 
-export function DossierBadge({ statut }: { statut?: string }) {
-  const def = dossierMap[statut ?? "a_preparer"] ?? dossierMap.a_preparer;
-  return <Badge def={def} />;
+export function DossierBadge({ statut }: { statut?: string | undefined }) {
+  const fallback: BadgeDef = {
+    label: "À remettre",
+    icon: FileText,
+    className: "border-warning/30 bg-warning/10 text-warning",
+  };
+  return <Badge def={dossierMap[statut ?? "a_preparer"] ?? fallback} />;
 }
 
 export const DOSSIER_LABELS = dossierMap;

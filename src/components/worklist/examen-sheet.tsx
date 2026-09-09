@@ -22,6 +22,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/ui-kit";
 import { PatientLabelPrintMenu } from "@/components/patients/patient-label-print-menu";
 import { SejourBadge } from "@/components/sejour-badge";
+import { useRole } from "@/hooks/use-role";
 import {
   CompteRenduBadge,
   DossierBadge,
@@ -84,6 +85,9 @@ export function ExamenSheet({
   onUpdated?: (item: WorklistItem) => void;
   onStatus?: (id: string, etat: WorklistItem["etatPatient"]) => void;
 }) {
+  const { canEdit, canValidate } = useRole();
+  const canWriteCr = canEdit("reports");
+  const canSignCr = canValidate("reports");
   const [indication, setIndication] = useState("");
   const [technique, setTechnique] = useState("");
   const [resultats, setResultats] = useState("");
@@ -112,8 +116,18 @@ export function ExamenSheet({
     setAnesthesia(Boolean(item.generalAnesthesia));
     setInpatient(Boolean(item.inpatient));
     setTechnologist(item.technologistName ?? "");
-    fetchPaiements(item.id).then(setPaiements).catch(() => setPaiements([]));
-    fetchExamenDocuments(item.id).then(setDocs).catch(() => setDocs([]));
+    const controller = new AbortController();
+    fetchPaiements(item.id, controller.signal)
+      .then(setPaiements)
+      .catch(() => {
+        if (!controller.signal.aborted) setPaiements([]);
+      });
+    fetchExamenDocuments(item.id, controller.signal)
+      .then(setDocs)
+      .catch(() => {
+        if (!controller.signal.aborted) setDocs([]);
+      });
+    return () => controller.abort();
   }, [item]);
 
   if (!item) return null;
@@ -123,6 +137,10 @@ export function ExamenSheet({
   const reste = item.reste ?? Math.max(total - paid, 0);
 
   const save = async () => {
+    if (!canWriteCr) {
+      toast.error("Rédaction du compte rendu réservée aux médecins / radiologues.");
+      return;
+    }
     setIsSaving(true);
     try {
       const updated = await saveCompteRendu(item.id, {
@@ -299,25 +317,54 @@ export function ExamenSheet({
             </p>
             <div>
               <Label>Indication</Label>
-              <Textarea value={indication} onChange={(e) => setIndication(e.target.value)} />
+              <Textarea
+                value={indication}
+                onChange={(e) => setIndication(e.target.value)}
+                disabled={!canWriteCr}
+                readOnly={!canWriteCr}
+              />
             </div>
             <div>
               <Label>Technique</Label>
-              <Textarea value={technique} onChange={(e) => setTechnique(e.target.value)} />
+              <Textarea
+                value={technique}
+                onChange={(e) => setTechnique(e.target.value)}
+                disabled={!canWriteCr}
+                readOnly={!canWriteCr}
+              />
             </div>
             <div>
               <Label>Observations</Label>
-              <Textarea className="min-h-28" value={resultats} onChange={(e) => setResultats(e.target.value)} />
+              <Textarea
+                className="min-h-28"
+                value={resultats}
+                onChange={(e) => setResultats(e.target.value)}
+                disabled={!canWriteCr}
+                readOnly={!canWriteCr}
+              />
             </div>
             <div>
               <Label>Conclusion</Label>
-              <Textarea value={conclusion} onChange={(e) => setConclusion(e.target.value)} />
+              <Textarea
+                value={conclusion}
+                onChange={(e) => setConclusion(e.target.value)}
+                disabled={!canWriteCr}
+                readOnly={!canWriteCr}
+              />
             </div>
+            {!canWriteCr ? (
+              <p className="text-xs text-muted-foreground">
+                Consultation uniquement — la rédaction et la validation sont réservées aux médecins
+                / radiologues.
+              </p>
+            ) : null}
             <div className="flex flex-wrap gap-2">
-              <Button onClick={save} disabled={isSaving}>
-                {isSaving ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Save className="mr-2 size-4" />}
-                Enregistrer
-              </Button>
+              {canWriteCr ? (
+                <Button onClick={save} disabled={isSaving}>
+                  {isSaving ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Save className="mr-2 size-4" />}
+                  Enregistrer
+                </Button>
+              ) : null}
               <Button variant="outline" onClick={() => previewCompteRenduExamen(item.id).catch((e) => toast.error(e.message))}>
                 Prévisualiser
               </Button>
@@ -327,19 +374,21 @@ export function ExamenSheet({
               >
                 <FileDown className="mr-2 size-4" /> PDF
               </Button>
-              <Button
-                variant="outline"
-                onClick={() =>
-                  updateWorklistStatut(item.id, { statutCr: "signe" })
-                    .then((u) => {
-                      onUpdated?.(u);
-                      toast.success("Compte rendu marqué comme signé.");
-                    })
-                    .catch((e: unknown) => toast.error(e instanceof Error ? e.message : "Mise à jour impossible"))
-                }
-              >
-                Valider / signer
-              </Button>
+              {canSignCr ? (
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    updateWorklistStatut(item.id, { statutCr: "signe" })
+                      .then((u) => {
+                        onUpdated?.(u);
+                        toast.success("Compte rendu marqué comme signé.");
+                      })
+                      .catch((e: unknown) => toast.error(e instanceof Error ? e.message : "Mise à jour impossible"))
+                  }
+                >
+                  Valider / signer
+                </Button>
+              ) : null}
             </div>
           </TabsContent>
 
@@ -482,27 +531,43 @@ export function ExamenSheet({
           </TabsContent>
 
           <TabsContent value="dossier" className="mt-4 space-y-3">
-            <Field label="Statut" value={item.dossierStatut} />
+            <Field
+              label="Statut"
+              value={
+                item.dossierStatut === "remis" || item.dossierStatut === "envoye"
+                  ? "Remis"
+                  : "À remettre"
+              }
+            />
             <Field label="Remis le" value={item.dossierRemisAt} />
             <Field label="Par" value={item.dossierRemisPar} />
             <div className="flex flex-wrap gap-2">
-              {(["a_preparer", "pret", "remis", "non_remis", "envoye"] as const).map((s) => (
+              {item.dossierStatut !== "remis" && item.dossierStatut !== "envoye" ? (
                 <Button
-                  key={s}
                   size="sm"
-                  variant={item.dossierStatut === s ? "default" : "outline"}
-                  onClick={() =>
-                    updateWorklistStatut(item.id, { dossierStatut: s })
+                  onClick={() => {
+                    if (
+                      !window.confirm(
+                        "Confirmer la remise du dossier ?\n\nCette action enregistrera la date, l'heure et le membre du personnel ayant remis le dossier au patient.",
+                      )
+                    ) {
+                      return;
+                    }
+                    updateWorklistStatut(item.id, { dossierStatut: "remis" })
                       .then((u) => {
                         onUpdated?.(u);
-                        toast.success("Statut dossier mis à jour.");
+                        toast.success("Dossier marqué comme remis.");
                       })
-                      .catch((e: unknown) => toast.error(e instanceof Error ? e.message : "Mise à jour impossible"))
-                  }
+                      .catch((e: unknown) =>
+                        toast.error(e instanceof Error ? e.message : "Mise à jour impossible"),
+                      );
+                  }}
                 >
-                  {s.replace("_", " ")}
+                  <CheckCircle2 className="mr-1.5 size-4" /> Dossier remis
                 </Button>
-              ))}
+              ) : (
+                <p className="text-sm text-success">✓ Dossier remis</p>
+              )}
             </div>
           </TabsContent>
 

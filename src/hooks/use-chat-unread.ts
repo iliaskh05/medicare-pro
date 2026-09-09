@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";
 
 import {
@@ -10,6 +10,7 @@ import {
 import { readAuthToken } from "@/lib/auth-session";
 
 const POLL_MS = 12_000;
+const WS_RETRY_MS = [2000, 5000, 10000, 20000];
 
 type Store = {
   channels: ChatChannelDto[];
@@ -17,6 +18,10 @@ type Store = {
   bootstrapped: boolean;
   knownIds: Set<string>;
   started: boolean;
+  lastError: string | null;
+  socket: WebSocket | null;
+  retryAttempt: number;
+  retryTimer: number | null;
 };
 
 const store: Store = {
@@ -25,6 +30,10 @@ const store: Store = {
   bootstrapped: false,
   knownIds: new Set(),
   started: false,
+  lastError: null,
+  socket: null,
+  retryAttempt: 0,
+  retryTimer: null,
 };
 
 const listeners = new Set<() => void>();
@@ -42,34 +51,72 @@ function getSnapshot() {
   return store.channels;
 }
 
+function getErrorSnapshot() {
+  return store.lastError;
+}
+
 async function refreshChannels() {
-  if (!readAuthToken()) return;
+  if (!readAuthToken()) {
+    store.channels = [];
+    store.lastError = null;
+    emit();
+    return;
+  }
   try {
     const rows = await fetchChannels();
     store.channels = rows;
+    store.lastError = null;
     emit();
-  } catch {
-    /* silencieux */
+  } catch (e) {
+    store.lastError =
+      e instanceof Error ? e.message : "Impossible de charger la messagerie";
+    emit();
   }
 }
 
-function ensureStarted() {
-  if (store.started || typeof window === "undefined") return;
-  store.started = true;
+function clearWsRetry() {
+  if (store.retryTimer != null) {
+    window.clearTimeout(store.retryTimer);
+    store.retryTimer = null;
+  }
+}
 
-  void refreshChannels();
+function connectUnreadSocket() {
+  if (typeof window === "undefined") return;
+  if (!readAuthToken()) return;
 
-  window.setInterval(() => {
-    if (document.visibilityState === "hidden") return;
-    void refreshChannels();
-  }, POLL_MS);
-
-  const onFocus = () => void refreshChannels();
-  window.addEventListener("focus", onFocus);
-  document.addEventListener("visibilitychange", onFocus);
+  try {
+    store.socket?.close();
+  } catch {
+    /* ignore */
+  }
 
   try {
     const socket = new WebSocket(chatSocketUrl());
+    store.socket = socket;
+
+    socket.onopen = () => {
+      store.retryAttempt = 0;
+    };
+
+    socket.onclose = () => {
+      store.socket = null;
+      const delay = WS_RETRY_MS[Math.min(store.retryAttempt, WS_RETRY_MS.length - 1)] ?? 20000;
+      store.retryAttempt += 1;
+      clearWsRetry();
+      store.retryTimer = window.setTimeout(() => {
+        connectUnreadSocket();
+      }, delay);
+    };
+
+    socket.onerror = () => {
+      try {
+        socket.close();
+      } catch {
+        /* ignore */
+      }
+    };
+
     socket.onmessage = (event) => {
       try {
         const incoming = JSON.parse(event.data as string) as ChatMessageDto;
@@ -94,12 +141,30 @@ function ensureStarted() {
         });
         void refreshChannels();
       } catch {
-        /* ignore */
+        /* ignore pong / non-JSON */
       }
     };
   } catch {
     /* polling only */
   }
+}
+
+function ensureStarted() {
+  if (store.started || typeof window === "undefined") return;
+  store.started = true;
+
+  void refreshChannels();
+
+  window.setInterval(() => {
+    if (document.visibilityState === "hidden") return;
+    void refreshChannels();
+  }, POLL_MS);
+
+  const onFocus = () => void refreshChannels();
+  window.addEventListener("focus", onFocus);
+  document.addEventListener("visibilitychange", onFocus);
+
+  connectUnreadSocket();
 
   window.setTimeout(() => {
     store.bootstrapped = true;
@@ -125,19 +190,19 @@ export function useChatUnread(opts?: { activeChannelId?: string | null; enabled?
   }, [activeChannelId]);
 
   const channels = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+  const lastError = useSyncExternalStore(subscribe, getErrorSnapshot, getErrorSnapshot);
   const totalUnread = channels.reduce((sum, c) => sum + (c.unreadCount ?? 0), 0);
 
   const refresh = useCallback(() => {
     void refreshChannels();
   }, []);
 
-  // Force re-render when active changes unread display only — channels from store
   const [, setTick] = useState(0);
   useEffect(() => {
     setTick((t) => t + 1);
   }, [activeChannelId]);
 
-  return { channels, totalUnread, refresh };
+  return { channels, totalUnread, refresh, lastError };
 }
 
 export function refreshChatUnread() {
@@ -147,4 +212,23 @@ export function refreshChatUnread() {
 /** Met à jour le canal « actif » pour supprimer les toasts sur ce canal. */
 export function setChatActiveChannel(channelId: string | null) {
   store.activeChannelId = channelId;
+}
+
+/** À appeler après login / logout pour repartir proprement. */
+export function resetChatUnreadStore() {
+  clearWsRetry();
+  try {
+    store.socket?.close();
+  } catch {
+    /* ignore */
+  }
+  store.socket = null;
+  store.channels = [];
+  store.activeChannelId = null;
+  store.bootstrapped = false;
+  store.knownIds = new Set();
+  store.started = false;
+  store.lastError = null;
+  store.retryAttempt = 0;
+  emit();
 }
